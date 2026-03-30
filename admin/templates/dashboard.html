@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Business Registry Admin</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+</head>
+<body>
+<nav class="sidebar">
+  <div class="logo">Business Registry</div>
+  <a href="{{ url_for('dashboard') }}" class="nav-link active">Dashboard</a>
+  <a href="{{ url_for('queue') }}" class="nav-link">QA Queue</a>
+  <a href="{{ url_for('markets') }}" class="nav-link">Markets</a>
+  <a href="{{ url_for('export') }}" class="nav-link">Export</a>
+</nav>
+
+<main class="main">
+  <div class="page-header">
+    <h1>Dashboard</h1>
+    <span class="subtitle">Business Registry QA Overview</span>
+  </div>
+
+  <!-- Stat cards -->
+  <div class="stat-grid">
+    <div class="stat-card pending">
+      <div class="stat-num">{{ stats.pending }}</div>
+      <div class="stat-label">Pending review</div>
+    </div>
+    <div class="stat-card approved">
+      <div class="stat-num">{{ stats.approved }}</div>
+      <div class="stat-label">Approved</div>
+    </div>
+    <div class="stat-card flagged">
+      <div class="stat-num">{{ stats.flagged }}</div>
+      <div class="stat-label">Flagged / dupes</div>
+    </div>
+    <div class="stat-card rejected">
+      <div class="stat-num">{{ stats.rejected }}</div>
+      <div class="stat-label">Rejected</div>
+    </div>
+    <div class="stat-card total">
+      <div class="stat-num">{{ stats.total }}</div>
+      <div class="stat-label">Total records</div>
+    </div>
+  </div>
+
+  <!-- By market breakdown -->
+  <div class="card">
+    <h2>Records by market</h2>
+    <table class="data-table">
+      <thead>
+        <tr><th>Market</th><th>Count</th><th>Actions</th></tr>
+      </thead>
+      <tbody>
+        {% for m in stats.by_market %}
+        <tr>
+          <td><span class="badge market">{{ m.source_market }}</span></td>
+          <td>{{ m.count }}</td>
+          <td>
+            <a href="{{ url_for('queue', market=m.source_market) }}" class="btn-sm">Review</a>
+            <a href="{{ url_for('export', market=m.source_market, status='approved') }}" class="btn-sm secondary">Export CSV</a>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="3" class="empty">No data yet. Run a scraper to populate records.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Quick actions -->
+  <div class="card">
+    <h2>Quick actions</h2>
+    <div class="action-row">
+      <a href="{{ url_for('queue', status='pending') }}" class="btn">Review pending ({{ stats.pending }})</a>
+      <a href="{{ url_for('queue', status='flagged') }}" class="btn secondary">Review flagged ({{ stats.flagged }})</a>
+      <a href="{{ url_for('export', status='approved', format='csv') }}" class="btn secondary">Export all approved</a>
+    </div>
+  </div>
+</main>
+</body>
+</html>

@@ -1,0 +1,270 @@
+/* Business Registry Admin — CSS */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:        #f5f4f0;
+  --surface:   #ffffff;
+  --border:    #e2e0d8;
+  --text:      #1a1a18;
+  --muted:     #6b6a65;
+  --accent:    #2563eb;
+  --green:     #16a34a;
+  --amber:     #d97706;
+  --red:       #dc2626;
+  --sidebar-w: 200px;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 14px;
+  background: var(--bg);
+  color: var(--text);
+  display: flex;
+  min-height: 100vh;
+}
+
+/* ── Sidebar ── */
+.sidebar {
+  width: var(--sidebar-w);
+  background: var(--text);
+  color: #e5e4de;
+  display: flex;
+  flex-direction: column;
+  padding: 20px 0;
+  position: fixed;
+  top: 0; left: 0; bottom: 0;
+}
+
+.logo {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  color: #fff;
+  padding: 0 20px 20px;
+  border-bottom: 1px solid rgba(255,255,255,.1);
+  margin-bottom: 8px;
+}
+
+.nav-link {
+  display: block;
+  padding: 10px 20px;
+  color: #a8a79e;
+  text-decoration: none;
+  font-size: 13px;
+  transition: background .15s, color .15s;
+}
+.nav-link:hover, .nav-link.active {
+  background: rgba(255,255,255,.08);
+  color: #fff;
+}
+
+/* ── Main ── */
+.main {
+  margin-left: var(--sidebar-w);
+  flex: 1;
+  padding: 32px 40px;
+  max-width: 1200px;
+}
+
+.page-header { margin-bottom: 24px; }
+.page-header h1 { font-size: 22px; font-weight: 500; }
+.subtitle { color: var(--muted); font-size: 13px; }
+
+/* ── Stat cards ── */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px 16px;
+  text-align: center;
+}
+.stat-num  { font-size: 32px; font-weight: 500; line-height: 1; margin-bottom: 6px; }
+.stat-label { font-size: 12px; color: var(--muted); }
+.stat-card.pending  .stat-num { color: var(--amber); }
+.stat-card.approved .stat-num { color: var(--green); }
+.stat-card.flagged  .stat-num { color: #7c3aed; }
+.stat-card.rejected .stat-num { color: var(--red); }
+.stat-card.total    .stat-num { color: var(--text); }
+
+/* ── Card ── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 24px;
+  margin-bottom: 20px;
+}
+.card h2 { font-size: 15px; font-weight: 500; margin-bottom: 16px; }
+
+/* ── Buttons ── */
+.btn {
+  display: inline-block;
+  padding: 8px 16px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: opacity .15s;
+}
+.btn:hover { opacity: .85; }
+.btn.secondary { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+.btn.danger    { background: var(--red); }
+.btn.warn      { background: var(--amber); }
+.btn.small     { padding: 5px 10px; font-size: 12px; }
+
+.btn-sm {
+  display: inline-block;
+  padding: 3px 8px;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  text-decoration: none;
+}
+.btn-sm:hover   { background: var(--bg); }
+.btn-sm.danger  { color: var(--red); border-color: #fca5a5; }
+.btn-sm.warn    { color: var(--amber); border-color: #fcd34d; }
+
+.action-row { display: flex; gap: 10px; flex-wrap: wrap; }
+
+/* ── Filter bar ── */
+.filter-bar {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+  align-items: center;
+}
+.filter-bar select, .filter-bar input {
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 13px;
+  background: var(--surface);
+  color: var(--text);
+}
+
+/* ── Bulk bar ── */
+.bulk-bar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 12px;
+  padding: 10px;
+  background: var(--bg);
+  border-radius: 6px;
+  flex-wrap: wrap;
+}
+
+/* ── Table ── */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.data-table th {
+  text-align: left;
+  padding: 8px 12px;
+  border-bottom: 2px solid var(--border);
+  font-weight: 500;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.data-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+.data-table tr:hover td { background: #fafaf8; }
+.data-table tr.row-approved td { background: #f0fdf4; }
+.data-table tr.row-rejected td { background: #fef2f2; }
+.data-table tr.row-flagged  td { background: #faf5ff; }
+
+.data-table a { color: var(--accent); text-decoration: none; }
+.data-table a:hover { text-decoration: underline; }
+
+.muted { color: var(--muted); }
+.code  { font-family: monospace; font-size: 11px; }
+.empty { color: var(--muted); padding: 24px; text-align: center; }
+.notes-col { max-width: 280px; font-size: 12px; color: var(--muted); }
+.action-cell { white-space: nowrap; }
+
+/* ── Tier header rows ── */
+.tier-header td {
+  background: var(--bg);
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--muted);
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  padding: 8px 12px;
+}
+
+/* ── Badges ── */
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.badge.market   { background: #eff6ff; color: #1d4ed8; }
+.badge.dupe     { background: #faf5ff; color: #7c3aed; }
+.badge.access   { background: #f5f4f0; color: var(--muted); }
+.badge.tier-1   { background: #ecfdf5; color: #065f46; }
+.badge.tier-2   { background: #fffbeb; color: #92400e; }
+.badge.tier-3   { background: #fef2f2; color: #991b1b; }
+.badge.warn     { background: #fffbeb; color: #92400e; }
+.badge.danger   { background: #fef2f2; color: #991b1b; }
+
+.badge.qa-pending  { background: #fffbeb; color: #92400e; }
+.badge.qa-approved { background: #ecfdf5; color: #065f46; }
+.badge.qa-rejected { background: #fef2f2; color: #991b1b; }
+.badge.qa-flagged  { background: #faf5ff; color: #7c3aed; }
+
+.badge.status-active      { background: #ecfdf5; color: #065f46; }
+.badge.status-dissolved   { background: #f5f4f0; color: var(--muted); }
+.badge.status-suspended   { background: #fef2f2; color: #991b1b; }
+.badge.status-delinquent  { background: #fffbeb; color: #92400e; }
+.badge.status-revoked     { background: #fef2f2; color: #991b1b; }
+
+/* ── Flash messages ── */
+.flash {
+  padding: 10px 16px;
+  border-radius: 6px;
+  margin-bottom: 16px;
+  font-size: 13px;
+}
+.flash.success { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+.flash.error   { background: #fef2f2; color: #991b1b; border: 1px solid #fca5a5; }
+
+/* ── Pagination ── */
+.pagination {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 20px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+/* ── Tier legend ── */
+.tier-legend {
+  margin-bottom: 20px;
+  font-size: 13px;
+  color: var(--muted);
+}

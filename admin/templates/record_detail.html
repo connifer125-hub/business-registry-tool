@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>{{ record.business_name }} — Business Registry Admin</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+<style>
+.detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+.field { margin-bottom: 14px; }
+.field label { display: block; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 3px; }
+.field value { display: block; font-size: 14px; color: var(--text); }
+.field value.empty { color: var(--muted); font-style: italic; }
+.raw-json { font-family: monospace; font-size: 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 16px; max-height: 300px; overflow-y: auto; white-space: pre-wrap; word-break: break-all; }
+.qa-form { display: flex; gap: 10px; align-items: flex-start; flex-wrap: wrap; }
+.qa-form textarea { flex: 1; min-width: 260px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; font-family: inherit; resize: vertical; min-height: 60px; }
+.back-link { display: inline-block; margin-bottom: 20px; color: var(--muted); font-size: 13px; text-decoration: none; }
+.back-link:hover { color: var(--text); }
+</style>
+</head>
+<body>
+<nav class="sidebar">
+  <div class="logo">Business Registry</div>
+  <a href="{{ url_for('dashboard') }}" class="nav-link">Dashboard</a>
+  <a href="{{ url_for('queue') }}" class="nav-link active">QA Queue</a>
+  <a href="{{ url_for('markets') }}" class="nav-link">Markets</a>
+  <a href="{{ url_for('export') }}" class="nav-link">Export</a>
+</nav>
+
+<main class="main">
+  <a href="{{ url_for('queue') }}" class="back-link">← Back to queue</a>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+      <div class="flash {{ cat }}">{{ msg }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  <div class="page-header">
+    <h1>{{ record.business_name }}</h1>
+    <span class="subtitle">
+      #{{ record.business_id }} &mdash;
+      <span class="badge market">{{ record.source_market }}</span>
+      <span class="badge qa-{{ record.qa_status }}">{{ record.qa_status }}</span>
+      {% if record.is_duplicate_of %}
+        <span class="badge dupe">Possible duplicate of #{{ record.is_duplicate_of }} ({{ (record.duplicate_confidence * 100)|int if record.duplicate_confidence else '?' }}% match)</span>
+      {% endif %}
+    </span>
+  </div>
+
+  <div class="detail-grid">
+    <!-- Left: Business details -->
+    <div class="card">
+      <h2>Business details</h2>
+
+      <div class="field">
+        <label>Legal name</label>
+        <value>{{ record.business_name or '' }}</value>
+      </div>
+      {% if record.trade_name %}
+      <div class="field">
+        <label>Trade name (DBA)</label>
+        <value>{{ record.trade_name }}</value>
+      </div>
+      {% endif %}
+      <div class="field">
+        <label>Entity type</label>
+        <value>{{ record.entity_type or '—' }}</value>
+      </div>
+      <div class="field">
+        <label>Status</label>
+        <value>
+          <span class="badge status-{{ (record.status or 'unknown')|lower|replace(' ','') }}">
+            {{ record.status or '—' }}
+          </span>
+        </value>
+      </div>
+      <div class="field">
+        <label>Registered date</label>
+        <value>{{ record.registered_date or '—' }}</value>
+      </div>
+      {% if record.dissolution_date %}
+      <div class="field">
+        <label>Dissolution date</label>
+        <value>{{ record.dissolution_date }}</value>
+      </div>
+      {% endif %}
+      <div class="field">
+        <label>Registered address</label>
+        <value>
+          {% if record.registered_address or record.city %}
+            {{ record.registered_address or '' }}
+            {% if record.city %}<br>{{ record.city }}{% endif %}
+            {% if record.state_province %}, {{ record.state_province }}{% endif %}
+            {% if record.postal_code %} {{ record.postal_code }}{% endif %}
+            {% if record.country %}<br>{{ record.country }}{% endif %}
+          {% else %}
+            <span class="empty">Not available</span>
+          {% endif %}
+        </value>
+      </div>
+      {% if record.registered_agent %}
+      <div class="field">
+        <label>Registered agent</label>
+        <value>{{ record.registered_agent }}</value>
+      </div>
+      {% endif %}
+      {% if record.officer_names %}
+      <div class="field">
+        <label>Officers</label>
+        <value>{{ record.officer_names | join(', ') }}</value>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Right: Industry + source -->
+    <div>
+      <div class="card">
+        <h2>Industry</h2>
+        <div class="field">
+          <label>SIC code</label>
+          <value>{{ record.sic_code or '—' }}</value>
+        </div>
+        <div class="field">
+          <label>NAICS code</label>
+          <value>{{ record.naics_code or '—' }}</value>
+        </div>
+        <div class="field">
+          <label>Industry description</label>
+          <value>{{ record.industry_desc or '—' }}</value>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Source & metadata</h2>
+        <div class="field">
+          <label>Market</label>
+          <value><span class="badge market">{{ record.source_market }}</span></value>
+        </div>
+        {% if record.source_url %}
+        <div class="field">
+          <label>Source URL</label>
+          <value><a href="{{ record.source_url }}" target="_blank">{{ record.source_url }}</a></value>
+        </div>
+        {% endif %}
+        <div class="field">
+          <label>Scraped at</label>
+          <value>{{ record.scraped_at.strftime('%Y-%m-%d %H:%M UTC') if record.scraped_at else '—' }}</value>
+        </div>
+        {% if record.reviewed_at %}
+        <div class="field">
+          <label>Reviewed</label>
+          <value>{{ record.reviewed_at.strftime('%Y-%m-%d %H:%M') }} by {{ record.reviewed_by or 'admin' }}</value>
+        </div>
+        {% endif %}
+        {% if record.qa_notes %}
+        <div class="field">
+          <label>QA notes</label>
+          <value>{{ record.qa_notes }}</value>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- QA Actions -->
+  {% if record.qa_status == 'pending' or record.qa_status == 'flagged' %}
+  <div class="card">
+    <h2>QA action</h2>
+    <form method="POST" action="{{ url_for('action') }}" class="qa-form">
+      <input type="hidden" name="business_id" value="{{ record.business_id }}">
+      <textarea name="notes" placeholder="Optional notes (reason for rejection, flag details, etc.)">{{ record.qa_notes or '' }}</textarea>
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        <button name="action" value="approved" class="btn">✓ Approve</button>
+        <button name="action" value="rejected"  class="btn danger">✗ Reject</button>
+        <button name="action" value="flagged"   class="btn warn">⚑ Flag</button>
+      </div>
+    </form>
+  </div>
+  {% endif %}
+
+  <!-- Raw data -->
+  <div class="card">
+    <h2>Raw source data</h2>
+    <div class="raw-json">{{ record.raw_data | tojson(indent=2) if record.raw_data else 'No raw data stored.' }}</div>
+  </div>
+
+</main>
+</body>
+</html>

@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QA Queue — Business Registry Admin</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+</head>
+<body>
+<nav class="sidebar">
+  <div class="logo">Business Registry</div>
+  <a href="{{ url_for('dashboard') }}" class="nav-link">Dashboard</a>
+  <a href="{{ url_for('queue') }}" class="nav-link active">QA Queue</a>
+  <a href="{{ url_for('markets') }}" class="nav-link">Markets</a>
+  <a href="{{ url_for('export') }}" class="nav-link">Export</a>
+</nav>
+
+<main class="main">
+  <div class="page-header">
+    <h1>QA Queue</h1>
+    <span class="subtitle">{{ total }} records &mdash; page {{ page }} of {{ total_pages }}</span>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+      <div class="flash {{ cat }}">{{ msg }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  <!-- Filters -->
+  <form method="GET" class="filter-bar">
+    <select name="market">
+      <option value="">All markets</option>
+      {% for m in markets %}
+        <option value="{{ m }}" {% if m == selected_market %}selected{% endif %}>{{ m }}</option>
+      {% endfor %}
+    </select>
+    <select name="status">
+      <option value="pending"  {% if selected_status == 'pending'  %}selected{% endif %}>Pending</option>
+      <option value="flagged"  {% if selected_status == 'flagged'  %}selected{% endif %}>Flagged</option>
+      <option value="approved" {% if selected_status == 'approved' %}selected{% endif %}>Approved</option>
+      <option value="rejected" {% if selected_status == 'rejected' %}selected{% endif %}>Rejected</option>
+      <option value=""         {% if selected_status == ''         %}selected{% endif %}>All</option>
+    </select>
+    <input type="text" name="search" placeholder="Search name..." value="{{ search }}">
+    <button type="submit" class="btn">Filter</button>
+    <a href="{{ url_for('queue') }}" class="btn secondary">Reset</a>
+  </form>
+
+  <!-- Bulk actions -->
+  <form method="POST" action="{{ url_for('bulk_action') }}" id="bulk-form">
+    <div class="bulk-bar">
+      <label><input type="checkbox" id="select-all" onchange="toggleAll(this)"> Select all</label>
+      <button type="submit" name="action" value="approved" class="btn small">✓ Approve selected</button>
+      <button type="submit" name="action" value="rejected" class="btn small danger">✗ Reject selected</button>
+      <button type="submit" name="action" value="flagged"  class="btn small warn">⚑ Flag selected</button>
+    </div>
+
+    <!-- Records table -->
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th><input type="checkbox" id="th-check" onchange="toggleAll(this)"></th>
+          <th>Business name</th>
+          <th>Type</th>
+          <th>Status</th>
+          <th>Location</th>
+          <th>Market</th>
+          <th>Scraped</th>
+          <th>QA</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in records %}
+        <tr class="row-{{ r.qa_status }}">
+          <td><input type="checkbox" name="ids" value="{{ r.business_id }}" class="row-check"></td>
+          <td>
+            <a href="{{ url_for('record_detail', business_id=r.business_id) }}">{{ r.business_name }}</a>
+            {% if r.trade_name %}<br><span class="muted">dba {{ r.trade_name }}</span>{% endif %}
+            {% if r.is_duplicate_of %}<br><span class="badge dupe">dupe → #{{ r.is_duplicate_of }} ({{ (r.duplicate_confidence * 100)|int }}%)</span>{% endif %}
+          </td>
+          <td>{{ r.entity_type or '—' }}</td>
+          <td>
+            <span class="badge status-{{ (r.status or 'unknown')|lower|replace(' ','') }}">
+              {{ r.status or '—' }}
+            </span>
+          </td>
+          <td>{{ r.city or '' }}{% if r.city and r.state_province %}, {% endif %}{{ r.state_province or '' }}</td>
+          <td><span class="badge market">{{ r.source_market }}</span></td>
+          <td class="muted">{{ r.scraped_at.strftime('%m/%d/%y') if r.scraped_at else '—' }}</td>
+          <td>
+            <span class="badge qa-{{ r.qa_status }}">{{ r.qa_status }}</span>
+          </td>
+          <td class="action-cell">
+            <form method="POST" action="{{ url_for('action') }}" style="display:inline">
+              <input type="hidden" name="business_id" value="{{ r.business_id }}">
+              {% if r.qa_status != 'approved' %}
+                <button name="action" value="approved" class="btn-sm">✓</button>
+              {% endif %}
+              {% if r.qa_status != 'rejected' %}
+                <button name="action" value="rejected" class="btn-sm danger">✗</button>
+              {% endif %}
+              {% if r.qa_status != 'flagged' %}
+                <button name="action" value="flagged" class="btn-sm warn">⚑</button>
+              {% endif %}
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="9" class="empty">No records found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </form>
+
+  <!-- Pagination -->
+  <div class="pagination">
+    {% if page > 1 %}
+      <a href="{{ url_for('queue', page=page-1, market=selected_market, status=selected_status, search=search) }}" class="btn secondary">← Prev</a>
+    {% endif %}
+    <span>Page {{ page }} of {{ total_pages }}</span>
+    {% if page < total_pages %}
+      <a href="{{ url_for('queue', page=page+1, market=selected_market, status=selected_status, search=search) }}" class="btn secondary">Next →</a>
+    {% endif %}
+  </div>
+
+</main>
+
+<script>
+function toggleAll(cb) {
+  document.querySelectorAll('.row-check').forEach(c => c.checked = cb.checked);
+}
+</script>
+</body>
+</html>

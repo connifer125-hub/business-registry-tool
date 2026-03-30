@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Markets — Business Registry Admin</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+</head>
+<body>
+<nav class="sidebar">
+  <div class="logo">Business Registry</div>
+  <a href="{{ url_for('dashboard') }}" class="nav-link">Dashboard</a>
+  <a href="{{ url_for('queue') }}" class="nav-link">QA Queue</a>
+  <a href="{{ url_for('markets') }}" class="nav-link active">Markets</a>
+  <a href="{{ url_for('export') }}" class="nav-link">Export</a>
+</nav>
+
+<main class="main">
+  <div class="page-header">
+    <h1>Market access guide</h1>
+    <span class="subtitle">Sorted by data accessibility tier</span>
+  </div>
+
+  <div class="tier-legend">
+    <span class="badge tier-1">Tier 1</span> Open API or bulk CSV — easiest &nbsp;
+    <span class="badge tier-2">Tier 2</span> HTML portal scraping — moderate &nbsp;
+    <span class="badge tier-3">Tier 3</span> Gated / registration required — hardest
+  </div>
+
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Tier</th><th>Market</th><th>Country</th><th>Access method</th>
+        <th>Requires key/fee</th><th>Bulk download</th><th>Notes</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% set current_tier = namespace(val=0) %}
+      {% for m in markets %}
+        {% if m.tier != current_tier.val %}
+          {% set current_tier.val = m.tier %}
+          <tr class="tier-header">
+            <td colspan="7">Tier {{ m.tier }}</td>
+          </tr>
+        {% endif %}
+        <tr>
+          <td><span class="badge tier-{{ m.tier }}">{{ m.tier }}</span></td>
+          <td>
+            <strong>{{ m.market_name }}</strong>
+            <br><span class="muted code">{{ m.market_code }}</span>
+          </td>
+          <td>{{ m.country }}</td>
+          <td><span class="badge access">{{ m.access_method or '—' }}</span></td>
+          <td>
+            {% if m.requires_key %}<span class="badge warn">Key required</span>{% endif %}
+            {% if m.requires_fee %}<span class="badge danger">Fee required</span>{% endif %}
+            {% if not m.requires_key and not m.requires_fee %}<span class="muted">None</span>{% endif %}
+          </td>
+          <td>
+            {% if m.bulk_download_url %}
+              <a href="{{ m.bulk_download_url }}" target="_blank" class="btn-sm">Download</a>
+            {% else %}
+              <span class="muted">—</span>
+            {% endif %}
+          </td>
+          <td class="muted notes-col">{{ m.notes or '' }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</main>
+</body>
+</html>
