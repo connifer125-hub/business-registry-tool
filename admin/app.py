@@ -24,7 +24,8 @@ ALLOWED_FIELDS = {
     "registered_address", "address_line1", "address_line2",
     "city", "state_province", "postal_code", "country",
     "owner_address", "phone", "sic_code", "naics_code",
-    "industry_desc", "registered_agent", "source_url", "qa_notes"
+    "industry_desc", "registered_agent", "source_url",
+    "website_url", "qa_notes"
 }
 
 # ─────────────────────────────────────────────
@@ -98,7 +99,11 @@ def _fetch_records(limit, offset, source_market=None, qa_status="pending", searc
                        qa_status, qa_notes,
                        is_duplicate_of, duplicate_confidence, scraped_at,
                        sic_code, industry_desc, filing_id, license_number,
-                       last_verified_at, times_seen
+                       last_verified_at, times_seen,
+                       google_place_id, google_address, google_phone,
+                       website_url, google_maps_url,
+                       address_match_score, address_match,
+                       pre_qa_status, pre_qa_note
                 FROM businesses {where}
                 ORDER BY scraped_at DESC
                 LIMIT %s OFFSET %s
@@ -253,8 +258,10 @@ def export():
                        registered_date, dissolution_date, sic_code, naics_code,
                        industry_desc, registered_agent, officer_names,
                        filing_id, license_number,
-                       source_market, source_url, qa_status,
-                       scraped_at, last_verified_at, times_seen
+                       website_url, google_maps_url, google_address,
+                       google_phone, address_match_score, address_match,
+                       pre_qa_status, source_market, source_url,
+                       qa_status, scraped_at, last_verified_at, times_seen
                 FROM businesses {where}
                 ORDER BY source_market, business_name
             """, params)
@@ -331,7 +338,7 @@ def run_colorado():
 
 
 # ─────────────────────────────────────────────
-# AI Enrichment
+# AI Enrichment — SIC codes
 # ─────────────────────────────────────────────
 @app.route("/enrich/delaware")
 def enrich_delaware():
@@ -339,6 +346,26 @@ def enrich_delaware():
     limit   = request.args.get("limit", "20")
     dry_run = request.args.get("dry", "0") == "1"
     args    = [sys.executable, "utils/enricher.py",
+               "--market", "US-DE", "--limit", limit]
+    if dry_run:
+        args.append("--dry-run")
+    result = subprocess.run(
+        args, capture_output=True, text=True,
+        cwd=str(Path(__file__).resolve().parents[1])
+    )
+    output = result.stdout + "\n" + result.stderr
+    return f"<pre style='font-family:monospace;padding:20px;'>{output}</pre>"
+
+
+# ─────────────────────────────────────────────
+# Google Places enrichment + pre-QA
+# ─────────────────────────────────────────────
+@app.route("/enrich/google")
+def enrich_google():
+    import subprocess
+    limit   = request.args.get("limit", "20")
+    dry_run = request.args.get("dry", "0") == "1"
+    args    = [sys.executable, "utils/enricher_google.py",
                "--market", "US-DE", "--limit", limit]
     if dry_run:
         args.append("--dry-run")
@@ -362,16 +389,23 @@ def scraper_index():
       <li><a href='/run-scraper/delaware/live?limit=500'>Run Delaware (500 records)</a></li>
       <li><a href='/run-scraper/colorado?limit=100'>Run Colorado (100 records)</a></li>
     </ul>
-    <p style='font-size:13px;color:#666'>
-      Rescraping existing records will detect changes and log them to the
-      <a href='/changes'>Change Log</a> — no duplicates created.
-    </p>
-    <h3>AI Enrichment (Claude SIC classification)</h3>
+    <h3>AI Enrichment — SIC classification</h3>
     <ul>
-      <li><a href='/enrich/delaware?limit=10&dry=1'>Preview enrichment — 10 records (dry run)</a></li>
-      <li><a href='/enrich/delaware?limit=20'>Enrich 20 records (live)</a></li>
-      <li><a href='/enrich/delaware?limit=100'>Enrich 100 records (live)</a></li>
+      <li><a href='/enrich/delaware?limit=10&dry=1'>Preview SIC enrichment (dry run)</a></li>
+      <li><a href='/enrich/delaware?limit=20'>Enrich 20 records with SIC codes</a></li>
+      <li><a href='/enrich/delaware?limit=100'>Enrich 100 records with SIC codes</a></li>
     </ul>
+    <h3>Google Places — address corroboration &amp; pre-QA</h3>
+    <ul>
+      <li><a href='/enrich/google?limit=10&dry=1'>Preview Google enrichment (dry run)</a></li>
+      <li><a href='/enrich/google?limit=20'>Enrich 20 records (live)</a></li>
+      <li><a href='/enrich/google?limit=100'>Enrich 100 records (live)</a></li>
+    </ul>
+    <p style='font-size:13px;color:#666'>
+      Google enrichment compares registry address vs Google Places address,
+      assigns a match score, and routes records to auto-approve or human review.
+      Results appear in the <a href='/queue'>QA Queue</a> pre-QA columns.
+    </p>
     <p><a href='/'>Back to admin</a></p>
     </body></html>
     """
