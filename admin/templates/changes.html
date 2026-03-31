@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Change Log — Business Registry Admin</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+</head>
+<body>
+<nav class="sidebar">
+  <div class="logo">Business Registry</div>
+  <a href="{{ url_for('dashboard') }}" class="nav-link">Dashboard</a>
+  <a href="{{ url_for('queue') }}" class="nav-link">QA Queue</a>
+  <a href="{{ url_for('changes') }}" class="nav-link active">Change Log</a>
+  <a href="{{ url_for('markets') }}" class="nav-link">Markets</a>
+  <a href="{{ url_for('export') }}" class="nav-link">Export</a>
+  <a href="/scrapers" class="nav-link">Scrapers</a>
+</nav>
+
+<main class="main">
+  <div class="page-header">
+    <h1>Change log</h1>
+    <span class="subtitle">Field changes, status updates, and dissolusions detected on rescrape</span>
+  </div>
+
+  <div class="stat-row" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">
+    <div class="stat-card">
+      <div class="stat-num" style="color:#2563eb">{{ stats.total }}</div>
+      <div class="stat-label">Total changes logged</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" style="color:#d97706">{{ stats.field_changes }}</div>
+      <div class="stat-label">Field changes</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" style="color:#dc2626">{{ stats.status_changes }}</div>
+      <div class="stat-label">Status changes</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" style="color:#7c3aed">{{ stats.not_found }}</div>
+      <div class="stat-label">Not found on rescrape</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <table class="data-table" style="font-size:12px">
+      <thead>
+        <tr>
+          <th>When</th>
+          <th>Business</th>
+          <th>Change type</th>
+          <th>Field</th>
+          <th>Was</th>
+          <th>Now</th>
+          <th>Market</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in changes %}
+        <tr>
+          <td style="white-space:nowrap;color:var(--muted)">
+            {{ c.changed_at.strftime('%m/%d/%y %H:%M') if c.changed_at else '—' }}
+          </td>
+          <td>
+            <a href="{{ url_for('record_detail', business_id=c.business_id) }}" style="color:var(--accent);text-decoration:none">
+              {{ c.business_name or '#' + c.business_id|string }}
+            </a>
+          </td>
+          <td>
+            <span class="badge {% if c.change_type == 'status_change' %}b-flagged{% elif c.change_type == 'not_found' %}b-rejected{% else %}b-pending{% endif %}">
+              {{ c.change_type|replace('_',' ') }}
+            </span>
+          </td>
+          <td style="font-family:monospace;font-size:11px">{{ c.field_name or '—' }}</td>
+          <td style="color:#dc2626;font-size:11px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+            {{ c.old_value or '—' }}
+          </td>
+          <td style="color:#16a34a;font-size:11px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+            {{ c.new_value or '—' }}
+          </td>
+          <td><span class="badge market">{{ c.source_market or '—' }}</span></td>
+          <td style="color:var(--muted);font-size:11px">{{ c.notes or '' }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="8" class="empty">No changes logged yet. Changes appear here after a rescrape detects differences.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="pagination">
+    {% if page > 1 %}
+      <a href="{{ url_for('changes', page=page-1) }}" class="btn secondary">← Prev</a>
+    {% endif %}
+    <span>Page {{ page }} of {{ total_pages }}</span>
+    {% if page < total_pages %}
+      <a href="{{ url_for('changes', page=page+1) }}" class="btn secondary">Next →</a>
+    {% endif %}
+  </div>
+</main>
+</body>
+</html>
