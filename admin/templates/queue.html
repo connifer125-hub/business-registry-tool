@@ -24,10 +24,9 @@
 .notes-input { width: 120px; font-size: 11px; padding: 3px 5px; border: 1px solid var(--border); border-radius: 4px; background: var(--surface); color: var(--text); }
 .unsaved-dot { display: none; width: 7px; height: 7px; background: #f59e0b; border-radius: 50%; margin-left: 3px; vertical-align: middle; }
 .unsaved-dot.visible { display: inline-block; }
-.addr-block { font-size: 11px; color: var(--muted); line-height: 1.5; }
-.addr-block span { display: block; }
-.field-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 1px; }
-.sub-field { margin-top: 6px; }
+.field-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 2px; }
+.sub-field { margin-top: 8px; }
+.city-state-zip { display: grid; grid-template-columns: 1fr 55px 90px; gap: 10px; margin-top: 8px; }
 </style>
 </head>
 <body>
@@ -35,6 +34,7 @@
   <div class="logo">Business Registry</div>
   <a href="{{ url_for('dashboard') }}" class="nav-link">Dashboard</a>
   <a href="{{ url_for('queue') }}" class="nav-link active">QA Queue</a>
+  <a href="{{ url_for('changes') }}" class="nav-link">Change Log</a>
   <a href="{{ url_for('markets') }}" class="nav-link">Markets</a>
   <a href="{{ url_for('export') }}" class="nav-link">Export</a>
   <a href="/scrapers" class="nav-link">Scrapers</a>
@@ -100,7 +100,7 @@
         <tr class="row-{{ r.qa_status }}" id="row-{{ r.business_id }}">
           <td><input type="checkbox" name="ids" value="{{ r.business_id }}" class="row-check"></td>
 
-          <!-- Business name (editable) -->
+          <!-- Business name -->
           <td>
             <div class="field-label">Legal name</div>
             <div style="display:flex;align-items:center;gap:3px">
@@ -125,7 +125,7 @@
             {% endif %}
           </td>
 
-          <!-- Entity type (editable) -->
+          <!-- Entity type -->
           <td>
             <div class="field-label">Type</div>
             <div style="display:flex;align-items:center;gap:3px">
@@ -133,7 +133,7 @@
                      value="{{ r.entity_type or '' }}"
                      onchange="markEdited({{ r.business_id }}, 'type')"
                      oninput="markEdited({{ r.business_id }}, 'type')"
-                     style="width:100px">
+                     style="width:110px">
               <button class="save-btn" id="save-type-{{ r.business_id }}"
                       onclick="saveField(event,{{ r.business_id }},'entity_type','type-{{ r.business_id }}')">Save</button>
               <span class="saved-check" id="check-type-{{ r.business_id }}">✓</span>
@@ -145,15 +145,15 @@
             </div>
           </td>
 
-          <!-- Full address — all components -->
-          <td style="min-width:180px">
+          <!-- Address — all components -->
+          <td style="min-width:200px">
             <div class="field-label">Street line 1</div>
             <div style="display:flex;align-items:center;gap:3px">
               <input class="editable" id="addr1-{{ r.business_id }}"
                      value="{{ r.address_line1 or r.registered_address or '' }}"
                      onchange="markEdited({{ r.business_id }}, 'addr1')"
                      oninput="markEdited({{ r.business_id }}, 'addr1')"
-                     style="width:160px">
+                     style="width:180px">
               <button class="save-btn" id="save-addr1-{{ r.business_id }}"
                       onclick="saveField(event,{{ r.business_id }},'address_line1','addr1-{{ r.business_id }}')">Save</button>
               <span class="saved-check" id="check-addr1-{{ r.business_id }}">✓</span>
@@ -163,19 +163,21 @@
             {% if r.address_line2 %}
             <div class="sub-field">
               <div class="field-label">Street line 2</div>
-              <input class="editable" id="addr2-{{ r.business_id }}"
-                     value="{{ r.address_line2 or '' }}"
-                     onchange="markEdited({{ r.business_id }}, 'addr2')"
-                     oninput="markEdited({{ r.business_id }}, 'addr2')"
-                     style="width:160px">
-              <button class="save-btn" id="save-addr2-{{ r.business_id }}"
-                      onclick="saveField(event,{{ r.business_id }},'address_line2','addr2-{{ r.business_id }}')">Save</button>
-              <span class="saved-check" id="check-addr2-{{ r.business_id }}">✓</span>
-              <span class="unsaved-dot" id="dot-addr2-{{ r.business_id }}"></span>
+              <div style="display:flex;align-items:center;gap:3px">
+                <input class="editable" id="addr2-{{ r.business_id }}"
+                       value="{{ r.address_line2 or '' }}"
+                       onchange="markEdited({{ r.business_id }}, 'addr2')"
+                       oninput="markEdited({{ r.business_id }}, 'addr2')"
+                       style="width:180px">
+                <button class="save-btn" id="save-addr2-{{ r.business_id }}"
+                        onclick="saveField(event,{{ r.business_id }},'address_line2','addr2-{{ r.business_id }}')">Save</button>
+                <span class="saved-check" id="check-addr2-{{ r.business_id }}">✓</span>
+                <span class="unsaved-dot" id="dot-addr2-{{ r.business_id }}"></span>
+              </div>
             </div>
             {% endif %}
 
-            <div class="sub-field" style="display:grid;grid-template-columns:1fr 60px 80px;gap:4px">
+            <div class="city-state-zip">
               <div>
                 <div class="field-label">City</div>
                 <input class="editable" id="city-{{ r.business_id }}"
@@ -191,8 +193,7 @@
                 <input class="editable" id="state-{{ r.business_id }}"
                        value="{{ r.state_province or '' }}"
                        onchange="markEdited({{ r.business_id }}, 'state')"
-                       oninput="markEdited({{ r.business_id }}, 'state')"
-                       style="width:50px">
+                       oninput="markEdited({{ r.business_id }}, 'state')">
                 <button class="save-btn" id="save-state-{{ r.business_id }}"
                         onclick="saveField(event,{{ r.business_id }},'state_province','state-{{ r.business_id }}')">✓</button>
                 <span class="unsaved-dot" id="dot-state-{{ r.business_id }}"></span>
@@ -202,8 +203,7 @@
                 <input class="editable" id="zip-{{ r.business_id }}"
                        value="{{ r.postal_code or '' }}"
                        onchange="markEdited({{ r.business_id }}, 'zip')"
-                       oninput="markEdited({{ r.business_id }}, 'zip')"
-                       style="width:75px">
+                       oninput="markEdited({{ r.business_id }}, 'zip')">
                 <button class="save-btn" id="save-zip-{{ r.business_id }}"
                         onclick="saveField(event,{{ r.business_id }},'postal_code','zip-{{ r.business_id }}')">✓</button>
                 <span class="unsaved-dot" id="dot-zip-{{ r.business_id }}"></span>
@@ -212,7 +212,7 @@
 
             {% if r.owner_address %}
             <div class="sub-field">
-              <div class="field-label">Owner/mailing address</div>
+              <div class="field-label">Owner / mailing address</div>
               <span style="font-size:11px;color:var(--muted)">{{ r.owner_address }}</span>
             </div>
             {% endif %}
@@ -231,7 +231,7 @@
                      value="{{ r.phone or '' }}"
                      onchange="markEdited({{ r.business_id }}, 'phone')"
                      oninput="markEdited({{ r.business_id }}, 'phone')"
-                     style="width:120px">
+                     style="width:130px">
               <button class="save-btn" id="save-phone-{{ r.business_id }}"
                       onclick="saveField(event,{{ r.business_id }},'phone','phone-{{ r.business_id }}')">Save</button>
               <span class="saved-check" id="check-phone-{{ r.business_id }}">✓</span>
@@ -278,7 +278,7 @@
                      value="{{ r.sic_code or '' }}"
                      onchange="markEdited({{ r.business_id }}, 'sic')"
                      oninput="markEdited({{ r.business_id }}, 'sic')"
-                     style="width:55px">
+                     style="width:60px">
               <button class="save-btn" id="save-sic-{{ r.business_id }}"
                       onclick="saveField(event,{{ r.business_id }},'sic_code','sic-{{ r.business_id }}')">Save</button>
               <span class="saved-check" id="check-sic-{{ r.business_id }}">✓</span>
@@ -305,7 +305,7 @@
             <span class="badge qa-{{ r.qa_status }}" id="badge-{{ r.business_id }}">{{ r.qa_status }}</span>
           </td>
 
-          <!-- Notes (auto-save) -->
+          <!-- Notes -->
           <td>
             <div style="display:flex;align-items:center;gap:3px">
               <input class="notes-input" id="notes-{{ r.business_id }}"
