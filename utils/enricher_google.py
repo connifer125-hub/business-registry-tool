@@ -2,17 +2,14 @@
 utils/enricher_google.py
 ─────────────────────────
 Google Places enrichment + pre-QA address corroboration.
+Uses Places API (New) — Text Search endpoint.
 
-For each business record:
-1. Search Google Places by business name + city + state
-2. Pull back: website, phone, formatted address, place_id, maps URL
-3. Compare Google address against registry address
-4. Assign a match confidence score and route accordingly:
-   - 0.90+ match  → auto_approve
-   - 0.70-0.89    → review (human queue, likely good)
-   - 0.50-0.69    → flag (address discrepancy)
-   - not found    → flag (cannot corroborate)
-   - <0.50        → flag (significant mismatch)
+Match score logic:
+  0.90+  → auto_approve
+  0.70+  → review
+  0.50+  → flag (partial mismatch)
+  found but low match → flag (address discrepancy — common with trade name filings)
+  not found → flag (cannot corroborate)
 """
 
 import os
@@ -27,24 +24,20 @@ from rapidfuzz import fuzz
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from db.db import get_conn
 
-GOOGLE_API_KEY = os.getenv("GOOGLE_PLACES_API_KEY", "")
-
-PLACES_SEARCH_URL = "https://maps.googleapis.com/maps/api/place/findplacefromtext/json"
-PLACES_DETAIL_URL = "https://maps.googleapis.com/maps/api/place/details/json"
-TEXTSEARCH_URL    = "https://maps.googleapis.com/maps/api/place/textsearch/json"
+GOOGLE_API_KEY   = os.getenv("GOOGLE_PLACES_API_KEY", "")
+NEW_TEXTSEARCH   = "https://places.googleapis.com/v1/places:searchText"
 
 
 def normalize_address(addr: str) -> str:
     if not addr:
         return ""
     addr = addr.upper().strip()
-    replacements = {
+    for old, new in {
         " STREET": " ST", " AVENUE": " AVE", " BOULEVARD": " BLVD",
         " DRIVE": " DR", " ROAD": " RD", " LANE": " LN",
         " COURT": " CT", " PLACE": " PL", " SUITE": " STE",
         ".": "", ",": "", "#": ""
-    }
-    for old, new in replacements.items():
+    }.items():
         addr = addr.replace(old, new)
     return " ".join(addr.split())
 
@@ -52,66 +45,44 @@ def normalize_address(addr: str) -> str:
 def address_match_score(registry_addr: str, google_addr: str) -> float:
     if not registry_addr or not google_addr:
         return 0.0
-    r = normalize_address(registry_addr)
-    g = normalize_address(google_addr)
-    return fuzz.token_sort_ratio(r, g) / 100.0
+    return fuzz.token_sort_ratio(
+        normalize_address(registry_addr),
+        normalize_address(google_addr)
+    ) / 100.0
 
 
-def search_google_places(business_name: str, city: str, state: str) -> dict | None:
+def search_places_new(business_name: str, city: str, state: str) -> dict | None:
+    """Use the Places API (New) Text Search endpoint."""
     if not GOOGLE_API_KEY:
         print("    No GOOGLE_PLACES_API_KEY set")
         return None
 
-    # Use Text Search — more reliable than Find Place for business lookups
-    query = f"{business_name}, {city}, {state}, USA"
-    params = urllib.parse.urlencode({
-        "query": query,
-        "key":   GOOGLE_API_KEY
-    })
+    query   = f"{business_name} {city} {state} USA"
+    payload = json.dumps({"textQuery": query, "maxResultCount": 1}).encode("utf-8")
+
+    req = urllib.request.Request(
+        NEW_TEXTSEARCH,
+        data    = payload,
+        headers = {
+            "Content-Type":     "application/json",
+            "X-Goog-Api-Key":   GOOGLE_API_KEY,
+            "X-Goog-FieldMask": "places.id,places.displayName,places.formattedAddress,places.nationalPhoneNumber,places.websiteUri,places.googleMapsUri"
+        },
+        method = "POST"
+    )
 
     try:
-        url  = f"{TEXTSEARCH_URL}?{params}"
-        req  = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
         with urllib.request.urlopen(req, timeout=10) as resp:
-            data = json.loads(resp.read())
-
-        status  = data.get("status")
-        results = data.get("results", [])
-
-        if status == "REQUEST_DENIED":
-            print(f"    Google API denied: {data.get('error_message', 'unknown')}")
-            return None
-
-        if status == "ZERO_RESULTS" or not results:
-            return None
-
-        return results[0]
-
+            data   = json.loads(resp.read())
+            places = data.get("places", [])
+            return places[0] if places else None
+    except urllib.error.HTTPError as e:
+        body = e.read().decode("utf-8", errors="replace")
+        print(f"    Places API error {e.code}: {body[:200]}")
+        return None
     except Exception as e:
         print(f"    Places search error: {e}")
         return None
-
-
-def get_place_details(place_id: str) -> dict:
-    if not GOOGLE_API_KEY or not place_id:
-        return {}
-
-    params = urllib.parse.urlencode({
-        "place_id": place_id,
-        "fields":   "name,formatted_address,formatted_phone_number,website,url",
-        "key":      GOOGLE_API_KEY
-    })
-
-    try:
-        url = f"{PLACES_DETAIL_URL}?{params}"
-        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            data = json.loads(resp.read())
-        return data.get("result", {})
-
-    except Exception as e:
-        print(f"    Places detail error: {e}")
-        return {}
 
 
 def determine_qa_routing(match_score: float, found: bool) -> tuple:
@@ -123,7 +94,7 @@ def determine_qa_routing(match_score: float, found: bool) -> tuple:
         return "review", f"Google address match {match_score:.0%} — likely match, review recommended"
     if match_score >= 0.50:
         return "flag", f"Google address match {match_score:.0%} — partial mismatch, needs review"
-    return "flag", f"Google address match {match_score:.0%} — significant mismatch or different location"
+    return "flag", f"Google address match {match_score:.0%} — low match, may be registered agent address vs operating address"
 
 
 def enrich_with_google(business_id: int, business_name: str, city: str,
@@ -142,36 +113,29 @@ def enrich_with_google(business_id: int, business_name: str, city: str,
         "pre_qa_note":         "Not processed",
     }
 
-    candidate = search_google_places(business_name, city or "", state or "")
-    if not candidate:
+    place = search_places_new(business_name, city or "", state or "")
+    if not place:
         result["pre_qa_note"] = "Business not found on Google Places"
         return result
 
-    place_id       = candidate.get("place_id")
-    google_address = candidate.get("formatted_address", "")
-
-    # Get full details for website and phone
-    details = get_place_details(place_id) if place_id else {}
-    if details.get("formatted_address"):
-        google_address = details["formatted_address"]
-
-    match_score = address_match_score(registry_address, google_address)
+    google_address = place.get("formattedAddress", "")
+    match_score    = address_match_score(registry_address, google_address)
     routing_status, routing_note = determine_qa_routing(match_score, True)
 
     result.update({
         "google_found":        True,
-        "google_place_id":     place_id,
+        "google_place_id":     place.get("id"),
         "google_address":      google_address,
-        "google_phone":        details.get("formatted_phone_number"),
-        "website_url":         details.get("website"),
-        "google_maps_url":     details.get("url"),
+        "google_phone":        place.get("nationalPhoneNumber"),
+        "website_url":         place.get("websiteUri"),
+        "google_maps_url":     place.get("googleMapsUri"),
         "address_match_score": round(match_score, 3),
         "address_match":       match_score >= 0.70,
         "pre_qa_status":       routing_status,
         "pre_qa_note":         routing_note,
     })
 
-    if not dry_run and place_id:
+    if not dry_run and place.get("id"):
         with get_conn() as conn:
             with conn.cursor() as cur:
                 cur.execute("""
@@ -188,10 +152,10 @@ def enrich_with_google(business_id: int, business_name: str, city: str,
                         updated_at           = NOW()
                     WHERE business_id = %s
                 """, (
-                    place_id, google_address,
-                    details.get("formatted_phone_number"),
-                    details.get("website"),
-                    details.get("url"),
+                    place.get("id"), google_address,
+                    place.get("nationalPhoneNumber"),
+                    place.get("websiteUri"),
+                    place.get("googleMapsUri"),
                     round(match_score, 3),
                     match_score >= 0.70,
                     routing_status,
@@ -203,7 +167,7 @@ def enrich_with_google(business_id: int, business_name: str, city: str,
 
 
 def enrich_batch(market: str = "US-DE", limit: int = 20, dry_run: bool = False) -> dict:
-    enriched = skipped = errors = auto_approved = flagged = reviewed = 0
+    enriched = errors = auto_approved = flagged = reviewed = 0
 
     with get_conn() as conn:
         with conn.cursor() as cur:
@@ -230,9 +194,9 @@ def enrich_batch(market: str = "US-DE", limit: int = 20, dry_run: bool = False) 
                 registry_address, dry_run
             )
 
-            status_icon = "✓" if result["address_match"] else "~" if result["google_found"] else "✗"
-            website_str = result.get("website_url") or "no website"
-            print(f"  {status_icon} {business_name[:40]:<40} | match={result['address_match_score']:.0%} | {result['pre_qa_status']} | {website_str[:40]}")
+            icon = "✓" if result["address_match"] else "~" if result["google_found"] else "✗"
+            site = (result.get("website_url") or "no website")[:45]
+            print(f"  {icon} {business_name[:40]:<40} | {result['address_match_score']:.0%} | {result['pre_qa_status']:<12} | {site}")
 
             if result["pre_qa_status"] == "auto_approve":
                 auto_approved += 1
@@ -251,7 +215,8 @@ def enrich_batch(market: str = "US-DE", limit: int = 20, dry_run: bool = False) 
 
     print(f"\n{'[DRY RUN] ' if dry_run else ''}Google enrichment complete:")
     print(f"  {enriched} enriched | {auto_approved} auto-approve | {reviewed} review | {flagged} flagged | {errors} errors")
-    return {"enriched": enriched, "auto_approved": auto_approved, "flagged": flagged, "errors": errors}
+    return {"enriched": enriched, "auto_approved": auto_approved,
+            "reviewed": reviewed, "flagged": flagged, "errors": errors}
 
 
 if __name__ == "__main__":
