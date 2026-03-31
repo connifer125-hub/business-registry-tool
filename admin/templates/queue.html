@@ -5,6 +5,27 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>QA Queue — Business Registry Admin</title>
 <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+<style>
+.editable { border: none; background: transparent; font-size: 13px; color: var(--text); font-family: inherit; width: 100%; padding: 2px 4px; border-radius: 4px; }
+.editable:hover { background: var(--bg); }
+.editable:focus { background: #fff; border: 1px solid #93c5fd; outline: none; box-shadow: 0 0 0 2px rgba(59,130,246,.15); }
+.editable.edited { background: #fffbeb; border: 1px solid #fcd34d; }
+.save-btn { display: none; font-size: 11px; padding: 2px 7px; background: #16a34a; color: #fff; border: none; border-radius: 4px; cursor: pointer; margin-left: 4px; }
+.save-btn.visible { display: inline-block; }
+.saved-check { display: none; color: #16a34a; font-size: 13px; margin-left: 4px; }
+.saved-check.visible { display: inline; }
+.url-link { color: var(--accent); text-decoration: none; font-size: 12px; }
+.url-link:hover { text-decoration: underline; }
+.inline-actions { display: flex; gap: 4px; align-items: center; }
+.field-cell { position: relative; }
+.tbl td { padding: 8px 10px; vertical-align: middle; }
+.tbl tr.row-approved td { background: #f0fdf4; }
+.tbl tr.row-rejected td { background: #fef2f2; }
+.tbl tr.row-flagged td { background: #faf5ff; }
+.notes-input { width: 140px; font-size: 11px; padding: 3px 6px; border: 1px solid var(--border); border-radius: 4px; background: var(--surface); color: var(--text); }
+.unsaved-dot { display: none; width: 7px; height: 7px; background: #f59e0b; border-radius: 50%; margin-left: 4px; }
+.unsaved-dot.visible { display: inline-block; }
+</style>
 </head>
 <body>
 <nav class="sidebar">
@@ -13,6 +34,7 @@
   <a href="{{ url_for('queue') }}" class="nav-link active">QA Queue</a>
   <a href="{{ url_for('markets') }}" class="nav-link">Markets</a>
   <a href="{{ url_for('export') }}" class="nav-link">Export</a>
+  <a href="/scrapers" class="nav-link">Scrapers</a>
 </nav>
 
 <main class="main">
@@ -27,7 +49,6 @@
     {% endfor %}
   {% endwith %}
 
-  <!-- Filters -->
   <form method="GET" class="filter-bar">
     <select name="market">
       <option value="">All markets</option>
@@ -47,7 +68,6 @@
     <a href="{{ url_for('queue') }}" class="btn secondary">Reset</a>
   </form>
 
-  <!-- Bulk actions -->
   <form method="POST" action="{{ url_for('bulk_action') }}" id="bulk-form">
     <div class="bulk-bar">
       <label><input type="checkbox" id="select-all" onchange="toggleAll(this)"> Select all</label>
@@ -56,65 +76,132 @@
       <button type="submit" name="action" value="flagged"  class="btn small warn">⚑ Flag selected</button>
     </div>
 
-    <!-- Records table -->
-    <table class="data-table">
+    <table class="data-table tbl">
       <thead>
         <tr>
-          <th><input type="checkbox" id="th-check" onchange="toggleAll(this)"></th>
+          <th><input type="checkbox" onchange="toggleAll(this)"></th>
           <th>Business name</th>
           <th>Type</th>
           <th>Status</th>
           <th>Location</th>
           <th>Market</th>
-          <th>Scraped</th>
-          <th>QA</th>
+          <th>Source</th>
+          <th>QA status</th>
+          <th>Notes</th>
           <th>Actions</th>
         </tr>
       </thead>
       <tbody>
         {% for r in records %}
-        <tr class="row-{{ r.qa_status }}">
+        <tr class="row-{{ r.qa_status }}" id="row-{{ r.business_id }}">
           <td><input type="checkbox" name="ids" value="{{ r.business_id }}" class="row-check"></td>
-          <td>
-            <a href="{{ url_for('record_detail', business_id=r.business_id) }}">{{ r.business_name }}</a>
-            {% if r.trade_name %}<br><span class="muted">dba {{ r.trade_name }}</span>{% endif %}
-            {% if r.is_duplicate_of %}<br><span class="badge dupe">dupe → #{{ r.is_duplicate_of }} ({{ (r.duplicate_confidence * 100)|int }}%)</span>{% endif %}
+
+          <td class="field-cell">
+            <div style="display:flex;align-items:center;gap:4px">
+              <input class="editable"
+                     id="name-{{ r.business_id }}"
+                     value="{{ r.business_name }}"
+                     onchange="markEdited({{ r.business_id }}, 'name')"
+                     oninput="markEdited({{ r.business_id }}, 'name')">
+              <button class="save-btn" id="save-name-{{ r.business_id }}"
+                      onclick="saveField(event, {{ r.business_id }}, 'business_name', 'name-{{ r.business_id }}')">Save</button>
+              <span class="saved-check" id="check-name-{{ r.business_id }}">✓</span>
+              <span class="unsaved-dot" id="dot-name-{{ r.business_id }}" title="Unsaved changes"></span>
+            </div>
+            {% if r.trade_name %}
+              <div style="font-size:11px;color:var(--muted);margin-top:2px">dba {{ r.trade_name }}</div>
+            {% endif %}
+            {% if r.is_duplicate_of %}
+              <span class="badge dupe" style="font-size:10px">dupe → #{{ r.is_duplicate_of }}</span>
+            {% endif %}
+            {% if r.source_url %}
+              <div style="margin-top:3px">
+                <a href="{{ r.source_url }}" target="_blank" class="url-link">↗ source</a>
+              </div>
+            {% endif %}
           </td>
-          <td>{{ r.entity_type or '—' }}</td>
+
+          <td>
+            <div style="display:flex;align-items:center;gap:4px">
+              <input class="editable"
+                     id="type-{{ r.business_id }}"
+                     value="{{ r.entity_type or '' }}"
+                     onchange="markEdited({{ r.business_id }}, 'type')"
+                     oninput="markEdited({{ r.business_id }}, 'type')"
+                     style="width:110px">
+              <button class="save-btn" id="save-type-{{ r.business_id }}"
+                      onclick="saveField(event, {{ r.business_id }}, 'entity_type', 'type-{{ r.business_id }}')">Save</button>
+              <span class="saved-check" id="check-type-{{ r.business_id }}">✓</span>
+              <span class="unsaved-dot" id="dot-type-{{ r.business_id }}" title="Unsaved changes"></span>
+            </div>
+          </td>
+
           <td>
             <span class="badge status-{{ (r.status or 'unknown')|lower|replace(' ','') }}">
               {{ r.status or '—' }}
             </span>
           </td>
-          <td>{{ r.city or '' }}{% if r.city and r.state_province %}, {% endif %}{{ r.state_province or '' }}</td>
-          <td><span class="badge market">{{ r.source_market }}</span></td>
-          <td class="muted">{{ r.scraped_at.strftime('%m/%d/%y') if r.scraped_at else '—' }}</td>
-          <td>
-            <span class="badge qa-{{ r.qa_status }}">{{ r.qa_status }}</span>
+
+          <td style="color:var(--muted);font-size:12px">
+            {{ r.city or '' }}{% if r.city and r.state_province %}, {% endif %}{{ r.state_province or '' }}
           </td>
-          <td class="action-cell">
-            <form method="POST" action="{{ url_for('action') }}" style="display:inline">
-              <input type="hidden" name="business_id" value="{{ r.business_id }}">
-              {% if r.qa_status != 'approved' %}
-                <button name="action" value="approved" class="btn-sm">✓</button>
-              {% endif %}
-              {% if r.qa_status != 'rejected' %}
-                <button name="action" value="rejected" class="btn-sm danger">✗</button>
-              {% endif %}
-              {% if r.qa_status != 'flagged' %}
-                <button name="action" value="flagged" class="btn-sm warn">⚑</button>
-              {% endif %}
-            </form>
+
+          <td><span class="badge market">{{ r.source_market }}</span></td>
+
+          <td>
+            {% if r.source_url %}
+              <a href="{{ r.source_url }}" target="_blank" class="url-link">↗ view</a>
+            {% else %}
+              <span style="color:var(--muted);font-size:11px">—</span>
+            {% endif %}
+          </td>
+
+          <td>
+            <span class="badge qa-{{ r.qa_status }}" id="badge-{{ r.business_id }}">{{ r.qa_status }}</span>
+          </td>
+
+          <td>
+            <div style="display:flex;align-items:center;gap:4px">
+              <input class="notes-input"
+                     id="notes-{{ r.business_id }}"
+                     placeholder="Add note..."
+                     value="{{ r.qa_notes or '' }}"
+                     onchange="markNotesEdited({{ r.business_id }})"
+                     oninput="markNotesEdited({{ r.business_id }})">
+              <span class="saved-check" id="check-notes-{{ r.business_id }}">✓</span>
+              <span class="unsaved-dot" id="dot-notes-{{ r.business_id }}" title="Unsaved changes"></span>
+            </div>
+          </td>
+
+          <td>
+            <div class="inline-actions">
+              <form method="POST" action="{{ url_for('action') }}" style="display:contents">
+                <input type="hidden" name="business_id" value="{{ r.business_id }}">
+                <input type="hidden" name="notes" id="form-notes-{{ r.business_id }}" value="{{ r.qa_notes or '' }}">
+                {% if r.qa_status != 'approved' %}
+                  <button name="action" value="approved" class="btn-sm btn-approve" title="Approve"
+                          onclick="return confirmAction(event, {{ r.business_id }}, 'approved')">✓</button>
+                {% endif %}
+                {% if r.qa_status != 'rejected' %}
+                  <button name="action" value="rejected" class="btn-sm btn-reject" title="Reject"
+                          onclick="return confirmAction(event, {{ r.business_id }}, 'rejected')">✗</button>
+                {% endif %}
+                {% if r.qa_status != 'flagged' %}
+                  <button name="action" value="flagged" class="btn-sm btn-flag" title="Flag"
+                          onclick="return confirmAction(event, {{ r.business_id }}, 'flagged')">⚑</button>
+                {% endif %}
+              </form>
+              <a href="{{ url_for('record_detail', business_id=r.business_id) }}" class="btn-sm" title="Full detail">↗</a>
+            </div>
           </td>
         </tr>
         {% else %}
-        <tr><td colspan="9" class="empty">No records found.</td></tr>
+        <tr><td colspan="10" class="empty">No records found.</td></tr>
         {% endfor %}
       </tbody>
     </table>
   </form>
 
-  <!-- Pagination -->
   <div class="pagination">
     {% if page > 1 %}
       <a href="{{ url_for('queue', page=page-1, market=selected_market, status=selected_status, search=search) }}" class="btn secondary">← Prev</a>
@@ -124,10 +211,123 @@
       <a href="{{ url_for('queue', page=page+1, market=selected_market, status=selected_status, search=search) }}" class="btn secondary">Next →</a>
     {% endif %}
   </div>
-
 </main>
 
 <script>
+const unsavedFields = {};
+
+function markEdited(id, field) {
+  const input = document.getElementById(field + '-' + id);
+  const btn   = document.getElementById('save-' + field + '-' + id);
+  const check = document.getElementById('check-' + field + '-' + id);
+  const dot   = document.getElementById('dot-' + field + '-' + id);
+  input.classList.add('edited');
+  btn.classList.add('visible');
+  check.classList.remove('visible');
+  dot.classList.add('visible');
+  if (!unsavedFields[id]) unsavedFields[id] = {};
+  unsavedFields[id][field] = true;
+}
+
+function saveField(e, id, dbField, inputId) {
+  e.preventDefault();
+  const fieldKey = inputId.split('-')[0];
+  const input = document.getElementById(inputId);
+  const btn   = document.getElementById('save-' + fieldKey + '-' + id);
+  const check = document.getElementById('check-' + fieldKey + '-' + id);
+  const dot   = document.getElementById('dot-' + fieldKey + '-' + id);
+
+  fetch('/update-field', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({business_id: id, field: dbField, value: input.value})
+  }).then(r => r.json()).then(data => {
+    if (data.ok) {
+      input.classList.remove('edited');
+      btn.classList.remove('visible');
+      dot.classList.remove('visible');
+      check.classList.add('visible');
+      setTimeout(() => check.classList.remove('visible'), 3000);
+      if (unsavedFields[id]) delete unsavedFields[id][fieldKey];
+    }
+  });
+}
+
+function markNotesEdited(id) {
+  const check = document.getElementById('check-notes-' + id);
+  const dot   = document.getElementById('dot-notes-' + id);
+  check.classList.remove('visible');
+  dot.classList.add('visible');
+  if (!unsavedFields[id]) unsavedFields[id] = {};
+  unsavedFields[id]['notes'] = true;
+
+  clearTimeout(window['notesTimer' + id]);
+  window['notesTimer' + id] = setTimeout(() => {
+    const val = document.getElementById('notes-' + id).value;
+    document.getElementById('form-notes-' + id).value = val;
+    fetch('/update-field', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({business_id: id, field: 'qa_notes', value: val})
+    }).then(r => r.json()).then(data => {
+      if (data.ok) {
+        dot.classList.remove('visible');
+        check.classList.add('visible');
+        setTimeout(() => check.classList.remove('visible'), 3000);
+        if (unsavedFields[id]) delete unsavedFields[id]['notes'];
+      }
+    });
+  }, 800);
+}
+
+function confirmAction(event, id, action) {
+  const fields = unsavedFields[id] || {};
+  const hasUnsaved = Object.keys(fields).length > 0;
+
+  if (hasUnsaved) {
+    const fieldNames = Object.keys(fields).join(', ');
+    const ok = confirm(
+      'You have unsaved edits (' + fieldNames + ') on this record.\n\n' +
+      'Click OK to save them automatically and then ' + action + ' this record.\n' +
+      'Click Cancel to go back and save manually first.'
+    );
+    if (!ok) return false;
+    saveAllPending(id);
+  }
+
+  document.getElementById('form-notes-' + id).value =
+    document.getElementById('notes-' + id).value;
+  return true;
+}
+
+function saveAllPending(id) {
+  const fields = unsavedFields[id] || {};
+  if (fields['name']) {
+    fetch('/update-field', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({business_id: id, field: 'business_name',
+        value: document.getElementById('name-' + id).value})
+    });
+  }
+  if (fields['type']) {
+    fetch('/update-field', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({business_id: id, field: 'entity_type',
+        value: document.getElementById('type-' + id).value})
+    });
+  }
+  if (fields['notes']) {
+    fetch('/update-field', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({business_id: id, field: 'qa_notes',
+        value: document.getElementById('notes-' + id).value})
+    });
+  }
+}
+
 function toggleAll(cb) {
   document.querySelectorAll('.row-check').forEach(c => c.checked = cb.checked);
 }
