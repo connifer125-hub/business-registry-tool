@@ -277,7 +277,7 @@
           <!-- Website -->
           <td style="min-width:120px">
             {% if r.website_url %}
-              <a href="{{ r.website_url }}" target="_blank" class="url-link">↗ website</a>
+              <a href="{{ r.website_url }}" target="_blank" class="url-link" style="display:block;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="{{ r.website_url }}">{{ r.website_url | replace('https://','') | replace('http://','') | truncate(35, true, '...') }}</a>
             {% else %}
               <span style="font-size:11px;color:#d1d5db">—</span>
             {% endif %}
