@@ -16,8 +16,7 @@ import argparse
 import requests
 from pathlib import Path
 
-# Allow imports from project root
-sys.path.insert(0, str(Path(__file__).resolve().parents[4]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 from utils.normalizer import normalize
 from utils.deduplicator import find_duplicate
 from db.db import insert_business, log_scrape_run, complete_scrape_run
@@ -92,8 +91,6 @@ def run(max_records: int = 10000, dry_run: bool = False):
 
         print(f"  Page {offset // PAGE_SIZE + 1}: scraped={scraped} inserted={inserted} dupes={dupes} errors={errors}")
         offset += batch_size
-
-        # Polite rate limiting — Socrata is free, don't abuse it
         time.sleep(0.5)
 
     if run_id:
