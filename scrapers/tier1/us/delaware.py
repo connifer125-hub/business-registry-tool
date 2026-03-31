@@ -1,13 +1,10 @@
 """
 scrapers/tier1/us/delaware.py
 ─────────────────────────────
-Delaware Division of Corporations — Tier 1 scraper
+Delaware Trade, Business & Fictitious Names — Tier 1 scraper
 Source: Delaware Open Data (Socrata API) — no auth required
 
-Endpoint: https://data.delaware.gov/resource/ahdy-uc97.json
-Docs:     https://data.delaware.gov/Corporations/Delaware-Division-of-Corporations-Entity-Filing/ahdy-uc97
-
-Run: python scrapers/tier1/us/delaware.py [--limit N] [--offset N] [--dry-run]
+Endpoint: https://data.delaware.gov/resource/i7m4-42sn.json
 """
 
 import sys
@@ -23,8 +20,8 @@ from db.db import insert_business, log_scrape_run, complete_scrape_run
 
 MARKET = "US-DE"
 TIER = 1
-API_URL = "https://data.delaware.gov/resource/ahdy-uc97.json"
-PAGE_SIZE = 1000
+API_URL = "https://data.delaware.gov/resource/i7m4-42sn.json"
+PAGE_SIZE = 100
 
 
 def fetch_page(offset: int, limit: int) -> list[dict]:
@@ -61,14 +58,25 @@ def run(max_records: int = 10000, dry_run: bool = False):
         for raw in records:
             scraped += 1
             try:
-                normalized = normalize(MARKET, raw)
+                # Map Trade/Business Names fields to normalizer keys
+                mapped = {
+                    "businessname":  raw.get("business_name") or raw.get("tradename") or raw.get("name") or "",
+                    "entity_kind":   raw.get("entity_type") or raw.get("type"),
+                    "status":        raw.get("status") or "Active",
+                    "registered_address": raw.get("address") or raw.get("street_address"),
+                    "city":          raw.get("city"),
+                    "zip":           raw.get("zip") or raw.get("postal_code"),
+                    "incdate":       raw.get("filing_date") or raw.get("date_filed"),
+                    "registered_agent": raw.get("registered_agent"),
+                    **raw
+                }
 
+                normalized = normalize(MARKET, mapped)
                 if not normalized.get("business_name"):
                     continue
 
                 dup_id, confidence = find_duplicate(normalized)
                 if dup_id:
-                    print(f"  ~ Duplicate ({confidence:.0%}): {normalized['business_name']} → #{dup_id}")
                     dupes += 1
                     if not dry_run:
                         from db.db import mark_duplicate
