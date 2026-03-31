@@ -58,16 +58,16 @@ def run(max_records: int = 10000, dry_run: bool = False):
         for raw in records:
             scraped += 1
             try:
-                # Map Trade/Business Names fields to normalizer keys
                 mapped = {
-                    "businessname":  raw.get("business_name") or raw.get("tradename") or raw.get("name") or "",
-                    "entity_kind":   raw.get("entity_type") or raw.get("type"),
-                    "status":        raw.get("status") or "Active",
-                    "registered_address": raw.get("address") or raw.get("street_address"),
-                    "city":          raw.get("city"),
-                    "zip":           raw.get("zip") or raw.get("postal_code"),
-                    "incdate":       raw.get("filing_date") or raw.get("date_filed"),
-                    "registered_agent": raw.get("registered_agent"),
+                    "businessname":       raw.get("trade_name__c") or raw.get("owner_company__c") or "",
+                    "trade_name":         raw.get("trade_name__c"),
+                    "entity_kind":        raw.get("business_nature__c"),
+                    "status":             "Active",
+                    "registered_address": raw.get("streetaddressline1__c") or raw.get("address__c"),
+                    "city":               raw.get("city__c"),
+                    "zip":                raw.get("zip__c"),
+                    "incdate":            raw.get("formation_date__c"),
+                    "registered_agent":   raw.get("affiant_name__c"),
                     **raw
                 }
 
@@ -75,22 +75,22 @@ def run(max_records: int = 10000, dry_run: bool = False):
                 if not normalized.get("business_name"):
                     continue
 
+                if dry_run:
+                    print(f"  [preview] {normalized['business_name']} | {normalized.get('entity_type')} | {normalized.get('city')}")
+                    inserted += 1
+                    continue
+
                 dup_id, confidence = find_duplicate(normalized)
                 if dup_id:
                     dupes += 1
-                    if not dry_run:
-                        from db.db import mark_duplicate
-                        bid = insert_business(normalized)
-                        if bid:
-                            mark_duplicate(bid, dup_id, confidence)
-                    continue
-
-                if not dry_run:
+                    from db.db import mark_duplicate
                     bid = insert_business(normalized)
                     if bid:
-                        inserted += 1
-                else:
-                    print(f"  [preview] {normalized['business_name']} | {normalized['entity_type']} | {normalized['status']}")
+                        mark_duplicate(bid, dup_id, confidence)
+                    continue
+
+                bid = insert_business(normalized)
+                if bid:
                     inserted += 1
 
             except Exception as e:
@@ -114,3 +114,8 @@ if __name__ == "__main__":
     parser.add_argument("--dry-run", action="store_true",     help="Preview only, no DB writes")
     args = parser.parse_args()
     run(max_records=args.limit, dry_run=args.dry_run)
+```
+
+Commit that, wait for Railway to redeploy, then go to:
+```
+https://business-registry-tool-production.up.railway.app/run-scraper/delaware
