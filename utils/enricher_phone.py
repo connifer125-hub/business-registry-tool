@@ -196,6 +196,7 @@ def enrich_record_phone(business_id: int, business_name: str,
     }
 
     # Check if phone is a registered agent
+    cleaned = clean_phone(phone)
     agent_phone, agent_name = is_agent_phone(phone)
     if agent_phone:
         result["is_agent_phone"] = True
@@ -229,7 +230,12 @@ def enrich_record_phone(business_id: int, business_name: str,
 
         result["pre_enrich_note"] += f" | OpenCorporates: found in {oc_match.get('jurisdiction')} ({oc_match['name_match_score']:.0%} name match)"
 
-    if not dry_run and (result["is_agent_phone"] or result["is_agent_address"] or result["opencorp_found"]):
+    # Always set a final address_type so record is marked as processed
+    if result["address_type"] == "unknown":
+        result["address_type"] = "registry"
+        result["pre_enrich_note"] = result["pre_enrich_note"] or "No agent detected — registry address retained"
+
+    if not dry_run:
         with get_conn() as conn:
             with conn.cursor() as cur:
                 cur.execute("""
@@ -269,7 +275,7 @@ def enrich_batch_phone(market: str = "US-DE", limit: int = 50,
                        address_line1, registered_address
                 FROM businesses
                 WHERE source_market = %s
-                  AND (address_type IS NULL OR address_type = 'unknown')
+                  AND (address_type IS NULL OR address_type IN ('unknown', ''))
                   AND business_name IS NOT NULL
                 ORDER BY business_id
                 LIMIT %s
