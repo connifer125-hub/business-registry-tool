@@ -2,7 +2,6 @@
 admin/app.py — Flask QA Admin Interface
 ────────────────────────────────────────
 Business Registry QA tool — review, flag, approve, reject, export.
-Same pattern as Best Rated Spots admin.
 
 Run: python admin/app.py
      → http://localhost:5000
@@ -53,7 +52,6 @@ def queue():
     )
     total_pages = (total + per_page - 1) // per_page
 
-    # Get all available markets for filter dropdown
     with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute("SELECT DISTINCT source_market FROM businesses ORDER BY source_market")
@@ -116,7 +114,7 @@ def record_detail(business_id):
 
 
 # ─────────────────────────────────────────────
-# QA actions (approve / reject / flag)
+# QA actions
 # ─────────────────────────────────────────────
 @app.route("/action", methods=["POST"])
 def action():
@@ -130,14 +128,11 @@ def action():
 
     update_qa_status(business_id, action_type, notes)
     flash(f"Record #{business_id} marked as {action_type}.", "success")
-
-    # Return to same page/filter state
     return redirect(request.referrer or url_for("queue"))
 
 
 @app.route("/bulk-action", methods=["POST"])
 def bulk_action():
-    """Approve or reject multiple records at once."""
     ids         = request.form.getlist("ids")
     action_type = request.form["action"]
 
@@ -209,6 +204,48 @@ def markets():
             cur.execute("SELECT * FROM market_registry ORDER BY tier, country, market_name")
             markets = cur.fetchall()
     return render_template("markets.html", markets=markets)
+
+
+# ─────────────────────────────────────────────
+# Scraper trigger routes
+# ─────────────────────────────────────────────
+@app.route("/run-scraper/delaware")
+def run_delaware():
+    import subprocess
+    limit = request.args.get("limit", "100")
+    result = subprocess.run(
+        [sys.executable, "scrapers/tier1/us/delaware.py", "--limit", limit],
+        capture_output=True, text=True, cwd=str(Path(__file__).resolve().parents[1])
+    )
+    output = result.stdout + "\n" + result.stderr
+    return f"<pre style='font-family:monospace;padding:20px;'>{output}</pre>"
+
+
+@app.route("/run-scraper/colorado")
+def run_colorado():
+    import subprocess
+    limit = request.args.get("limit", "100")
+    result = subprocess.run(
+        [sys.executable, "scrapers/tier1/us/colorado.py", "--limit", limit],
+        capture_output=True, text=True, cwd=str(Path(__file__).resolve().parents[1])
+    )
+    output = result.stdout + "\n" + result.stderr
+    return f"<pre style='font-family:monospace;padding:20px;'>{output}</pre>"
+
+
+@app.route("/scrapers")
+def scraper_index():
+    return """
+    <html><body style='font-family:sans-serif;padding:40px;'>
+    <h2>Scraper triggers</h2>
+    <ul>
+      <li><a href='/run-scraper/delaware?limit=100'>Run Delaware (100 records)</a></li>
+      <li><a href='/run-scraper/delaware?limit=500'>Run Delaware (500 records)</a></li>
+      <li><a href='/run-scraper/colorado?limit=100'>Run Colorado (100 records)</a></li>
+    </ul>
+    <p><a href='/'>Back to admin</a></p>
+    </body></html>
+    """
 
 
 if __name__ == "__main__":
