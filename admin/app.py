@@ -377,35 +377,69 @@ def enrich_google():
     return f"<pre style='font-family:monospace;padding:20px;'>{output}</pre>"
 
 
+@app.route("/enrich/phone")
+def enrich_phone():
+    import subprocess
+    limit   = request.args.get("limit", "50")
+    dry_run = request.args.get("dry", "0") == "1"
+    args    = [sys.executable, "utils/enricher_phone.py",
+               "--market", "US-DE", "--limit", limit]
+    if dry_run:
+        args.append("--dry-run")
+    result = subprocess.run(
+        args, capture_output=True, text=True,
+        cwd=str(Path(__file__).resolve().parents[1])
+    )
+    output = result.stdout + "\n" + result.stderr
+    return f"<pre style='font-family:monospace;padding:20px;'>{output}</pre>"
+
+
 @app.route("/scrapers")
 def scraper_index():
     return """
     <html><body style='font-family:sans-serif;padding:40px;line-height:2'>
     <h2>Scraper &amp; enrichment triggers</h2>
-    <h3>Scrapers</h3>
+
+    <h3>Step 1 — Scrape</h3>
     <ul>
       <li><a href='/run-scraper/delaware'>Inspect Delaware fields (dry run)</a></li>
       <li><a href='/run-scraper/delaware/live?limit=100'>Run Delaware (100 records)</a></li>
       <li><a href='/run-scraper/delaware/live?limit=500'>Run Delaware (500 records)</a></li>
       <li><a href='/run-scraper/colorado?limit=100'>Run Colorado (100 records)</a></li>
     </ul>
-    <h3>AI Enrichment — SIC classification</h3>
+
+    <h3>Step 2 — Phone pre-enrichment (run first)</h3>
+    <p style='font-size:13px;color:#666;margin-top:-10px'>
+      Detects registered agent phones/addresses. Cross-references OpenCorporates
+      for operating address from non-Delaware filings.
+    </p>
     <ul>
-      <li><a href='/enrich/delaware?limit=10&dry=1'>Preview SIC enrichment (dry run)</a></li>
-      <li><a href='/enrich/delaware?limit=20'>Enrich 20 records with SIC codes</a></li>
-      <li><a href='/enrich/delaware?limit=100'>Enrich 100 records with SIC codes</a></li>
+      <li><a href='/enrich/phone?limit=20&dry=1'>Preview phone enrichment (dry run)</a></li>
+      <li><a href='/enrich/phone?limit=50'>Enrich 50 records (live)</a></li>
+      <li><a href='/enrich/phone?limit=100'>Enrich 100 records (live)</a></li>
     </ul>
-    <h3>Google Places — address corroboration &amp; pre-QA</h3>
+
+    <h3>Step 3 — Google Places corroboration</h3>
+    <p style='font-size:13px;color:#666;margin-top:-10px'>
+      Compares registry address vs Google Places. Returns website, maps link,
+      and address match score.
+    </p>
     <ul>
       <li><a href='/enrich/google?limit=10&dry=1'>Preview Google enrichment (dry run)</a></li>
       <li><a href='/enrich/google?limit=20'>Enrich 20 records (live)</a></li>
       <li><a href='/enrich/google?limit=100'>Enrich 100 records (live)</a></li>
     </ul>
-    <p style='font-size:13px;color:#666'>
-      Google enrichment compares registry address vs Google Places address,
-      assigns a match score, and routes records to auto-approve or human review.
-      Results appear in the <a href='/queue'>QA Queue</a> pre-QA columns.
+
+    <h3>Step 4 — AI SIC classification</h3>
+    <p style='font-size:13px;color:#666;margin-top:-10px'>
+      Claude AI classifies business descriptions into official SIC codes.
     </p>
+    <ul>
+      <li><a href='/enrich/delaware?limit=10&dry=1'>Preview SIC enrichment (dry run)</a></li>
+      <li><a href='/enrich/delaware?limit=20'>Enrich 20 records with SIC codes</a></li>
+      <li><a href='/enrich/delaware?limit=100'>Enrich 100 records with SIC codes</a></li>
+    </ul>
+
     <p><a href='/'>Back to admin</a></p>
     </body></html>
     """
