@@ -211,6 +211,22 @@ def markets():
 # ─────────────────────────────────────────────
 @app.route("/run-scraper/delaware")
 def run_delaware():
+    import requests as req
+    import subprocess
+    limit = request.args.get("limit", "100")
+
+    sample = req.get("https://data.delaware.gov/resource/i7m4-42sn.json?$limit=1").json()
+
+    result = subprocess.run(
+        [sys.executable, "scrapers/tier1/us/delaware.py", "--limit", limit, "--dry-run"],
+        capture_output=True, text=True, cwd=str(Path(__file__).resolve().parents[1])
+    )
+    output = result.stdout + "\n" + result.stderr
+    return f"<pre style='font-family:monospace;padding:20px;'>SAMPLE FIELDS:\n{sample}\n\nSCRAPER OUTPUT:\n{output}</pre>"
+
+
+@app.route("/run-scraper/delaware/live")
+def run_delaware_live():
     import subprocess
     limit = request.args.get("limit", "100")
     result = subprocess.run(
@@ -239,8 +255,9 @@ def scraper_index():
     <html><body style='font-family:sans-serif;padding:40px;'>
     <h2>Scraper triggers</h2>
     <ul>
-      <li><a href='/run-scraper/delaware?limit=100'>Run Delaware (100 records)</a></li>
-      <li><a href='/run-scraper/delaware?limit=500'>Run Delaware (500 records)</a></li>
+      <li><a href='/run-scraper/delaware'>Inspect Delaware fields (dry run)</a></li>
+      <li><a href='/run-scraper/delaware/live?limit=100'>Run Delaware live (100 records)</a></li>
+      <li><a href='/run-scraper/delaware/live?limit=500'>Run Delaware live (500 records)</a></li>
       <li><a href='/run-scraper/colorado?limit=100'>Run Colorado (100 records)</a></li>
     </ul>
     <p><a href='/'>Back to admin</a></p>
