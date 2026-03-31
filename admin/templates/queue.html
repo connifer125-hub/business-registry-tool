@@ -6,7 +6,7 @@
 <title>QA Queue — Business Registry Admin</title>
 <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
 <style>
-.editable { border: none; background: transparent; font-size: 13px; color: var(--text); font-family: inherit; width: 100%; padding: 2px 4px; border-radius: 4px; }
+.editable { border: none; background: transparent; font-size: 12px; color: var(--text); font-family: inherit; width: 100%; padding: 2px 4px; border-radius: 4px; }
 .editable:hover { background: var(--bg); }
 .editable:focus { background: #fff; border: 1px solid #93c5fd; outline: none; box-shadow: 0 0 0 2px rgba(59,130,246,.15); }
 .editable.edited { background: #fffbeb; border: 1px solid #fcd34d; }
@@ -14,17 +14,20 @@
 .save-btn.visible { display: inline-block; }
 .saved-check { display: none; color: #16a34a; font-size: 13px; margin-left: 4px; }
 .saved-check.visible { display: inline; }
-.url-link { color: var(--accent); text-decoration: none; font-size: 12px; }
+.url-link { color: var(--accent); text-decoration: none; font-size: 11px; }
 .url-link:hover { text-decoration: underline; }
 .inline-actions { display: flex; gap: 4px; align-items: center; }
-.field-cell { position: relative; }
-.tbl td { padding: 8px 10px; vertical-align: middle; }
+.tbl td { padding: 7px 8px; vertical-align: top; font-size: 12px; }
 .tbl tr.row-approved td { background: #f0fdf4; }
 .tbl tr.row-rejected td { background: #fef2f2; }
 .tbl tr.row-flagged td { background: #faf5ff; }
-.notes-input { width: 140px; font-size: 11px; padding: 3px 6px; border: 1px solid var(--border); border-radius: 4px; background: var(--surface); color: var(--text); }
-.unsaved-dot { display: none; width: 7px; height: 7px; background: #f59e0b; border-radius: 50%; margin-left: 4px; }
+.notes-input { width: 120px; font-size: 11px; padding: 3px 5px; border: 1px solid var(--border); border-radius: 4px; background: var(--surface); color: var(--text); }
+.unsaved-dot { display: none; width: 7px; height: 7px; background: #f59e0b; border-radius: 50%; margin-left: 3px; vertical-align: middle; }
 .unsaved-dot.visible { display: inline-block; }
+.addr-block { font-size: 11px; color: var(--muted); line-height: 1.5; }
+.addr-block span { display: block; }
+.field-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 1px; }
+.sub-field { margin-top: 6px; }
 </style>
 </head>
 <body>
@@ -76,17 +79,18 @@
       <button type="submit" name="action" value="flagged"  class="btn small warn">⚑ Flag selected</button>
     </div>
 
-    <table class="data-table tbl">
+    <table class="data-table tbl" style="font-size:12px">
       <thead>
         <tr>
-          <th><input type="checkbox" onchange="toggleAll(this)"></th>
-          <th>Business name</th>
-          <th>Type</th>
-          <th>Status</th>
-          <th>Location</th>
+          <th style="width:24px"></th>
+          <th>Business name / trade name</th>
+          <th>Entity type</th>
+          <th>Address</th>
+          <th>Phone / contact</th>
+          <th>Filing info</th>
+          <th>Industry / SIC</th>
           <th>Market</th>
-          <th>Source</th>
-          <th>QA status</th>
+          <th>QA</th>
           <th>Notes</th>
           <th>Actions</th>
         </tr>
@@ -96,83 +100,225 @@
         <tr class="row-{{ r.qa_status }}" id="row-{{ r.business_id }}">
           <td><input type="checkbox" name="ids" value="{{ r.business_id }}" class="row-check"></td>
 
-          <td class="field-cell">
-            <div style="display:flex;align-items:center;gap:4px">
-              <input class="editable"
-                     id="name-{{ r.business_id }}"
+          <!-- Business name (editable) -->
+          <td>
+            <div class="field-label">Legal name</div>
+            <div style="display:flex;align-items:center;gap:3px">
+              <input class="editable" id="name-{{ r.business_id }}"
                      value="{{ r.business_name }}"
                      onchange="markEdited({{ r.business_id }}, 'name')"
-                     oninput="markEdited({{ r.business_id }}, 'name')">
+                     oninput="markEdited({{ r.business_id }}, 'name')"
+                     style="font-weight:500">
               <button class="save-btn" id="save-name-{{ r.business_id }}"
-                      onclick="saveField(event, {{ r.business_id }}, 'business_name', 'name-{{ r.business_id }}')">Save</button>
+                      onclick="saveField(event,{{ r.business_id }},'business_name','name-{{ r.business_id }}')">Save</button>
               <span class="saved-check" id="check-name-{{ r.business_id }}">✓</span>
-              <span class="unsaved-dot" id="dot-name-{{ r.business_id }}" title="Unsaved changes"></span>
+              <span class="unsaved-dot" id="dot-name-{{ r.business_id }}"></span>
             </div>
             {% if r.trade_name %}
-              <div style="font-size:11px;color:var(--muted);margin-top:2px">dba {{ r.trade_name }}</div>
+            <div class="sub-field">
+              <div class="field-label">Trade name (DBA)</div>
+              <span style="font-size:11px;color:var(--muted)">{{ r.trade_name }}</span>
+            </div>
             {% endif %}
             {% if r.is_duplicate_of %}
-              <span class="badge dupe" style="font-size:10px">dupe → #{{ r.is_duplicate_of }}</span>
-            {% endif %}
-            {% if r.source_url %}
-              <div style="margin-top:3px">
-                <a href="{{ r.source_url }}" target="_blank" class="url-link">↗ source</a>
-              </div>
+              <span class="badge dupe" style="font-size:10px;margin-top:3px;display:inline-block">dupe → #{{ r.is_duplicate_of }}</span>
             {% endif %}
           </td>
 
+          <!-- Entity type (editable) -->
           <td>
-            <div style="display:flex;align-items:center;gap:4px">
-              <input class="editable"
-                     id="type-{{ r.business_id }}"
+            <div class="field-label">Type</div>
+            <div style="display:flex;align-items:center;gap:3px">
+              <input class="editable" id="type-{{ r.business_id }}"
                      value="{{ r.entity_type or '' }}"
                      onchange="markEdited({{ r.business_id }}, 'type')"
                      oninput="markEdited({{ r.business_id }}, 'type')"
-                     style="width:110px">
+                     style="width:100px">
               <button class="save-btn" id="save-type-{{ r.business_id }}"
-                      onclick="saveField(event, {{ r.business_id }}, 'entity_type', 'type-{{ r.business_id }}')">Save</button>
+                      onclick="saveField(event,{{ r.business_id }},'entity_type','type-{{ r.business_id }}')">Save</button>
               <span class="saved-check" id="check-type-{{ r.business_id }}">✓</span>
-              <span class="unsaved-dot" id="dot-type-{{ r.business_id }}" title="Unsaved changes"></span>
+              <span class="unsaved-dot" id="dot-type-{{ r.business_id }}"></span>
+            </div>
+            <div class="sub-field">
+              <div class="field-label">Status</div>
+              <span class="badge status-{{ (r.status or 'unknown')|lower|replace(' ','') }}">{{ r.status or '—' }}</span>
             </div>
           </td>
 
-          <td>
-            <span class="badge status-{{ (r.status or 'unknown')|lower|replace(' ','') }}">
-              {{ r.status or '—' }}
-            </span>
+          <!-- Full address — all components -->
+          <td style="min-width:180px">
+            <div class="field-label">Street line 1</div>
+            <div style="display:flex;align-items:center;gap:3px">
+              <input class="editable" id="addr1-{{ r.business_id }}"
+                     value="{{ r.address_line1 or r.registered_address or '' }}"
+                     onchange="markEdited({{ r.business_id }}, 'addr1')"
+                     oninput="markEdited({{ r.business_id }}, 'addr1')"
+                     style="width:160px">
+              <button class="save-btn" id="save-addr1-{{ r.business_id }}"
+                      onclick="saveField(event,{{ r.business_id }},'address_line1','addr1-{{ r.business_id }}')">Save</button>
+              <span class="saved-check" id="check-addr1-{{ r.business_id }}">✓</span>
+              <span class="unsaved-dot" id="dot-addr1-{{ r.business_id }}"></span>
+            </div>
+
+            {% if r.address_line2 %}
+            <div class="sub-field">
+              <div class="field-label">Street line 2</div>
+              <input class="editable" id="addr2-{{ r.business_id }}"
+                     value="{{ r.address_line2 or '' }}"
+                     onchange="markEdited({{ r.business_id }}, 'addr2')"
+                     oninput="markEdited({{ r.business_id }}, 'addr2')"
+                     style="width:160px">
+              <button class="save-btn" id="save-addr2-{{ r.business_id }}"
+                      onclick="saveField(event,{{ r.business_id }},'address_line2','addr2-{{ r.business_id }}')">Save</button>
+              <span class="saved-check" id="check-addr2-{{ r.business_id }}">✓</span>
+              <span class="unsaved-dot" id="dot-addr2-{{ r.business_id }}"></span>
+            </div>
+            {% endif %}
+
+            <div class="sub-field" style="display:grid;grid-template-columns:1fr 60px 80px;gap:4px">
+              <div>
+                <div class="field-label">City</div>
+                <input class="editable" id="city-{{ r.business_id }}"
+                       value="{{ r.city or '' }}"
+                       onchange="markEdited({{ r.business_id }}, 'city')"
+                       oninput="markEdited({{ r.business_id }}, 'city')">
+                <button class="save-btn" id="save-city-{{ r.business_id }}"
+                        onclick="saveField(event,{{ r.business_id }},'city','city-{{ r.business_id }}')">✓</button>
+                <span class="unsaved-dot" id="dot-city-{{ r.business_id }}"></span>
+              </div>
+              <div>
+                <div class="field-label">State</div>
+                <input class="editable" id="state-{{ r.business_id }}"
+                       value="{{ r.state_province or '' }}"
+                       onchange="markEdited({{ r.business_id }}, 'state')"
+                       oninput="markEdited({{ r.business_id }}, 'state')"
+                       style="width:50px">
+                <button class="save-btn" id="save-state-{{ r.business_id }}"
+                        onclick="saveField(event,{{ r.business_id }},'state_province','state-{{ r.business_id }}')">✓</button>
+                <span class="unsaved-dot" id="dot-state-{{ r.business_id }}"></span>
+              </div>
+              <div>
+                <div class="field-label">ZIP</div>
+                <input class="editable" id="zip-{{ r.business_id }}"
+                       value="{{ r.postal_code or '' }}"
+                       onchange="markEdited({{ r.business_id }}, 'zip')"
+                       oninput="markEdited({{ r.business_id }}, 'zip')"
+                       style="width:75px">
+                <button class="save-btn" id="save-zip-{{ r.business_id }}"
+                        onclick="saveField(event,{{ r.business_id }},'postal_code','zip-{{ r.business_id }}')">✓</button>
+                <span class="unsaved-dot" id="dot-zip-{{ r.business_id }}"></span>
+              </div>
+            </div>
+
+            {% if r.owner_address %}
+            <div class="sub-field">
+              <div class="field-label">Owner/mailing address</div>
+              <span style="font-size:11px;color:var(--muted)">{{ r.owner_address }}</span>
+            </div>
+            {% endif %}
+
+            <div class="sub-field">
+              <div class="field-label">Combined</div>
+              <span style="font-size:10px;color:var(--muted)">{{ r.registered_address or '—' }}</span>
+            </div>
           </td>
 
-          <td style="color:var(--muted);font-size:12px">
-            {{ r.city or '' }}{% if r.city and r.state_province %}, {% endif %}{{ r.state_province or '' }}
-          </td>
-
-          <td><span class="badge market">{{ r.source_market }}</span></td>
-
+          <!-- Phone / contact -->
           <td>
+            <div class="field-label">Phone</div>
+            <div style="display:flex;align-items:center;gap:3px">
+              <input class="editable" id="phone-{{ r.business_id }}"
+                     value="{{ r.phone or '' }}"
+                     onchange="markEdited({{ r.business_id }}, 'phone')"
+                     oninput="markEdited({{ r.business_id }}, 'phone')"
+                     style="width:120px">
+              <button class="save-btn" id="save-phone-{{ r.business_id }}"
+                      onclick="saveField(event,{{ r.business_id }},'phone','phone-{{ r.business_id }}')">Save</button>
+              <span class="saved-check" id="check-phone-{{ r.business_id }}">✓</span>
+              <span class="unsaved-dot" id="dot-phone-{{ r.business_id }}"></span>
+            </div>
+            {% if r.registered_agent %}
+            <div class="sub-field">
+              <div class="field-label">Registered agent</div>
+              <span style="font-size:11px;color:var(--muted)">{{ r.registered_agent }}</span>
+            </div>
+            {% endif %}
             {% if r.source_url %}
-              <a href="{{ r.source_url }}" target="_blank" class="url-link">↗ view</a>
-            {% else %}
-              <span style="color:var(--muted);font-size:11px">—</span>
+            <div class="sub-field">
+              <a href="{{ r.source_url }}" target="_blank" class="url-link">↗ source</a>
+            </div>
             {% endif %}
           </td>
 
+          <!-- Filing info -->
+          <td>
+            {% if r.filing_id %}
+            <div class="field-label">Filing ID</div>
+            <span style="font-size:11px;font-family:monospace">{{ r.filing_id }}</span>
+            {% endif %}
+            {% if r.license_number %}
+            <div class="sub-field">
+              <div class="field-label">License #</div>
+              <span style="font-size:11px;font-family:monospace">{{ r.license_number }}</span>
+            </div>
+            {% endif %}
+            {% if r.registered_date %}
+            <div class="sub-field">
+              <div class="field-label">Formed</div>
+              <span style="font-size:11px">{{ r.registered_date }}</span>
+            </div>
+            {% endif %}
+          </td>
+
+          <!-- Industry / SIC -->
+          <td>
+            <div class="field-label">SIC code</div>
+            <div style="display:flex;align-items:center;gap:3px">
+              <input class="editable" id="sic-{{ r.business_id }}"
+                     value="{{ r.sic_code or '' }}"
+                     onchange="markEdited({{ r.business_id }}, 'sic')"
+                     oninput="markEdited({{ r.business_id }}, 'sic')"
+                     style="width:55px">
+              <button class="save-btn" id="save-sic-{{ r.business_id }}"
+                      onclick="saveField(event,{{ r.business_id }},'sic_code','sic-{{ r.business_id }}')">Save</button>
+              <span class="saved-check" id="check-sic-{{ r.business_id }}">✓</span>
+              <span class="unsaved-dot" id="dot-sic-{{ r.business_id }}"></span>
+            </div>
+            {% if r.industry_desc %}
+            <div class="sub-field">
+              <div class="field-label">Description</div>
+              <span style="font-size:11px;color:var(--muted)">{{ r.industry_desc[:60] }}{% if r.industry_desc|length > 60 %}…{% endif %}</span>
+            </div>
+            {% endif %}
+          </td>
+
+          <!-- Market -->
+          <td>
+            <span class="badge market">{{ r.source_market }}</span>
+            <div class="sub-field" style="font-size:10px;color:var(--muted)">
+              {{ r.scraped_at.strftime('%m/%d/%y') if r.scraped_at else '—' }}
+            </div>
+          </td>
+
+          <!-- QA status -->
           <td>
             <span class="badge qa-{{ r.qa_status }}" id="badge-{{ r.business_id }}">{{ r.qa_status }}</span>
           </td>
 
+          <!-- Notes (auto-save) -->
           <td>
-            <div style="display:flex;align-items:center;gap:4px">
-              <input class="notes-input"
-                     id="notes-{{ r.business_id }}"
+            <div style="display:flex;align-items:center;gap:3px">
+              <input class="notes-input" id="notes-{{ r.business_id }}"
                      placeholder="Add note..."
                      value="{{ r.qa_notes or '' }}"
                      onchange="markNotesEdited({{ r.business_id }})"
                      oninput="markNotesEdited({{ r.business_id }})">
               <span class="saved-check" id="check-notes-{{ r.business_id }}">✓</span>
-              <span class="unsaved-dot" id="dot-notes-{{ r.business_id }}" title="Unsaved changes"></span>
+              <span class="unsaved-dot" id="dot-notes-{{ r.business_id }}"></span>
             </div>
           </td>
 
+          <!-- Actions -->
           <td>
             <div class="inline-actions">
               <form method="POST" action="{{ url_for('action') }}" style="display:contents">
@@ -196,7 +342,7 @@
           </td>
         </tr>
         {% else %}
-        <tr><td colspan="10" class="empty">No records found.</td></tr>
+        <tr><td colspan="11" class="empty">No records found.</td></tr>
         {% endfor %}
       </tbody>
     </table>
@@ -221,10 +367,10 @@ function markEdited(id, field) {
   const btn   = document.getElementById('save-' + field + '-' + id);
   const check = document.getElementById('check-' + field + '-' + id);
   const dot   = document.getElementById('dot-' + field + '-' + id);
-  input.classList.add('edited');
-  btn.classList.add('visible');
-  check.classList.remove('visible');
-  dot.classList.add('visible');
+  if (input) input.classList.add('edited');
+  if (btn)   btn.classList.add('visible');
+  if (check) check.classList.remove('visible');
+  if (dot)   dot.classList.add('visible');
   if (!unsavedFields[id]) unsavedFields[id] = {};
   unsavedFields[id][field] = true;
 }
@@ -243,11 +389,10 @@ function saveField(e, id, dbField, inputId) {
     body: JSON.stringify({business_id: id, field: dbField, value: input.value})
   }).then(r => r.json()).then(data => {
     if (data.ok) {
-      input.classList.remove('edited');
-      btn.classList.remove('visible');
-      dot.classList.remove('visible');
-      check.classList.add('visible');
-      setTimeout(() => check.classList.remove('visible'), 3000);
+      if (input) input.classList.remove('edited');
+      if (btn)   btn.classList.remove('visible');
+      if (dot)   dot.classList.remove('visible');
+      if (check) { check.classList.add('visible'); setTimeout(() => check.classList.remove('visible'), 3000); }
       if (unsavedFields[id]) delete unsavedFields[id][fieldKey];
     }
   });
@@ -256,8 +401,8 @@ function saveField(e, id, dbField, inputId) {
 function markNotesEdited(id) {
   const check = document.getElementById('check-notes-' + id);
   const dot   = document.getElementById('dot-notes-' + id);
-  check.classList.remove('visible');
-  dot.classList.add('visible');
+  if (check) check.classList.remove('visible');
+  if (dot)   dot.classList.add('visible');
   if (!unsavedFields[id]) unsavedFields[id] = {};
   unsavedFields[id]['notes'] = true;
 
@@ -271,9 +416,8 @@ function markNotesEdited(id) {
       body: JSON.stringify({business_id: id, field: 'qa_notes', value: val})
     }).then(r => r.json()).then(data => {
       if (data.ok) {
-        dot.classList.remove('visible');
-        check.classList.add('visible');
-        setTimeout(() => check.classList.remove('visible'), 3000);
+        if (dot)   dot.classList.remove('visible');
+        if (check) { check.classList.add('visible'); setTimeout(() => check.classList.remove('visible'), 3000); }
         if (unsavedFields[id]) delete unsavedFields[id]['notes'];
       }
     });
@@ -283,7 +427,6 @@ function markNotesEdited(id) {
 function confirmAction(event, id, action) {
   const fields = unsavedFields[id] || {};
   const hasUnsaved = Object.keys(fields).length > 0;
-
   if (hasUnsaved) {
     const fieldNames = Object.keys(fields).join(', ');
     const ok = confirm(
@@ -294,38 +437,36 @@ function confirmAction(event, id, action) {
     if (!ok) return false;
     saveAllPending(id);
   }
-
   document.getElementById('form-notes-' + id).value =
     document.getElementById('notes-' + id).value;
   return true;
 }
 
 function saveAllPending(id) {
+  const fieldMap = {
+    'name':  'business_name',
+    'type':  'entity_type',
+    'addr1': 'address_line1',
+    'addr2': 'address_line2',
+    'city':  'city',
+    'state': 'state_province',
+    'zip':   'postal_code',
+    'phone': 'phone',
+    'sic':   'sic_code',
+    'notes': 'qa_notes'
+  };
   const fields = unsavedFields[id] || {};
-  if (fields['name']) {
-    fetch('/update-field', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({business_id: id, field: 'business_name',
-        value: document.getElementById('name-' + id).value})
-    });
-  }
-  if (fields['type']) {
-    fetch('/update-field', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({business_id: id, field: 'entity_type',
-        value: document.getElementById('type-' + id).value})
-    });
-  }
-  if (fields['notes']) {
-    fetch('/update-field', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({business_id: id, field: 'qa_notes',
-        value: document.getElementById('notes-' + id).value})
-    });
-  }
+  Object.keys(fields).forEach(fk => {
+    const dbField = fieldMap[fk];
+    const el = document.getElementById(fk + '-' + id);
+    if (dbField && el) {
+      fetch('/update-field', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({business_id: id, field: dbField, value: el.value})
+      });
+    }
+  });
 }
 
 function toggleAll(cb) {
