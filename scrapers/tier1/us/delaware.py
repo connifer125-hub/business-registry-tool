@@ -1,6 +1,6 @@
 """
 scrapers/tier1/us/delaware.py
-─────────────────────────────
+-────────────────────────────
 Delaware Trade, Business & Fictitious Names — Tier 1 scraper
 Source: Delaware Open Data (Socrata API) — no auth required
 
@@ -47,12 +47,12 @@ def run(max_records: int = 10000, dry_run: bool = False):
         try:
             records = fetch_page(offset, batch_size)
         except requests.RequestException as e:
-            print(f"  ✗ Fetch error at offset {offset}: {e}")
+            print(f"  x Fetch error at offset {offset}: {e}")
             errors += 1
             break
 
         if not records:
-            print("  ✓ No more records.")
+            print("  Done. No more records.")
             break
 
         for raw in records:
@@ -94,7 +94,7 @@ def run(max_records: int = 10000, dry_run: bool = False):
                     inserted += 1
 
             except Exception as e:
-                print(f"  ✗ Error processing record: {e}")
+                print(f"  x Error processing record: {e}")
                 errors += 1
 
         print(f"  Page {offset // PAGE_SIZE + 1}: scraped={scraped} inserted={inserted} dupes={dupes} errors={errors}")
@@ -114,8 +114,3 @@ if __name__ == "__main__":
     parser.add_argument("--dry-run", action="store_true",     help="Preview only, no DB writes")
     args = parser.parse_args()
     run(max_records=args.limit, dry_run=args.dry_run)
-```
-
-Commit that, wait for Railway to redeploy, then go to:
-```
-https://business-registry-tool-production.up.railway.app/run-scraper/delaware
