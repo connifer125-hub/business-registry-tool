@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
 <style>
 .queue-wrap { overflow-x: auto; }
-.tbl { border-collapse: collapse; font-size: 12px; min-width: 1600px; width: 100%; }
+.tbl { border-collapse: collapse; font-size: 12px; min-width: 2000px; width: 100%; }
 .tbl th {
   text-align: left; padding: 8px 10px;
   border-bottom: 2px solid var(--border);
@@ -19,14 +19,12 @@
 .tbl th .sort-icon { margin-left: 4px; opacity: 0.4; font-size: 10px; }
 .tbl th.sorted .sort-icon { opacity: 1; color: var(--accent); }
 .tbl td { padding: 9px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; white-space: nowrap; }
-.tbl td.wrap { white-space: normal; min-width: 160px; }
 .tbl tr.row-approved td { background: #f0fdf4; }
 .tbl tr.row-rejected td { background: #fef2f2; }
 .tbl tr.row-flagged  td { background: #faf5ff; }
-.tbl tr:hover td { background: #fafaf8; }
-.tbl tr.row-approved:hover td { background: #e8faf0; }
+.tbl tr:hover td { filter: brightness(0.97); }
 
-.editable { border: none; background: transparent; font-size: 12px; color: var(--text); font-family: inherit; padding: 2px 4px; border-radius: 4px; min-width: 80px; }
+.editable { border: none; background: transparent; font-size: 12px; color: var(--text); font-family: inherit; padding: 2px 4px; border-radius: 4px; }
 .editable:hover { background: var(--bg); }
 .editable:focus { background: #fff; border: 1px solid #93c5fd; outline: none; box-shadow: 0 0 0 2px rgba(59,130,246,.15); }
 .editable.edited { background: #fffbeb; border: 1px solid #fcd34d; }
@@ -40,30 +38,18 @@
 
 .notes-input { width: 110px; font-size: 11px; padding: 3px 5px; border: 1px solid var(--border); border-radius: 4px; background: var(--surface); color: var(--text); }
 .inline-actions { display: flex; gap: 3px; align-items: center; }
-.url-link { color: var(--accent); text-decoration: none; font-size: 11px; }
+.url-link { color: var(--accent); text-decoration: none; font-size: 11px; white-space: nowrap; }
 .url-link:hover { text-decoration: underline; }
-
-.col-check  { width: 28px; }
-.col-name   { min-width: 180px; max-width: 220px; }
-.col-dba    { min-width: 140px; max-width: 180px; }
-.col-type   { min-width: 120px; }
-.col-status { min-width: 80px; }
-.col-street { min-width: 180px; max-width: 220px; }
-.col-city   { min-width: 100px; }
-.col-state  { min-width: 55px; }
-.col-zip    { min-width: 90px; }
-.col-phone  { min-width: 120px; }
-.col-agent  { min-width: 130px; }
-.col-filing { min-width: 90px; }
-.col-formed { min-width: 90px; }
-.col-sic    { min-width: 65px; }
-.col-industry { min-width: 150px; max-width: 200px; }
-.col-market { min-width: 70px; }
-.col-qa     { min-width: 80px; }
-.col-notes  { min-width: 130px; }
-.col-actions{ min-width: 100px; }
-
 .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
+
+.match-high   { color: #16a34a; font-weight: 500; }
+.match-medium { color: #d97706; font-weight: 500; }
+.match-low    { color: #dc2626; font-weight: 500; }
+.match-none   { color: #9ca3af; }
+
+.pre-qa-auto   { background: #ecfdf5; color: #065f46; }
+.pre-qa-review { background: #fffbeb; color: #92400e; }
+.pre-qa-flag   { background: #fef2f2; color: #991b1b; }
 </style>
 </head>
 <body>
@@ -120,43 +106,46 @@
     <table class="tbl" id="queue-table">
       <thead>
         <tr>
-          <th class="col-check"><input type="checkbox" onchange="toggleAll(this)"></th>
-          <th class="col-name"    onclick="sortTable(1)">Legal name <span class="sort-icon">↕</span></th>
-          <th class="col-dba"     onclick="sortTable(2)">Trade name / DBA <span class="sort-icon">↕</span></th>
-          <th class="col-type"    onclick="sortTable(3)">Entity type <span class="sort-icon">↕</span></th>
-          <th class="col-status"  onclick="sortTable(4)">Status <span class="sort-icon">↕</span></th>
-          <th class="col-street"  onclick="sortTable(5)">Street address <span class="sort-icon">↕</span></th>
-          <th class="col-city"    onclick="sortTable(6)">City <span class="sort-icon">↕</span></th>
-          <th class="col-state"   onclick="sortTable(7)">State <span class="sort-icon">↕</span></th>
-          <th class="col-zip"     onclick="sortTable(8)">ZIP <span class="sort-icon">↕</span></th>
-          <th class="col-phone"   onclick="sortTable(9)">Phone <span class="sort-icon">↕</span></th>
-          <th class="col-agent"   onclick="sortTable(10)">Registered agent <span class="sort-icon">↕</span></th>
-          <th class="col-filing"  onclick="sortTable(11)">Filing ID <span class="sort-icon">↕</span></th>
-          <th class="col-formed"  onclick="sortTable(12)">Formed <span class="sort-icon">↕</span></th>
-          <th class="col-sic"     onclick="sortTable(13)">SIC <span class="sort-icon">↕</span></th>
-          <th class="col-industry" onclick="sortTable(14)">Industry <span class="sort-icon">↕</span></th>
-          <th class="col-market"  onclick="sortTable(15)">Market <span class="sort-icon">↕</span></th>
-          <th class="col-qa"      onclick="sortTable(16)">QA <span class="sort-icon">↕</span></th>
-          <th class="col-notes">Notes</th>
-          <th class="col-actions">Actions</th>
+          <th style="width:28px"><input type="checkbox" onchange="toggleAll(this)"></th>
+          <th onclick="sortTable(1)">Legal name <span class="sort-icon">↕</span></th>
+          <th onclick="sortTable(2)">Trade name / DBA <span class="sort-icon">↕</span></th>
+          <th onclick="sortTable(3)">Entity type <span class="sort-icon">↕</span></th>
+          <th onclick="sortTable(4)">Status <span class="sort-icon">↕</span></th>
+          <th onclick="sortTable(5)">Street address <span class="sort-icon">↕</span></th>
+          <th onclick="sortTable(6)">City <span class="sort-icon">↕</span></th>
+          <th onclick="sortTable(7)">State <span class="sort-icon">↕</span></th>
+          <th onclick="sortTable(8)">ZIP <span class="sort-icon">↕</span></th>
+          <th onclick="sortTable(9)">Phone <span class="sort-icon">↕</span></th>
+          <th onclick="sortTable(10)">Google address <span class="sort-icon">↕</span></th>
+          <th onclick="sortTable(11)">Address match <span class="sort-icon">↕</span></th>
+          <th onclick="sortTable(12)">Website <span class="sort-icon">↕</span></th>
+          <th onclick="sortTable(13)">Maps <span class="sort-icon">↕</span></th>
+          <th onclick="sortTable(14)">Pre-QA <span class="sort-icon">↕</span></th>
+          <th onclick="sortTable(15)">Registered agent <span class="sort-icon">↕</span></th>
+          <th onclick="sortTable(16)">Filing ID <span class="sort-icon">↕</span></th>
+          <th onclick="sortTable(17)">Formed <span class="sort-icon">↕</span></th>
+          <th onclick="sortTable(18)">SIC <span class="sort-icon">↕</span></th>
+          <th onclick="sortTable(19)">Industry <span class="sort-icon">↕</span></th>
+          <th onclick="sortTable(20)">Market <span class="sort-icon">↕</span></th>
+          <th onclick="sortTable(21)">QA <span class="sort-icon">↕</span></th>
+          <th>Notes</th>
+          <th>Actions</th>
         </tr>
       </thead>
       <tbody>
         {% for r in records %}
         <tr class="row-{{ r.qa_status }}" id="row-{{ r.business_id }}">
 
-          <td class="col-check">
-            <input type="checkbox" name="ids" value="{{ r.business_id }}" class="row-check">
-          </td>
+          <td><input type="checkbox" name="ids" value="{{ r.business_id }}" class="row-check"></td>
 
           <!-- Legal name -->
-          <td class="col-name">
+          <td style="min-width:180px">
             <div style="display:flex;align-items:center;gap:3px">
               <input class="editable" id="name-{{ r.business_id }}"
                      value="{{ r.business_name }}"
                      style="font-weight:500;width:160px"
-                     onchange="markEdited({{ r.business_id }}, 'name')"
-                     oninput="markEdited({{ r.business_id }}, 'name')">
+                     onchange="markEdited({{ r.business_id }},'name')"
+                     oninput="markEdited({{ r.business_id }},'name')">
               <button class="save-btn" id="save-name-{{ r.business_id }}"
                       onclick="saveField(event,{{ r.business_id }},'business_name','name-{{ r.business_id }}')">✓</button>
               <span class="saved-check" id="check-name-{{ r.business_id }}">✓</span>
@@ -167,19 +156,19 @@
             {% endif %}
           </td>
 
-          <!-- Trade name DBA -->
-          <td class="col-dba">
-            <span class="truncate" style="max-width:170px;font-size:11px;color:var(--muted)">{{ r.trade_name or '—' }}</span>
+          <!-- Trade name -->
+          <td style="min-width:140px">
+            <span class="truncate" style="max-width:160px;font-size:11px;color:var(--muted)">{{ r.trade_name or '—' }}</span>
           </td>
 
           <!-- Entity type -->
-          <td class="col-type">
+          <td style="min-width:110px">
             <div style="display:flex;align-items:center;gap:3px">
               <input class="editable" id="type-{{ r.business_id }}"
                      value="{{ r.entity_type or '' }}"
-                     style="width:100px"
-                     onchange="markEdited({{ r.business_id }}, 'type')"
-                     oninput="markEdited({{ r.business_id }}, 'type')">
+                     style="width:95px"
+                     onchange="markEdited({{ r.business_id }},'type')"
+                     oninput="markEdited({{ r.business_id }},'type')">
               <button class="save-btn" id="save-type-{{ r.business_id }}"
                       onclick="saveField(event,{{ r.business_id }},'entity_type','type-{{ r.business_id }}')">✓</button>
               <span class="saved-check" id="check-type-{{ r.business_id }}">✓</span>
@@ -188,18 +177,18 @@
           </td>
 
           <!-- Status -->
-          <td class="col-status">
+          <td style="min-width:75px">
             <span class="badge status-{{ (r.status or 'unknown')|lower|replace(' ','') }}">{{ r.status or '—' }}</span>
           </td>
 
-          <!-- Street address -->
-          <td class="col-street">
+          <!-- Street -->
+          <td style="min-width:180px">
             <div style="display:flex;align-items:center;gap:3px">
               <input class="editable" id="addr1-{{ r.business_id }}"
                      value="{{ r.address_line1 or r.registered_address or '' }}"
-                     style="width:160px"
-                     onchange="markEdited({{ r.business_id }}, 'addr1')"
-                     oninput="markEdited({{ r.business_id }}, 'addr1')">
+                     style="width:165px"
+                     onchange="markEdited({{ r.business_id }},'addr1')"
+                     oninput="markEdited({{ r.business_id }},'addr1')">
               <button class="save-btn" id="save-addr1-{{ r.business_id }}"
                       onclick="saveField(event,{{ r.business_id }},'address_line1','addr1-{{ r.business_id }}')">✓</button>
               <span class="saved-check" id="check-addr1-{{ r.business_id }}">✓</span>
@@ -208,28 +197,27 @@
           </td>
 
           <!-- City -->
-          <td class="col-city">
+          <td style="min-width:95px">
             <div style="display:flex;align-items:center;gap:3px">
               <input class="editable" id="city-{{ r.business_id }}"
                      value="{{ r.city or '' }}"
-                     style="width:85px"
-                     onchange="markEdited({{ r.business_id }}, 'city')"
-                     oninput="markEdited({{ r.business_id }}, 'city')">
+                     style="width:80px"
+                     onchange="markEdited({{ r.business_id }},'city')"
+                     oninput="markEdited({{ r.business_id }},'city')">
               <button class="save-btn" id="save-city-{{ r.business_id }}"
                       onclick="saveField(event,{{ r.business_id }},'city','city-{{ r.business_id }}')">✓</button>
-              <span class="saved-check" id="check-city-{{ r.business_id }}">✓</span>
               <span class="unsaved-dot" id="dot-city-{{ r.business_id }}"></span>
             </div>
           </td>
 
           <!-- State -->
-          <td class="col-state">
-            <div style="display:flex;align-items:center;gap:3px">
+          <td style="min-width:50px">
+            <div style="display:flex;align-items:center;gap:2px">
               <input class="editable" id="state-{{ r.business_id }}"
                      value="{{ r.state_province or '' }}"
-                     style="width:38px"
-                     onchange="markEdited({{ r.business_id }}, 'state')"
-                     oninput="markEdited({{ r.business_id }}, 'state')">
+                     style="width:36px"
+                     onchange="markEdited({{ r.business_id }},'state')"
+                     oninput="markEdited({{ r.business_id }},'state')">
               <button class="save-btn" id="save-state-{{ r.business_id }}"
                       onclick="saveField(event,{{ r.business_id }},'state_province','state-{{ r.business_id }}')">✓</button>
               <span class="unsaved-dot" id="dot-state-{{ r.business_id }}"></span>
@@ -237,13 +225,13 @@
           </td>
 
           <!-- ZIP -->
-          <td class="col-zip">
-            <div style="display:flex;align-items:center;gap:3px">
+          <td style="min-width:90px">
+            <div style="display:flex;align-items:center;gap:2px">
               <input class="editable" id="zip-{{ r.business_id }}"
                      value="{{ r.postal_code or '' }}"
                      style="width:75px"
-                     onchange="markEdited({{ r.business_id }}, 'zip')"
-                     oninput="markEdited({{ r.business_id }}, 'zip')">
+                     onchange="markEdited({{ r.business_id }},'zip')"
+                     oninput="markEdited({{ r.business_id }},'zip')">
               <button class="save-btn" id="save-zip-{{ r.business_id }}"
                       onclick="saveField(event,{{ r.business_id }},'postal_code','zip-{{ r.business_id }}')">✓</button>
               <span class="unsaved-dot" id="dot-zip-{{ r.business_id }}"></span>
@@ -251,13 +239,13 @@
           </td>
 
           <!-- Phone -->
-          <td class="col-phone">
+          <td style="min-width:115px">
             <div style="display:flex;align-items:center;gap:3px">
               <input class="editable" id="phone-{{ r.business_id }}"
                      value="{{ r.phone or '' }}"
-                     style="width:105px"
-                     onchange="markEdited({{ r.business_id }}, 'phone')"
-                     oninput="markEdited({{ r.business_id }}, 'phone')">
+                     style="width:100px"
+                     onchange="markEdited({{ r.business_id }},'phone')"
+                     oninput="markEdited({{ r.business_id }},'phone')">
               <button class="save-btn" id="save-phone-{{ r.business_id }}"
                       onclick="saveField(event,{{ r.business_id }},'phone','phone-{{ r.business_id }}')">✓</button>
               <span class="saved-check" id="check-phone-{{ r.business_id }}">✓</span>
@@ -265,29 +253,80 @@
             </div>
           </td>
 
+          <!-- Google address -->
+          <td style="min-width:180px">
+            {% if r.google_address %}
+              <span class="truncate" style="max-width:170px;font-size:11px;color:var(--muted)">{{ r.google_address }}</span>
+            {% else %}
+              <span style="font-size:11px;color:#d1d5db">not enriched</span>
+            {% endif %}
+          </td>
+
+          <!-- Address match score -->
+          <td style="min-width:90px;text-align:center">
+            {% if r.address_match_score is not none and r.google_address %}
+              {% set score = (r.address_match_score * 100)|int %}
+              <span class="{% if score >= 90 %}match-high{% elif score >= 70 %}match-medium{% elif score >= 50 %}match-low{% else %}match-none{% endif %}">
+                {{ score }}%
+              </span>
+            {% else %}
+              <span class="match-none">—</span>
+            {% endif %}
+          </td>
+
+          <!-- Website -->
+          <td style="min-width:120px">
+            {% if r.website_url %}
+              <a href="{{ r.website_url }}" target="_blank" class="url-link">↗ website</a>
+            {% else %}
+              <span style="font-size:11px;color:#d1d5db">—</span>
+            {% endif %}
+          </td>
+
+          <!-- Google Maps -->
+          <td style="min-width:90px">
+            {% if r.google_maps_url %}
+              <a href="{{ r.google_maps_url }}" target="_blank" class="url-link">↗ maps</a>
+            {% else %}
+              <span style="font-size:11px;color:#d1d5db">—</span>
+            {% endif %}
+          </td>
+
+          <!-- Pre-QA status -->
+          <td style="min-width:100px">
+            {% if r.pre_qa_status %}
+              <span class="badge pre-qa-{{ r.pre_qa_status|replace('_','-') }}"
+                    title="{{ r.pre_qa_note or '' }}">
+                {{ r.pre_qa_status|replace('_',' ') }}
+              </span>
+            {% else %}
+              <span style="font-size:11px;color:#d1d5db">—</span>
+            {% endif %}
+          </td>
+
           <!-- Registered agent -->
-          <td class="col-agent">
+          <td style="min-width:130px">
             <span class="truncate" style="max-width:120px;font-size:11px;color:var(--muted)">{{ r.registered_agent or '—' }}</span>
           </td>
 
           <!-- Filing ID -->
-          <td class="col-filing">
+          <td style="min-width:90px">
             <span style="font-size:11px;font-family:monospace">{{ r.filing_id or '—' }}</span>
           </td>
 
           <!-- Formed -->
-          <td class="col-formed">
+          <td style="min-width:90px">
             <span style="font-size:11px">{{ r.registered_date or '—' }}</span>
           </td>
 
           <!-- SIC -->
-          <td class="col-sic">
+          <td style="min-width:65px">
             <div style="display:flex;align-items:center;gap:3px">
               <input class="editable" id="sic-{{ r.business_id }}"
                      value="{{ r.sic_code or '' }}"
                      style="width:48px"
-                     onchange="markEdited({{ r.business_id }}, 'sic')"
-                     oninput="markEdited({{ r.business_id }}, 'sic')">
+                     onchange="markEdited({{ r.business_id }},'sic')"
+                     oninput="markEdited({{ r.business_id }},'sic')">
               <button class="save-btn" id="save-sic-{{ r.business_id }}"
                       onclick="saveField(event,{{ r.business_id }},'sic_code','sic-{{ r.business_id }}')">✓</button>
               <span class="saved-check" id="check-sic-{{ r.business_id }}">✓</span>
@@ -296,22 +335,22 @@
           </td>
 
           <!-- Industry -->
-          <td class="col-industry">
-            <span class="truncate" style="max-width:190px;font-size:11px;color:var(--muted)">{{ r.industry_desc or '—' }}</span>
+          <td style="min-width:160px">
+            <span class="truncate" style="max-width:150px;font-size:11px;color:var(--muted)">{{ r.industry_desc or '—' }}</span>
           </td>
 
           <!-- Market -->
-          <td class="col-market">
+          <td style="min-width:70px">
             <span class="badge market">{{ r.source_market }}</span>
           </td>
 
           <!-- QA status -->
-          <td class="col-qa">
+          <td style="min-width:80px">
             <span class="badge qa-{{ r.qa_status }}" id="badge-{{ r.business_id }}">{{ r.qa_status }}</span>
           </td>
 
           <!-- Notes -->
-          <td class="col-notes">
+          <td style="min-width:130px">
             <div style="display:flex;align-items:center;gap:3px">
               <input class="notes-input" id="notes-{{ r.business_id }}"
                      placeholder="Add note..."
@@ -324,7 +363,7 @@
           </td>
 
           <!-- Actions -->
-          <td class="col-actions">
+          <td style="min-width:100px">
             <div class="inline-actions">
               <form method="POST" action="{{ url_for('action') }}" style="display:contents">
                 <input type="hidden" name="business_id" value="{{ r.business_id }}">
@@ -348,7 +387,7 @@
 
         </tr>
         {% else %}
-        <tr><td colspan="19" class="empty">No records found.</td></tr>
+        <tr><td colspan="24" class="empty">No records found.</td></tr>
         {% endfor %}
       </tbody>
     </table>
@@ -375,9 +414,8 @@ function sortTable(col) {
   const tbody = table.querySelector('tbody');
   const rows  = Array.from(tbody.querySelectorAll('tr'));
   const dir   = sortDir[col] === 'asc' ? 'desc' : 'asc';
-  sortDir     = {};
+  sortDir = {};
   sortDir[col] = dir;
-
   document.querySelectorAll('.tbl th .sort-icon').forEach(i => i.textContent = '↕');
   document.querySelectorAll('.tbl th').forEach(h => h.classList.remove('sorted'));
   const headers = document.querySelectorAll('.tbl th');
@@ -385,7 +423,6 @@ function sortTable(col) {
     headers[col].classList.add('sorted');
     headers[col].querySelector('.sort-icon').textContent = dir === 'asc' ? '↑' : '↓';
   }
-
   rows.sort((a, b) => {
     const aVal = (a.cells[col] ? a.cells[col].innerText : '').trim().toLowerCase();
     const bVal = (b.cells[col] ? b.cells[col].innerText : '').trim().toLowerCase();
@@ -393,7 +430,6 @@ function sortTable(col) {
     if (aVal > bVal) return dir === 'asc' ?  1 : -1;
     return 0;
   });
-
   rows.forEach(r => tbody.appendChild(r));
 }
 
@@ -417,7 +453,6 @@ function saveField(e, id, dbField, inputId) {
   const btn   = document.getElementById('save-' + fieldKey + '-' + id);
   const check = document.getElementById('check-' + fieldKey + '-' + id);
   const dot   = document.getElementById('dot-' + fieldKey + '-' + id);
-
   fetch('/update-field', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
@@ -440,7 +475,6 @@ function markNotesEdited(id) {
   if (dot)   dot.classList.add('visible');
   if (!unsavedFields[id]) unsavedFields[id] = {};
   unsavedFields[id]['notes'] = true;
-
   clearTimeout(window['notesTimer' + id]);
   window['notesTimer' + id] = setTimeout(() => {
     const val = document.getElementById('notes-' + id).value;
@@ -479,11 +513,11 @@ function confirmAction(event, id, action) {
 
 function saveAllPending(id) {
   const fieldMap = {
-    'name':  'business_name',  'type':  'entity_type',
-    'addr1': 'address_line1',  'addr2': 'address_line2',
-    'city':  'city',           'state': 'state_province',
-    'zip':   'postal_code',    'phone': 'phone',
-    'sic':   'sic_code',       'notes': 'qa_notes'
+    'name': 'business_name', 'type': 'entity_type',
+    'addr1': 'address_line1', 'addr2': 'address_line2',
+    'city': 'city', 'state': 'state_province',
+    'zip': 'postal_code', 'phone': 'phone',
+    'sic': 'sic_code', 'notes': 'qa_notes'
   };
   const fields = unsavedFields[id] || {};
   Object.keys(fields).forEach(fk => {
