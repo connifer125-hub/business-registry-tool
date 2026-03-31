@@ -1,15 +1,11 @@
 """
 admin/app.py — Flask QA Admin Interface
-────────────────────────────────────────
-Business Registry QA tool — review, flag, approve, reject, export.
-
-Run: python admin/app.py
-     → http://localhost:5000
 """
 
 import csv
 import io
 import sys
+import json
 from pathlib import Path
 from flask import Flask, render_template, request, redirect, url_for, flash, Response, jsonify
 
@@ -23,6 +19,11 @@ import psycopg2.extras
 app = Flask(__name__)
 app.secret_key = "change-this-in-production"
 
+ALLOWED_FIELDS = {"business_name", "trade_name", "entity_type", "status",
+                  "registered_address", "city", "state_province", "postal_code",
+                  "sic_code", "naics_code", "industry_desc", "registered_agent",
+                  "source_url", "qa_notes"}
+
 # ─────────────────────────────────────────────
 # Dashboard
 # ─────────────────────────────────────────────
@@ -33,16 +34,16 @@ def dashboard():
 
 
 # ─────────────────────────────────────────────
-# Record queue — paginated, filterable
+# Queue
 # ─────────────────────────────────────────────
 @app.route("/queue")
 def queue():
-    page         = int(request.args.get("page", 1))
-    per_page     = int(request.args.get("per_page", 50))
-    market       = request.args.get("market", "")
-    status       = request.args.get("status", "pending")
-    search       = request.args.get("search", "").strip()
-    offset       = (page - 1) * per_page
+    page     = int(request.args.get("page", 1))
+    per_page = int(request.args.get("per_page", 50))
+    market   = request.args.get("market", "")
+    status   = request.args.get("status", "pending")
+    search   = request.args.get("search", "").strip()
+    offset   = (page - 1) * per_page
 
     records, total = _fetch_records(
         limit=per_page, offset=offset,
@@ -85,11 +86,10 @@ def _fetch_records(limit, offset, source_market=None, qa_status="pending", searc
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             cur.execute(f"SELECT COUNT(*) FROM businesses {where}", params)
             total = cur.fetchone()["count"]
-
             cur.execute(f"""
                 SELECT business_id, business_name, trade_name, entity_type, status,
                        city, state_province, country, registered_date,
-                       source_market, qa_status, qa_notes,
+                       source_market, source_url, qa_status, qa_notes,
                        is_duplicate_of, duplicate_confidence, scraped_at
                 FROM businesses {where}
                 ORDER BY scraped_at DESC
@@ -99,7 +99,29 @@ def _fetch_records(limit, offset, source_market=None, qa_status="pending", searc
 
 
 # ─────────────────────────────────────────────
-# Single record detail
+# Inline field update (AJAX)
+# ─────────────────────────────────────────────
+@app.route("/update-field", methods=["POST"])
+def update_field():
+    data       = request.get_json()
+    business_id = data.get("business_id")
+    field      = data.get("field")
+    value      = data.get("value", "")
+
+    if field not in ALLOWED_FIELDS:
+        return jsonify({"ok": False, "error": "Field not allowed"})
+
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                f"UPDATE businesses SET {field} = %s, updated_at = NOW() WHERE business_id = %s",
+                (value or None, business_id)
+            )
+    return jsonify({"ok": True})
+
+
+# ─────────────────────────────────────────────
+# Record detail
 # ─────────────────────────────────────────────
 @app.route("/record/<int:business_id>")
 def record_detail(business_id):
@@ -152,9 +174,9 @@ def bulk_action():
 # ─────────────────────────────────────────────
 @app.route("/export")
 def export():
-    market  = request.args.get("market", "")
-    status  = request.args.get("status", "approved")
-    fmt     = request.args.get("format", "csv")
+    market = request.args.get("market", "")
+    status = request.args.get("status", "approved")
+    fmt    = request.args.get("format", "csv")
 
     conditions = []
     params = []
@@ -195,7 +217,7 @@ def export():
 
 
 # ─────────────────────────────────────────────
-# Market access guide
+# Markets
 # ─────────────────────────────────────────────
 @app.route("/markets")
 def markets():
@@ -207,16 +229,14 @@ def markets():
 
 
 # ─────────────────────────────────────────────
-# Scraper trigger routes
+# Scraper triggers
 # ─────────────────────────────────────────────
 @app.route("/run-scraper/delaware")
 def run_delaware():
     import requests as req
     import subprocess
     limit = request.args.get("limit", "100")
-
     sample = req.get("https://data.delaware.gov/resource/i7m4-42sn.json?$limit=1").json()
-
     result = subprocess.run(
         [sys.executable, "scrapers/tier1/us/delaware.py", "--limit", limit, "--dry-run"],
         capture_output=True, text=True, cwd=str(Path(__file__).resolve().parents[1])
