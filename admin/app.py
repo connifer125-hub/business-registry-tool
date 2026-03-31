@@ -19,10 +19,13 @@ import psycopg2.extras
 app = Flask(__name__)
 app.secret_key = "change-this-in-production"
 
-ALLOWED_FIELDS = {"business_name", "trade_name", "entity_type", "status",
-                      "registered_address", "address_line1", "address_line2", "city", "state_province", "postal_code",
-                      "sic_code", "naics_code", "industry_desc", "registered_agent", "phone",
-                  "source_url", "qa_notes"}
+ALLOWED_FIELDS = {
+    "business_name", "trade_name", "entity_type", "status",
+    "registered_address", "address_line1", "address_line2",
+    "city", "state_province", "postal_code", "country",
+    "owner_address", "phone", "sic_code", "naics_code",
+    "industry_desc", "registered_agent", "source_url", "qa_notes"
+}
 
 # ─────────────────────────────────────────────
 # Dashboard
@@ -88,12 +91,14 @@ def _fetch_records(limit, offset, source_market=None, qa_status="pending", searc
             total = cur.fetchone()["count"]
             cur.execute(f"""
                 SELECT business_id, business_name, trade_name, entity_type, status,
-                       city, state_province, country, registered_date,
-                       source_market, source_url, qa_status, qa_notes,
-                       address_line1, address_line2, owner_address, phone,
-                       filing_id, license_number,
+                       registered_address, address_line1, address_line2,
+                       city, state_province, postal_code, country,
+                       owner_address, phone,
+                       registered_date, source_market, source_url,
+                       qa_status, qa_notes,
                        is_duplicate_of, duplicate_confidence, scraped_at,
-                       sic_code, industry_desc
+                       sic_code, industry_desc, filing_id, license_number,
+                       last_verified_at, times_seen
                 FROM businesses {where}
                 ORDER BY scraped_at DESC
                 LIMIT %s OFFSET %s
@@ -132,10 +137,59 @@ def record_detail(business_id):
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             cur.execute("SELECT * FROM businesses WHERE business_id = %s", (business_id,))
             record = cur.fetchone()
+            cur.execute("""
+                SELECT cl.*, b.business_name
+                FROM change_log cl
+                JOIN businesses b ON b.business_id = cl.business_id
+                WHERE cl.business_id = %s
+                ORDER BY cl.changed_at DESC
+                LIMIT 20
+            """, (business_id,))
+            history = cur.fetchall()
     if not record:
         flash("Record not found.", "error")
         return redirect(url_for("queue"))
-    return render_template("record_detail.html", record=record)
+    return render_template("record_detail.html", record=record, history=history)
+
+
+# ─────────────────────────────────────────────
+# Change log
+# ─────────────────────────────────────────────
+@app.route("/changes")
+def changes():
+    page     = int(request.args.get("page", 1))
+    per_page = 50
+    offset   = (page - 1) * per_page
+
+    with get_conn() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute("SELECT COUNT(*) FROM change_log")
+            total = cur.fetchone()["count"]
+
+            cur.execute("""
+                SELECT cl.*, b.business_name
+                FROM change_log cl
+                LEFT JOIN businesses b ON b.business_id = cl.business_id
+                ORDER BY cl.changed_at DESC
+                LIMIT %s OFFSET %s
+            """, (per_page, offset))
+            change_rows = cur.fetchall()
+
+            cur.execute("""
+                SELECT
+                    COUNT(*) AS total,
+                    COUNT(*) FILTER (WHERE change_type = 'field_change')  AS field_changes,
+                    COUNT(*) FILTER (WHERE change_type = 'status_change') AS status_changes,
+                    COUNT(*) FILTER (WHERE change_type = 'not_found')     AS not_found
+                FROM change_log
+            """)
+            change_stats = dict(cur.fetchone())
+
+    total_pages = (total + per_page - 1) // per_page
+    return render_template("changes.html",
+        changes=change_rows, stats=change_stats,
+        page=page, total_pages=total_pages
+    )
 
 
 # ─────────────────────────────────────────────
@@ -193,10 +247,14 @@ def export():
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             cur.execute(f"""
                 SELECT business_id, business_name, trade_name, entity_type, status,
-                       registered_address, city, state_province, postal_code, country,
+                       registered_address, address_line1, address_line2,
+                       city, state_province, postal_code, country,
+                       owner_address, phone,
                        registered_date, dissolution_date, sic_code, naics_code,
                        industry_desc, registered_agent, officer_names,
-                       source_market, source_url, qa_status, scraped_at
+                       filing_id, license_number,
+                       source_market, source_url, qa_status,
+                       scraped_at, last_verified_at, times_seen
                 FROM businesses {where}
                 ORDER BY source_market, business_name
             """, params)
@@ -238,7 +296,7 @@ def markets():
 def run_delaware():
     import requests as req
     import subprocess
-    limit = request.args.get("limit", "100")
+    limit  = request.args.get("limit", "100")
     sample = req.get("https://data.delaware.gov/resource/i7m4-42sn.json?$limit=1").json()
     result = subprocess.run(
         [sys.executable, "scrapers/tier1/us/delaware.py", "--limit", limit, "--dry-run"],
@@ -251,7 +309,7 @@ def run_delaware():
 @app.route("/run-scraper/delaware/live")
 def run_delaware_live():
     import subprocess
-    limit = request.args.get("limit", "100")
+    limit  = request.args.get("limit", "100")
     result = subprocess.run(
         [sys.executable, "scrapers/tier1/us/delaware.py", "--limit", limit],
         capture_output=True, text=True, cwd=str(Path(__file__).resolve().parents[1])
@@ -263,7 +321,7 @@ def run_delaware_live():
 @app.route("/run-scraper/colorado")
 def run_colorado():
     import subprocess
-    limit = request.args.get("limit", "100")
+    limit  = request.args.get("limit", "100")
     result = subprocess.run(
         [sys.executable, "scrapers/tier1/us/colorado.py", "--limit", limit],
         capture_output=True, text=True, cwd=str(Path(__file__).resolve().parents[1])
@@ -300,10 +358,14 @@ def scraper_index():
     <h3>Scrapers</h3>
     <ul>
       <li><a href='/run-scraper/delaware'>Inspect Delaware fields (dry run)</a></li>
-      <li><a href='/run-scraper/delaware/live?limit=100'>Run Delaware live (100 records)</a></li>
-      <li><a href='/run-scraper/delaware/live?limit=500'>Run Delaware live (500 records)</a></li>
+      <li><a href='/run-scraper/delaware/live?limit=100'>Run Delaware (100 records)</a></li>
+      <li><a href='/run-scraper/delaware/live?limit=500'>Run Delaware (500 records)</a></li>
       <li><a href='/run-scraper/colorado?limit=100'>Run Colorado (100 records)</a></li>
     </ul>
+    <p style='font-size:13px;color:#666'>
+      Rescraping existing records will detect changes and log them to the
+      <a href='/changes'>Change Log</a> — no duplicates created.
+    </p>
     <h3>AI Enrichment (Claude SIC classification)</h3>
     <ul>
       <li><a href='/enrich/delaware?limit=10&dry=1'>Preview enrichment — 10 records (dry run)</a></li>
