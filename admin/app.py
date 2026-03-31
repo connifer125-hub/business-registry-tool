@@ -20,8 +20,8 @@ app = Flask(__name__)
 app.secret_key = "change-this-in-production"
 
 ALLOWED_FIELDS = {"business_name", "trade_name", "entity_type", "status",
-                  "registered_address", "city", "state_province", "postal_code",
-                  "sic_code", "naics_code", "industry_desc", "registered_agent",
+                      "registered_address", "address_line1", "address_line2", "city", "state_province", "postal_code",
+                      "sic_code", "naics_code", "industry_desc", "registered_agent", "phone",
                   "source_url", "qa_notes"}
 
 # ─────────────────────────────────────────────
@@ -90,7 +90,10 @@ def _fetch_records(limit, offset, source_market=None, qa_status="pending", searc
                 SELECT business_id, business_name, trade_name, entity_type, status,
                        city, state_province, country, registered_date,
                        source_market, source_url, qa_status, qa_notes,
-                       is_duplicate_of, duplicate_confidence, scraped_at
+                       address_line1, address_line2, owner_address, phone,
+                       filing_id, license_number,
+                       is_duplicate_of, duplicate_confidence, scraped_at,
+                       sic_code, industry_desc
                 FROM businesses {where}
                 ORDER BY scraped_at DESC
                 LIMIT %s OFFSET %s
@@ -103,10 +106,10 @@ def _fetch_records(limit, offset, source_market=None, qa_status="pending", searc
 # ─────────────────────────────────────────────
 @app.route("/update-field", methods=["POST"])
 def update_field():
-    data       = request.get_json()
+    data        = request.get_json()
     business_id = data.get("business_id")
-    field      = data.get("field")
-    value      = data.get("value", "")
+    field       = data.get("field")
+    value       = data.get("value", "")
 
     if field not in ALLOWED_FIELDS:
         return jsonify({"ok": False, "error": "Field not allowed"})
@@ -269,16 +272,43 @@ def run_colorado():
     return f"<pre style='font-family:monospace;padding:20px;'>{output}</pre>"
 
 
+# ─────────────────────────────────────────────
+# AI Enrichment
+# ─────────────────────────────────────────────
+@app.route("/enrich/delaware")
+def enrich_delaware():
+    import subprocess
+    limit   = request.args.get("limit", "20")
+    dry_run = request.args.get("dry", "0") == "1"
+    args    = [sys.executable, "utils/enricher.py",
+               "--market", "US-DE", "--limit", limit]
+    if dry_run:
+        args.append("--dry-run")
+    result = subprocess.run(
+        args, capture_output=True, text=True,
+        cwd=str(Path(__file__).resolve().parents[1])
+    )
+    output = result.stdout + "\n" + result.stderr
+    return f"<pre style='font-family:monospace;padding:20px;'>{output}</pre>"
+
+
 @app.route("/scrapers")
 def scraper_index():
     return """
-    <html><body style='font-family:sans-serif;padding:40px;'>
-    <h2>Scraper triggers</h2>
+    <html><body style='font-family:sans-serif;padding:40px;line-height:2'>
+    <h2>Scraper &amp; enrichment triggers</h2>
+    <h3>Scrapers</h3>
     <ul>
       <li><a href='/run-scraper/delaware'>Inspect Delaware fields (dry run)</a></li>
       <li><a href='/run-scraper/delaware/live?limit=100'>Run Delaware live (100 records)</a></li>
       <li><a href='/run-scraper/delaware/live?limit=500'>Run Delaware live (500 records)</a></li>
       <li><a href='/run-scraper/colorado?limit=100'>Run Colorado (100 records)</a></li>
+    </ul>
+    <h3>AI Enrichment (Claude SIC classification)</h3>
+    <ul>
+      <li><a href='/enrich/delaware?limit=10&dry=1'>Preview enrichment — 10 records (dry run)</a></li>
+      <li><a href='/enrich/delaware?limit=20'>Enrich 20 records (live)</a></li>
+      <li><a href='/enrich/delaware?limit=100'>Enrich 100 records (live)</a></li>
     </ul>
     <p><a href='/'>Back to admin</a></p>
     </body></html>
