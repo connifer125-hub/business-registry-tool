@@ -95,6 +95,28 @@
   </form>
 
   <form method="POST" action="{{ url_for('bulk_action') }}" id="bulk-form">
+
+    <!-- Pre-QA legend -->
+    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:12px;padding:10px 14px;background:var(--bg);border-radius:var(--border-radius-md);font-size:11px;border:0.5px solid var(--border)">
+      <span style="font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">Pre-QA key</span>
+      <span style="display:flex;align-items:center;gap:5px">
+        <span style="background:#ecfdf5;color:#065f46;padding:1px 7px;border-radius:10px;font-weight:500">auto approve</span>
+        <span style="color:var(--muted)">Google address 90%+ match — high confidence, DUNS-ready</span>
+      </span>
+      <span style="display:flex;align-items:center;gap:5px">
+        <span style="background:#fffbeb;color:#92400e;padding:1px 7px;border-radius:10px;font-weight:500">review</span>
+        <span style="color:var(--muted)">70–89% match — likely correct, quick human check recommended</span>
+      </span>
+      <span style="display:flex;align-items:center;gap:5px">
+        <span style="background:#fef2f2;color:#991b1b;padding:1px 7px;border-radius:10px;font-weight:500">flag</span>
+        <span style="color:var(--muted)">Below 70% or not found — registry may be home/agent address, use Research button</span>
+      </span>
+      <span style="display:flex;align-items:center;gap:5px">
+        <span style="background:#faf5ff;color:#6d28d9;padding:1px 7px;border-radius:10px;font-weight:500">R</span>
+        <span style="color:var(--muted)">Research button — opens smart social/public source lookup for that business</span>
+      </span>
+    </div>
+
     <div class="bulk-bar">
       <label><input type="checkbox" id="select-all" onchange="toggleAll(this)"> Select all</label>
       <button type="submit" name="action" value="approved" class="btn small">✓ Approve selected</button>
@@ -363,7 +385,7 @@
           </td>
 
           <!-- Actions -->
-          <td style="min-width:100px">
+          <td style="min-width:130px">
             <div class="inline-actions">
               <form method="POST" action="{{ url_for('action') }}" style="display:contents">
                 <input type="hidden" name="business_id" value="{{ r.business_id }}">
@@ -382,6 +404,9 @@
                 {% endif %}
               </form>
               <a href="{{ url_for('record_detail', business_id=r.business_id) }}" class="btn-sm" title="Full detail">↗</a>
+              <button class="btn-sm" style="color:#7c3aed;border-color:#c4b5fd"
+                      onclick="openResearch('{{ r.business_name|replace("'","") }}','{{ r.city or "" }}','{{ r.state_province or "" }}','{{ r.entity_type or "" }}','{{ r.industry_desc or "" }}')"
+                      title="Research this business">R</button>
             </div>
           </td>
 
@@ -535,6 +560,77 @@ function saveAllPending(id) {
 
 function toggleAll(cb) {
   document.querySelectorAll('.row-check').forEach(c => c.checked = cb.checked);
+}
+
+function openResearch(name, city, state, entityType, industry) {
+  const q       = encodeURIComponent(name + ' ' + city + ' ' + state);
+  const qName   = encodeURIComponent(name);
+  const qLocal  = encodeURIComponent(name + ' ' + city);
+
+  const ind = (industry || '').toLowerCase();
+  const ent = (entityType || '').toLowerCase();
+
+  const isSmallBiz = (
+    ent.includes('sole') || ent.includes('trade') ||
+    ind.match(/restaurant|salon|cleaning|repair|childcare|daycare|food|cafe|retail|plumb|electric|contrac|landscap|paint|bar|gym|yoga|massage|nail|beauty|barber/)
+  );
+  const isEnterprise = (
+    ent.includes('corporation') && !ent.includes('sole') ||
+    ind.match(/software|financial|healthcare system|pharma|insurance|hospital|bank|technology|saas/)
+  );
+
+  let links = [];
+
+  links.push({ label: 'Google', url: `https://www.google.com/search?q=${q}`, always: true });
+  links.push({ label: 'BBB', url: `https://www.bbb.org/search?find_text=${qName}&find_loc=${encodeURIComponent(city + ' ' + state)}`, always: true });
+
+  if (isSmallBiz || !isEnterprise) {
+    links.push({ label: 'Facebook', url: `https://www.facebook.com/search/pages/?q=${qLocal}` });
+    links.push({ label: 'Yelp', url: `https://www.yelp.com/search?find_desc=${qName}&find_loc=${encodeURIComponent(city + ' ' + state)}` });
+  }
+
+  if (!isSmallBiz || isEnterprise) {
+    links.push({ label: 'LinkedIn', url: `https://www.linkedin.com/search/results/companies/?keywords=${qName}` });
+    links.push({ label: 'Crunchbase', url: `https://www.crunchbase.com/textsearch?q=${qName}` });
+  }
+
+  links.push({ label: 'OpenCorporates', url: `https://opencorporates.com/companies?q=${qName}&jurisdiction_code=us_de` });
+  links.push({ label: 'SEC EDGAR', url: `https://efts.sec.gov/LATEST/search-index?q=%22${qName}%22&dateRange=custom&startdt=2000-01-01` });
+
+  const existing = document.getElementById('research-modal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'research-modal';
+  modal.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--surface,#fff);border:1px solid var(--border,#e2e0d8);border-radius:12px;padding:24px;z-index:9999;min-width:340px;box-shadow:0 4px 24px rgba(0,0,0,.12)';
+
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:9998';
+  overlay.onclick = () => { modal.remove(); overlay.remove(); };
+
+  modal.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div>
+        <div style="font-weight:500;font-size:14px;color:var(--text,#1a1a18)">${name}</div>
+        <div style="font-size:11px;color:var(--muted,#6b6a65);margin-top:2px">${city}${state ? ', ' + state : ''} &bull; ${entityType || 'unknown type'}</div>
+      </div>
+      <button onclick="document.getElementById('research-modal').remove();document.getElementById('research-overlay').remove()" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--muted,#6b6a65)">&times;</button>
+    </div>
+    <div style="font-size:11px;color:var(--muted,#6b6a65);margin-bottom:12px;padding:8px 10px;background:var(--bg,#f5f4f0);border-radius:6px">
+      ${isSmallBiz ? 'Small business — showing Facebook, Yelp, BBB' : isEnterprise ? 'Enterprise — showing LinkedIn, Crunchbase, EDGAR' : 'Standard — showing all sources'}
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      ${links.map(l => `
+        <a href="${l.url}" target="_blank" style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border:0.5px solid var(--border,#e2e0d8);border-radius:8px;text-decoration:none;color:var(--text,#1a1a18);font-size:13px;background:var(--surface,#fff)">
+          <span style="font-weight:500">${l.label}</span>
+          <span style="font-size:11px;color:var(--muted,#6b6a65)">↗ open</span>
+        </a>`).join('')}
+    </div>
+  `;
+
+  overlay.id = 'research-overlay';
+  document.body.appendChild(overlay);
+  document.body.appendChild(modal);
 }
 </script>
 </body>
