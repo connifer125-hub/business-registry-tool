@@ -660,10 +660,22 @@ function getAreaInfo(phone) {
 }
 
 function renderAreaCodes() {
+  const TOLL_FREE = ["800","833","844","855","866","877","888"];
   document.querySelectorAll('[id^="area-"]').forEach(el => {
     const phone    = el.dataset.phone;
     const regState = el.dataset.state;
-    const info     = getAreaInfo(phone);
+    const digits   = phone.replace(/\D/g, '');
+    const area     = digits.length >= 10 ? digits.slice(-10, -7) : digits.slice(0, 3);
+
+    if (TOLL_FREE.includes(area)) {
+      el.textContent       = `(${area}) Toll-free — N/A`;
+      el.style.background  = '#ecfdf5';
+      el.style.color       = '#065f46';
+      el.title             = 'Toll-free number — no geographic signal';
+      return;
+    }
+
+    const info = getAreaInfo(phone);
     if (!info) return;
     const match = info.state === regState;
     el.textContent  = `(${info.area}) ${info.city}, ${info.state}`;
