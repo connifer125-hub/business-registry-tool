@@ -595,7 +595,7 @@ function openResearch(name, city, state, entityType, industry) {
   }
 
   links.push({ label: 'OpenCorporates', url: `https://opencorporates.com/companies?q=${qName}&jurisdiction_code=us_de` });
-  links.push({ label: 'SEC EDGAR', url: `https://efts.sec.gov/LATEST/search-index?q=%22${qName}%22&dateRange=custom&startdt=2000-01-01` });
+  links.push({ label: 'SEC EDGAR', url: `https://www.sec.gov/cgi-bin/browse-edgar?company=${qName}&CIK=&type=10-K&dateb=&owner=include&count=10&search_text=&action=getcompany` });
 
   const existing = document.getElementById('research-modal');
   if (existing) existing.remove();
