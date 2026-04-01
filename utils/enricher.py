@@ -62,7 +62,7 @@ def enrich_record(business_id: int, business_nature: str, business_name: str) ->
     prompt = f'Business name: "{business_name}"\nBusiness description: "{business_nature}"\n\nReturn the best SIC code and a clean description.'
 
     payload = json.dumps({
-        "model": "claude-sonnet-4-5",
+        "model": "claude-sonnet-4-5-20250929",
         "max_tokens": 200,
         "system": SIC_SYSTEM_PROMPT,
         "messages": [{"role": "user", "content": prompt}]
