@@ -73,32 +73,40 @@ def enrich_record(business_id: int, business_nature: str, business_name: str) ->
         "https://api.anthropic.com/v1/messages",
         data=payload,
         headers={
-            "x-api-key":          ANTHROPIC_API_KEY,
-            "anthropic-version":  "2023-06-01",
-            "content-type":       "application/json",
+            "x-api-key":         ANTHROPIC_API_KEY,
+            "anthropic-version": "2023-06-01",
+            "content-type":      "application/json",
         },
         method="POST"
     )
 
     try:
         with urllib.request.urlopen(req, timeout=15) as resp:
-            data = json.loads(resp.read())
+            raw = resp.read()
+            print(f"    DEBUG raw response: {raw[:200]}")
+            data = json.loads(raw)
             text = data["content"][0]["text"].strip()
+            # Strip any markdown code fences if present
+            text = text.replace("```json", "").replace("```", "").strip()
             result = json.loads(text)
             return result
     except urllib.error.HTTPError as e:
         body = e.read().decode("utf-8", errors="replace")
         return {"error": f"HTTP {e.code}: {body[:300]}"}
+    except json.JSONDecodeError as e:
+        return {"error": f"JSON parse error: {e} — raw was empty or invalid"}
     except Exception as e:
-        return {"error": str(e)}
+        return {"error": f"{type(e).__name__}: {e}"}
 
 
 def enrich_batch(market: str = "US-DE", limit: int = 50, dry_run: bool = False) -> dict:
-    """
-    Enrich records that have a business_nature but no SIC code.
-    Writes SIC code and enriched description back to the database.
-    """
     enriched = skipped = errors = 0
+
+    if not ANTHROPIC_API_KEY:
+        print("ERROR: ANTHROPIC_API_KEY is not set in environment variables")
+        return {"enriched": 0, "skipped": 0, "errors": 1}
+
+    print(f"  API key present: {'yes' if ANTHROPIC_API_KEY else 'no'} (starts with: {ANTHROPIC_API_KEY[:8]}...)")
 
     with get_conn() as conn:
         with conn.cursor() as cur:
