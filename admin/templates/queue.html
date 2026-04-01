@@ -404,7 +404,7 @@
                 {% endif %}
               </form>
               <a href="{{ url_for('record_detail', business_id=r.business_id) }}" class="btn-sm" title="Full detail">↗</a>
-              <button class="btn-sm" style="color:#7c3aed;border-color:#c4b5fd"
+              <button type="button" class="btn-sm" style="color:#7c3aed;border-color:#c4b5fd"
                       onclick="openResearch('{{ r.business_name|replace("'","") }}','{{ r.city or "" }}','{{ r.state_province or "" }}','{{ r.entity_type or "" }}','{{ r.industry_desc or "" }}')"
                       title="Research this business">R</button>
             </div>
