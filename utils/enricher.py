@@ -9,6 +9,8 @@ import sys
 import os
 import json
 import time
+import urllib.request
+import urllib.error
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -54,15 +56,14 @@ Common SIC codes for reference:
 
 def enrich_record(business_id: int, business_nature: str, business_name: str) -> dict:
     """Call Claude API to get SIC code and clean description for one record."""
-    import urllib.request
 
     if not ANTHROPIC_API_KEY:
-        return {"error": "No ANTHROPIC_API_KEY set"}
+        return {"error": "No ANTHROPIC_API_KEY set in environment"}
 
     prompt = f'Business name: "{business_name}"\nBusiness description: "{business_nature}"\n\nReturn the best SIC code and a clean description.'
 
     payload = json.dumps({
-        "model": "claude-sonnet-4-5-20250929",
+        "model": "claude-haiku-4-5-20251001",
         "max_tokens": 200,
         "system": SIC_SYSTEM_PROMPT,
         "messages": [{"role": "user", "content": prompt}]
@@ -72,9 +73,9 @@ def enrich_record(business_id: int, business_nature: str, business_name: str) ->
         "https://api.anthropic.com/v1/messages",
         data=payload,
         headers={
-            "x-api-key": ANTHROPIC_API_KEY,
-            "anthropic-version": "2023-06-01",
-            "content-type": "application/json",
+            "x-api-key":          ANTHROPIC_API_KEY,
+            "anthropic-version":  "2023-06-01",
+            "content-type":       "application/json",
         },
         method="POST"
     )
@@ -85,6 +86,9 @@ def enrich_record(business_id: int, business_nature: str, business_name: str) ->
             text = data["content"][0]["text"].strip()
             result = json.loads(text)
             return result
+    except urllib.error.HTTPError as e:
+        body = e.read().decode("utf-8", errors="replace")
+        return {"error": f"HTTP {e.code}: {body[:300]}"}
     except Exception as e:
         return {"error": str(e)}
 
@@ -125,11 +129,11 @@ def enrich_batch(market: str = "US-DE", limit: int = 50, dry_run: bool = False) 
             errors += 1
             continue
 
-        sic_code    = result.get("sic_code", "")
-        sic_desc    = result.get("sic_description", "")
-        clean_desc  = result.get("clean_description", "")
+        sic_code   = result.get("sic_code", "")
+        sic_desc   = result.get("sic_description", "")
+        clean_desc = result.get("clean_description", "")
 
-        print(f"  {business_name[:40]:<40} → SIC {sic_code} ({sic_desc})")
+        print(f"  {business_name[:40]:<40} -> SIC {sic_code} ({sic_desc})")
 
         if not dry_run:
             with get_conn() as conn:
