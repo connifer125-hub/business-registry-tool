@@ -6,13 +6,14 @@
 <title>QA Queue — Business Registry Admin</title>
 <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
 <style>
-.queue-wrap { overflow-x: auto; overflow-y: auto; max-height: calc(100vh - 300px); border: 0.5px solid var(--border); border-radius: var(--border-radius-md); }
+.queue-wrap { overflow-x: auto; width: 100%; }
 .tbl { border-collapse: collapse; font-size: 12px; width: 100%; }
-.tbl th { text-align:left; padding:7px 10px; border-bottom:2px solid var(--border); font-weight:500; font-size:11px; color:var(--muted); white-space:nowrap; cursor:pointer; user-select:none; background:var(--bg); position:sticky; top:0; z-index:2; box-shadow:0 1px 0 var(--border); }
+.tbl th { text-align:left; padding:7px 10px; border-bottom:2px solid var(--border); font-weight:500; font-size:11px; color:var(--muted); white-space:nowrap; cursor:pointer; user-select:none; background:var(--bg); position:sticky; top:56px; z-index:2; box-shadow:0 1px 0 var(--border); }
 .tbl th:hover { color:var(--text); }
 .tbl th .sort-icon { margin-left:3px; opacity:.4; font-size:10px; }
 .tbl th.sorted .sort-icon { opacity:1; color:var(--accent); }
 .tbl td { padding:8px 10px; border-bottom:1px solid var(--border); vertical-align:middle; white-space:nowrap; }
+.main { overflow-x: auto; }
 .tbl tr.row-approved td { background:#f0fdf4; }
 .tbl tr.row-rejected td { background:#fef2f2; }
 .tbl tr.row-flagged  td { background:#faf5ff; }
@@ -403,6 +404,11 @@
               <button type="button" class="btn-sm" style="color:#7c3aed;border-color:#c4b5fd"
                       onclick="openResearch('{{ r.business_name|replace("'","") }}','{{ r.city or "" }}','{{ r.state_province or "" }}','{{ r.entity_type or "" }}','{{ r.industry_desc or "" }}')"
                       title="Research this business">R</button>
+              <form method="POST" action="{{ url_for('delete_record', business_id=r.business_id) }}"
+                    style="display:inline"
+                    onsubmit="return confirm('Delete record #{{ r.business_id }} — {{ r.business_name }}?\n\nThis cannot be undone.')">
+                <button type="submit" class="btn-sm btn-reject" title="Delete this record" style="font-size:10px">🗑</button>
+              </form>
             </div>
           </td>
 
@@ -684,7 +690,60 @@ function renderAreaCodes() {
   });
 }
 
-document.addEventListener('DOMContentLoaded', renderAreaCodes);
+document.addEventListener('DOMContentLoaded', () => {
+  renderAreaCodes();
+  highlightDuplicateNames();
+});
+
+function highlightDuplicateNames() {
+  const tbody = document.querySelector('#queue-table tbody');
+  if (!tbody) return;
+  const rows  = Array.from(tbody.querySelectorAll('tr'));
+
+  // Build name → [rows] map
+  const nameMap = {};
+  rows.forEach(row => {
+    const nameInput = row.querySelector('input[id^="name-"]');
+    if (!nameInput) return;
+    const name = nameInput.value.trim().toLowerCase();
+    if (!nameMap[name]) nameMap[name] = [];
+    nameMap[name].push(row);
+  });
+
+  // For each name with 2+ rows, add badge and group them
+  Object.entries(nameMap).forEach(([name, dupeRows]) => {
+    if (dupeRows.length < 2) return;
+
+    dupeRows.forEach((row, idx) => {
+      const nameInput = row.querySelector('input[id^="name-"]');
+      if (!nameInput) return;
+
+      // Add duplicate badge next to name
+      const existing = row.querySelector('.dupe-name-badge');
+      if (!existing) {
+        const badge = document.createElement('span');
+        badge.className = 'dupe-name-badge';
+        badge.style.cssText = 'display:inline-block;margin-left:6px;padding:1px 6px;background:#fef3c7;color:#92400e;border-radius:10px;font-size:10px;font-weight:500;cursor:pointer;white-space:nowrap';
+        badge.textContent = `${dupeRows.length} filings`;
+        badge.title = `${dupeRows.length} records share this name — click to scroll between them`;
+        badge.onclick = () => scrollToDupe(dupeRows, row);
+        nameInput.parentNode.appendChild(badge);
+      }
+
+      // Add colored left border to visually group
+      row.style.borderLeft = '3px solid #f59e0b';
+    });
+  });
+}
+
+function scrollToDupe(rows, currentRow) {
+  // Find the next row in the group and scroll to it
+  const idx = rows.indexOf(currentRow);
+  const next = rows[(idx + 1) % rows.length];
+  next.scrollIntoView({behavior:'smooth', block:'center'});
+  next.style.outline = '2px solid #f59e0b';
+  setTimeout(() => next.style.outline = '', 2000);
+}
 
 function openResearch(name, city, state, entityType, industry) {
   const q     = encodeURIComponent(name+' '+city+' '+state);
