@@ -13,22 +13,24 @@
   border: 0.5px solid var(--border);
   border-radius: var(--border-radius-md);
 }
-.tbl { border-collapse: collapse; font-size: 12px; width: 100%; }
+.tbl { border-collapse: collapse; font-size: 11px; width: 100%; table-layout: fixed; }
 .tbl th {
-  text-align: left; padding: 8px 10px;
+  text-align: left; padding: 7px 8px;
   border-bottom: 2px solid var(--border);
-  font-weight: 500; font-size: 11px; color: var(--muted);
+  font-weight: 500; font-size: 10px; color: var(--muted);
   white-space: nowrap; cursor: pointer; user-select: none;
   background: var(--bg);
   position: sticky;
   top: 0;
   z-index: 2;
   box-shadow: 0 1px 0 var(--border);
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .tbl th:hover { color: var(--text); }
 .tbl th .sort-icon { margin-left: 4px; opacity: 0.4; font-size: 10px; }
 .tbl th.sorted .sort-icon { opacity: 1; color: var(--accent); }
-.tbl td { padding: 9px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; white-space: nowrap; }
+.tbl td { padding: 7px 8px; border-bottom: 1px solid var(--border); vertical-align: middle; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 0; }
 .tbl tr.row-approved td { background: #f0fdf4; }
 .tbl tr.row-rejected td { background: #fef2f2; }
 .tbl tr.row-flagged  td { background: #faf5ff; }
@@ -138,30 +140,30 @@
     <table class="tbl" id="queue-table">
       <thead>
         <tr>
-          <th style="width:28px"><input type="checkbox" onchange="toggleAll(this)"></th>
-          <th onclick="sortTable(1)">Legal name <span class="sort-icon">↕</span></th>
-          <th onclick="sortTable(2)">Trade name / DBA <span class="sort-icon">↕</span></th>
-          <th onclick="sortTable(3)">Entity type <span class="sort-icon">↕</span></th>
-          <th onclick="sortTable(4)">Status <span class="sort-icon">↕</span></th>
-          <th onclick="sortTable(5)">Street address <span class="sort-icon">↕</span></th>
-          <th onclick="sortTable(6)">City <span class="sort-icon">↕</span></th>
-          <th onclick="sortTable(7)">State <span class="sort-icon">↕</span></th>
-          <th onclick="sortTable(8)">ZIP <span class="sort-icon">↕</span></th>
-          <th onclick="sortTable(9)">Phone <span class="sort-icon">↕</span></th>
-          <th onclick="sortTable(10)">Google address <span class="sort-icon">↕</span></th>
-          <th onclick="sortTable(11)">Address match <span class="sort-icon">↕</span></th>
-          <th onclick="sortTable(12)">Website <span class="sort-icon">↕</span></th>
-          <th onclick="sortTable(13)">Maps <span class="sort-icon">↕</span></th>
-          <th onclick="sortTable(14)">Pre-QA <span class="sort-icon">↕</span></th>
-          <th onclick="sortTable(15)">Registered agent <span class="sort-icon">↕</span></th>
-          <th onclick="sortTable(16)">Filing ID <span class="sort-icon">↕</span></th>
-          <th onclick="sortTable(17)">Formed <span class="sort-icon">↕</span></th>
-          <th onclick="sortTable(18)">SIC <span class="sort-icon">↕</span></th>
-          <th onclick="sortTable(19)">Industry <span class="sort-icon">↕</span></th>
-          <th onclick="sortTable(20)">Market <span class="sort-icon">↕</span></th>
-          <th onclick="sortTable(21)">QA <span class="sort-icon">↕</span></th>
-          <th>Notes</th>
-          <th>Actions</th>
+          <th style="width:2%"><input type="checkbox" onchange="toggleAll(this)"></th>
+          <th style="width:8%" onclick="sortTable(1)">Legal name <span class="sort-icon">↕</span></th>
+          <th style="width:6%" onclick="sortTable(2)">DBA <span class="sort-icon">↕</span></th>
+          <th style="width:5%" onclick="sortTable(3)">Type <span class="sort-icon">↕</span></th>
+          <th style="width:4%" onclick="sortTable(4)">Status <span class="sort-icon">↕</span></th>
+          <th style="width:8%" onclick="sortTable(5)">Street <span class="sort-icon">↕</span></th>
+          <th style="width:5%" onclick="sortTable(6)">City <span class="sort-icon">↕</span></th>
+          <th style="width:3%" onclick="sortTable(7)">St <span class="sort-icon">↕</span></th>
+          <th style="width:4%" onclick="sortTable(8)">ZIP <span class="sort-icon">↕</span></th>
+          <th style="width:7%" onclick="sortTable(9)">Phone / area <span class="sort-icon">↕</span></th>
+          <th style="width:8%" onclick="sortTable(10)">Google address <span class="sort-icon">↕</span></th>
+          <th style="width:4%" onclick="sortTable(11)">Match <span class="sort-icon">↕</span></th>
+          <th style="width:6%" onclick="sortTable(12)">Website <span class="sort-icon">↕</span></th>
+          <th style="width:3%" onclick="sortTable(13)">Maps <span class="sort-icon">↕</span></th>
+          <th style="width:4%" onclick="sortTable(14)">Pre-QA <span class="sort-icon">↕</span></th>
+          <th style="width:5%" onclick="sortTable(15)">Reg. agent <span class="sort-icon">↕</span></th>
+          <th style="width:4%" onclick="sortTable(16)">Filing ID <span class="sort-icon">↕</span></th>
+          <th style="width:4%" onclick="sortTable(17)">Formed <span class="sort-icon">↕</span></th>
+          <th style="width:3%" onclick="sortTable(18)">SIC <span class="sort-icon">↕</span></th>
+          <th style="width:5%" onclick="sortTable(19)">Industry <span class="sort-icon">↕</span></th>
+          <th style="width:3%" onclick="sortTable(20)">Mkt <span class="sort-icon">↕</span></th>
+          <th style="width:3%" onclick="sortTable(21)">QA <span class="sort-icon">↕</span></th>
+          <th style="width:5%">Notes</th>
+          <th style="width:6%">Actions</th>
         </tr>
       </thead>
       <tbody>
@@ -171,7 +173,7 @@
           <td><input type="checkbox" name="ids" value="{{ r.business_id }}" class="row-check"></td>
 
           <!-- Legal name -->
-          <td style="min-width:180px">
+          <td style="">
             <div style="display:flex;align-items:center;gap:3px">
               <input class="editable" id="name-{{ r.business_id }}"
                      value="{{ r.business_name }}"
@@ -189,12 +191,12 @@
           </td>
 
           <!-- Trade name -->
-          <td style="min-width:140px">
+          <td style="">
             <span class="truncate" style="max-width:160px;font-size:11px;color:var(--muted)">{{ r.trade_name or '—' }}</span>
           </td>
 
           <!-- Entity type -->
-          <td style="min-width:110px">
+          <td style="">
             <div style="display:flex;align-items:center;gap:3px">
               <input class="editable" id="type-{{ r.business_id }}"
                      value="{{ r.entity_type or '' }}"
@@ -209,12 +211,12 @@
           </td>
 
           <!-- Status -->
-          <td style="min-width:75px">
+          <td style="">
             <span class="badge status-{{ (r.status or 'unknown')|lower|replace(' ','') }}">{{ r.status or '—' }}</span>
           </td>
 
           <!-- Street -->
-          <td style="min-width:180px">
+          <td style="">
             <div style="display:flex;align-items:center;gap:3px">
               <input class="editable" id="addr1-{{ r.business_id }}"
                      value="{{ r.address_line1 or r.registered_address or '' }}"
@@ -229,7 +231,7 @@
           </td>
 
           <!-- City -->
-          <td style="min-width:95px">
+          <td style="">
             <div style="display:flex;align-items:center;gap:3px">
               <input class="editable" id="city-{{ r.business_id }}"
                      value="{{ r.city or '' }}"
@@ -243,7 +245,7 @@
           </td>
 
           <!-- State -->
-          <td style="min-width:50px">
+          <td style="">
             <div style="display:flex;align-items:center;gap:2px">
               <input class="editable" id="state-{{ r.business_id }}"
                      value="{{ r.state_province or '' }}"
@@ -257,7 +259,7 @@
           </td>
 
           <!-- ZIP -->
-          <td style="min-width:90px">
+          <td style="">
             <div style="display:flex;align-items:center;gap:2px">
               <input class="editable" id="zip-{{ r.business_id }}"
                      value="{{ r.postal_code or '' }}"
@@ -271,7 +273,7 @@
           </td>
 
           <!-- Phone -->
-          <td style="min-width:190px">
+          <td style="">
             <div style="display:flex;align-items:center;gap:3px">
               <input class="editable" id="phone-{{ r.business_id }}"
                      value="{{ r.phone or '' }}"
@@ -295,7 +297,7 @@
           </td>
 
           <!-- Google address -->
-          <td style="min-width:180px">
+          <td style="">
             {% if r.google_address %}
               <span class="truncate" style="max-width:170px;font-size:11px;color:var(--muted)">{{ r.google_address }}</span>
             {% else %}
@@ -304,7 +306,7 @@
           </td>
 
           <!-- Address match score -->
-          <td style="min-width:90px;text-align:center">
+          <td style="text-align:center">
             {% if r.address_match_score is not none and r.google_address %}
               {% set score = (r.address_match_score * 100)|int %}
               <span class="{% if score >= 90 %}match-high{% elif score >= 70 %}match-medium{% elif score >= 50 %}match-low{% else %}match-none{% endif %}">
@@ -316,7 +318,7 @@
           </td>
 
           <!-- Website -->
-          <td style="min-width:120px">
+          <td style="">
             {% if r.website_url %}
               <a href="{{ r.website_url }}" target="_blank" class="url-link" style="display:block;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="{{ r.website_url }}">{{ r.website_url | replace('https://','') | replace('http://','') | truncate(35, true, '...') }}</a>
             {% else %}
@@ -325,7 +327,7 @@
           </td>
 
           <!-- Google Maps -->
-          <td style="min-width:90px">
+          <td style="">
             {% if r.google_maps_url %}
               <a href="{{ r.google_maps_url }}" target="_blank" class="url-link">↗ maps</a>
             {% else %}
@@ -334,7 +336,7 @@
           </td>
 
           <!-- Pre-QA status -->
-          <td style="min-width:100px">
+          <td style="">
             {% if r.pre_qa_status %}
               <span class="badge pre-qa-{{ r.pre_qa_status|replace('_','-') }}"
                     title="{{ r.pre_qa_note or '' }}">
@@ -346,22 +348,22 @@
           </td>
 
           <!-- Registered agent -->
-          <td style="min-width:130px">
+          <td style="">
             <span class="truncate" style="max-width:120px;font-size:11px;color:var(--muted)">{{ r.registered_agent or '—' }}</span>
           </td>
 
           <!-- Filing ID -->
-          <td style="min-width:90px">
+          <td style="">
             <span style="font-size:11px;font-family:monospace">{{ r.filing_id or '—' }}</span>
           </td>
 
           <!-- Formed -->
-          <td style="min-width:90px">
+          <td style="">
             <span style="font-size:11px">{{ r.registered_date or '—' }}</span>
           </td>
 
           <!-- SIC -->
-          <td style="min-width:65px">
+          <td style="">
             <div style="display:flex;align-items:center;gap:3px">
               <input class="editable" id="sic-{{ r.business_id }}"
                      value="{{ r.sic_code or '' }}"
@@ -376,22 +378,22 @@
           </td>
 
           <!-- Industry -->
-          <td style="min-width:160px">
+          <td style="">
             <span class="truncate" style="max-width:150px;font-size:11px;color:var(--muted)">{{ r.industry_desc or '—' }}</span>
           </td>
 
           <!-- Market -->
-          <td style="min-width:70px">
+          <td style="">
             <span class="badge market">{{ r.source_market }}</span>
           </td>
 
           <!-- QA status -->
-          <td style="min-width:80px">
+          <td style="">
             <span class="badge qa-{{ r.qa_status }}" id="badge-{{ r.business_id }}">{{ r.qa_status }}</span>
           </td>
 
           <!-- Notes -->
-          <td style="min-width:130px">
+          <td style="">
             <div style="display:flex;align-items:center;gap:3px">
               <input class="notes-input" id="notes-{{ r.business_id }}"
                      placeholder="Add note..."
@@ -404,7 +406,7 @@
           </td>
 
           <!-- Actions -->
-          <td style="min-width:130px">
+          <td style="">
             <div class="inline-actions">
               <form method="POST" action="{{ url_for('action') }}" style="display:contents">
                 <input type="hidden" name="business_id" value="{{ r.business_id }}">
