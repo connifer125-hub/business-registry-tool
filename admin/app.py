@@ -232,6 +232,46 @@ def bulk_action():
 
 
 # ─────────────────────────────────────────────
+# Delete record
+# ─────────────────────────────────────────────
+@app.route("/delete/<int:business_id>", methods=["POST"])
+def delete_record(business_id):
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            # Log deletion first
+            cur.execute("""
+                INSERT INTO change_log (business_id, change_type, notes)
+                VALUES (%s, 'deleted', 'Record deleted via QA admin')
+            """, (business_id,))
+            # Delete the record
+            cur.execute("DELETE FROM businesses WHERE business_id = %s", (business_id,))
+    flash(f"Record #{business_id} deleted.", "success")
+    return redirect(request.referrer or url_for("queue"))
+
+
+# ─────────────────────────────────────────────
+# Duplicate name lookup (AJAX)
+# ─────────────────────────────────────────────
+@app.route("/duplicates-by-name")
+def duplicates_by_name():
+    with get_conn() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute("""
+                SELECT business_name, COUNT(*) as count,
+                       array_agg(business_id ORDER BY registered_date DESC NULLS LAST) as ids,
+                       array_agg(registered_date ORDER BY registered_date DESC NULLS LAST) as dates,
+                       array_agg(filing_id ORDER BY registered_date DESC NULLS LAST) as filing_ids
+                FROM businesses
+                WHERE business_name IS NOT NULL
+                GROUP BY business_name
+                HAVING COUNT(*) > 1
+                ORDER BY business_name
+            """)
+            dupes = cur.fetchall()
+    return jsonify([dict(d) for d in dupes])
+
+
+# ─────────────────────────────────────────────
 # Export
 # ─────────────────────────────────────────────
 @app.route("/export")
