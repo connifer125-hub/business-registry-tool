@@ -6,14 +6,24 @@
 <title>QA Queue — Business Registry Admin</title>
 <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
 <style>
-.queue-wrap { overflow-x: auto; }
-.tbl { border-collapse: collapse; font-size: 12px; min-width: 2200px; width: 100%; }
+.queue-wrap {
+  overflow-x: auto;
+  overflow-y: auto;
+  max-height: calc(100vh - 280px);
+  border: 0.5px solid var(--border);
+  border-radius: var(--border-radius-md);
+}
+.tbl { border-collapse: collapse; font-size: 12px; width: 100%; }
 .tbl th {
   text-align: left; padding: 8px 10px;
   border-bottom: 2px solid var(--border);
   font-weight: 500; font-size: 11px; color: var(--muted);
   white-space: nowrap; cursor: pointer; user-select: none;
-  background: var(--bg); position: sticky; top: 0; z-index: 1;
+  background: var(--bg);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  box-shadow: 0 1px 0 var(--border);
 }
 .tbl th:hover { color: var(--text); }
 .tbl th .sort-icon { margin-left: 4px; opacity: 0.4; font-size: 10px; }
