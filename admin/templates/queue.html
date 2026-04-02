@@ -6,61 +6,42 @@
 <title>QA Queue — Business Registry Admin</title>
 <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
 <style>
-.queue-wrap {
-  overflow-x: auto;
-  overflow-y: auto;
-  max-height: calc(100vh - 280px);
-  border: 0.5px solid var(--border);
-  border-radius: var(--border-radius-md);
-  width: 100%;
-}
-.tbl { border-collapse: collapse; font-size: 11px; width: 100%; table-layout: auto; }
-.tbl th {
-  text-align: left; padding: 7px 10px;
-  border-bottom: 2px solid var(--border);
-  font-weight: 500; font-size: 11px; color: var(--muted);
-  white-space: nowrap; cursor: pointer; user-select: none;
-  background: var(--bg);
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  box-shadow: 0 1px 0 var(--border);
-}
-.tbl th:hover { color: var(--text); }
-.tbl th .sort-icon { margin-left: 4px; opacity: 0.4; font-size: 10px; }
-.tbl th.sorted .sort-icon { opacity: 1; color: var(--accent); }
-.tbl td { padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; white-space: nowrap; }
-.tbl tr.row-approved td { background: #f0fdf4; }
-.tbl tr.row-rejected td { background: #fef2f2; }
-.tbl tr.row-flagged  td { background: #faf5ff; }
-.tbl tr:hover td { filter: brightness(0.97); }
-
-.editable { border: none; background: transparent; font-size: 12px; color: var(--text); font-family: inherit; padding: 2px 4px; border-radius: 4px; }
-.editable:hover { background: var(--bg); }
-.editable:focus { background: #fff; border: 1px solid #93c5fd; outline: none; box-shadow: 0 0 0 2px rgba(59,130,246,.15); }
-.editable.edited { background: #fffbeb; border: 1px solid #fcd34d; }
-
-.save-btn { display: none; font-size: 10px; padding: 1px 5px; background: #16a34a; color: #fff; border: none; border-radius: 3px; cursor: pointer; margin-left: 3px; }
-.save-btn.visible { display: inline-block; }
-.saved-check { display: none; color: #16a34a; font-size: 12px; margin-left: 3px; }
-.saved-check.visible { display: inline; }
-.unsaved-dot { display: none; width: 6px; height: 6px; background: #f59e0b; border-radius: 50%; margin-left: 3px; vertical-align: middle; }
-.unsaved-dot.visible { display: inline-block; }
-
-.notes-input { width: 110px; font-size: 11px; padding: 3px 5px; border: 1px solid var(--border); border-radius: 4px; background: var(--surface); color: var(--text); }
-.inline-actions { display: flex; gap: 3px; align-items: center; }
-.url-link { color: var(--accent); text-decoration: none; font-size: 11px; white-space: nowrap; }
-.url-link:hover { text-decoration: underline; }
-.truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
-
-.match-high   { color: #16a34a; font-weight: 500; }
-.match-medium { color: #d97706; font-weight: 500; }
-.match-low    { color: #dc2626; font-weight: 500; }
-.match-none   { color: #9ca3af; }
-
-.pre-qa-auto   { background: #ecfdf5; color: #065f46; }
-.pre-qa-review { background: #fffbeb; color: #92400e; }
-.pre-qa-flag   { background: #fef2f2; color: #991b1b; }
+.queue-wrap { overflow-x: auto; overflow-y: auto; max-height: calc(100vh - 300px); border: 0.5px solid var(--border); border-radius: var(--border-radius-md); }
+.tbl { border-collapse: collapse; font-size: 12px; width: 100%; }
+.tbl th { text-align:left; padding:7px 10px; border-bottom:2px solid var(--border); font-weight:500; font-size:11px; color:var(--muted); white-space:nowrap; cursor:pointer; user-select:none; background:var(--bg); position:sticky; top:0; z-index:2; box-shadow:0 1px 0 var(--border); }
+.tbl th:hover { color:var(--text); }
+.tbl th .sort-icon { margin-left:3px; opacity:.4; font-size:10px; }
+.tbl th.sorted .sort-icon { opacity:1; color:var(--accent); }
+.tbl td { padding:8px 10px; border-bottom:1px solid var(--border); vertical-align:middle; white-space:nowrap; }
+.tbl tr.row-approved td { background:#f0fdf4; }
+.tbl tr.row-rejected td { background:#fef2f2; }
+.tbl tr.row-flagged  td { background:#faf5ff; }
+.tbl tr:hover td { filter:brightness(.97); }
+.col-addr { display:none; }
+.col-detail { display:none; }
+.show-addr .col-addr { display:table-cell; }
+.show-detail .col-detail { display:table-cell; }
+.editable { border:none; background:transparent; font-size:12px; color:var(--text); font-family:inherit; padding:2px 4px; border-radius:4px; width:100%; box-sizing:border-box; }
+.editable:hover { background:var(--bg); }
+.editable:focus { background:#fff; border:1px solid #93c5fd; outline:none; }
+.editable.edited { background:#fffbeb; border:1px solid #fcd34d; }
+.save-btn { display:none; font-size:10px; padding:1px 5px; background:#16a34a; color:#fff; border:none; border-radius:3px; cursor:pointer; margin-left:3px; }
+.save-btn.visible { display:inline-block; }
+.saved-check { display:none; color:#16a34a; font-size:12px; margin-left:3px; }
+.saved-check.visible { display:inline; }
+.unsaved-dot { display:none; width:6px; height:6px; background:#f59e0b; border-radius:50%; margin-left:3px; vertical-align:middle; }
+.unsaved-dot.visible { display:inline-block; }
+.notes-input { width:100%; font-size:11px; padding:3px 5px; border:1px solid var(--border); border-radius:4px; background:var(--surface); color:var(--text); box-sizing:border-box; }
+.inline-actions { display:flex; gap:3px; align-items:center; flex-wrap:nowrap; }
+.url-link { color:var(--accent); text-decoration:none; font-size:11px; }
+.url-link:hover { text-decoration:underline; }
+.match-high { color:#16a34a; font-weight:500; }
+.match-medium { color:#d97706; font-weight:500; }
+.match-low { color:#dc2626; font-weight:500; }
+.match-none { color:#9ca3af; }
+.view-toggle { display:flex; gap:6px; align-items:center; margin-bottom:10px; font-size:12px; }
+.view-btn { padding:5px 12px; border:0.5px solid var(--border); border-radius:6px; background:var(--surface); color:var(--muted); cursor:pointer; font-size:12px; }
+.view-btn.active { background:var(--text); color:#fff; border-color:var(--text); }
 </style>
 </head>
 <body>
@@ -108,24 +89,20 @@
   <form method="POST" action="{{ url_for('bulk_action') }}" id="bulk-form">
 
     <!-- Pre-QA legend -->
-    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:12px;padding:10px 14px;background:var(--bg);border-radius:var(--border-radius-md);font-size:11px;border:0.5px solid var(--border)">
-      <span style="font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">Pre-QA key</span>
-      <span style="display:flex;align-items:center;gap:5px">
-        <span style="background:#ecfdf5;color:#065f46;padding:1px 7px;border-radius:10px;font-weight:500">auto approve</span>
-        <span style="color:var(--muted)">Google address 90%+ match — high confidence, DUNS-ready</span>
-      </span>
-      <span style="display:flex;align-items:center;gap:5px">
-        <span style="background:#fffbeb;color:#92400e;padding:1px 7px;border-radius:10px;font-weight:500">review</span>
-        <span style="color:var(--muted)">70–89% match — likely correct, quick human check recommended</span>
-      </span>
-      <span style="display:flex;align-items:center;gap:5px">
-        <span style="background:#fef2f2;color:#991b1b;padding:1px 7px;border-radius:10px;font-weight:500">flag</span>
-        <span style="color:var(--muted)">Below 70% or not found — registry may be home/agent address, use Research button</span>
-      </span>
-      <span style="display:flex;align-items:center;gap:5px">
-        <span style="background:#faf5ff;color:#6d28d9;padding:1px 7px;border-radius:10px;font-weight:500">R</span>
-        <span style="color:var(--muted)">Research button — opens smart social/public source lookup for that business</span>
-      </span>
+    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:10px;padding:8px 14px;background:var(--bg);border-radius:var(--border-radius-md);font-size:11px;border:0.5px solid var(--border)">
+      <span style="font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">Pre-QA</span>
+      <span><span style="background:#ecfdf5;color:#065f46;padding:1px 7px;border-radius:10px;font-weight:500">auto approve</span> &nbsp;Google 90%+ match</span>
+      <span><span style="background:#fffbeb;color:#92400e;padding:1px 7px;border-radius:10px;font-weight:500">review</span> &nbsp;70–89% match</span>
+      <span><span style="background:#fef2f2;color:#991b1b;padding:1px 7px;border-radius:10px;font-weight:500">flag</span> &nbsp;Below 70% or not found — use R button to research</span>
+      <span><span style="background:#faf5ff;color:#6d28d9;padding:1px 7px;border-radius:10px;font-weight:500">R</span> &nbsp;Smart research links by business type</span>
+    </div>
+
+    <!-- Column view toggle -->
+    <div class="view-toggle">
+      <span style="color:var(--muted);font-weight:500">Columns:</span>
+      <button type="button" class="view-btn active" id="btn-core" onclick="setView('core')">Core</button>
+      <button type="button" class="view-btn" id="btn-addr" onclick="setView('addr')">+ Address detail</button>
+      <button type="button" class="view-btn" id="btn-full" onclick="setView('full')">Full view</button>
     </div>
 
     <div class="bulk-bar">
@@ -135,48 +112,47 @@
       <button type="submit" name="action" value="flagged"  class="btn small warn">⚑ Flag selected</button>
     </div>
 
-    <div class="queue-wrap">
+    <div class="queue-wrap" id="queue-wrap">
     <table class="tbl" id="queue-table">
       <thead>
         <tr>
           <th style="width:28px"><input type="checkbox" onchange="toggleAll(this)"></th>
           <th onclick="sortTable(1)">Legal name <span class="sort-icon">↕</span></th>
-          <th onclick="sortTable(2)">Trade name / DBA <span class="sort-icon">↕</span></th>
+          <th class="col-detail" onclick="sortTable(2)">Trade name / DBA <span class="sort-icon">↕</span></th>
           <th onclick="sortTable(3)">Entity type <span class="sort-icon">↕</span></th>
           <th onclick="sortTable(4)">Status <span class="sort-icon">↕</span></th>
-          <th onclick="sortTable(5)">Street address <span class="sort-icon">↕</span></th>
+          <th class="col-addr" onclick="sortTable(5)">Street address <span class="sort-icon">↕</span></th>
           <th onclick="sortTable(6)">City <span class="sort-icon">↕</span></th>
           <th onclick="sortTable(7)">State <span class="sort-icon">↕</span></th>
           <th onclick="sortTable(8)">ZIP <span class="sort-icon">↕</span></th>
           <th onclick="sortTable(9)">Phone / area <span class="sort-icon">↕</span></th>
-          <th onclick="sortTable(10)">Google address <span class="sort-icon">↕</span></th>
-          <th onclick="sortTable(11)">Address match <span class="sort-icon">↕</span></th>
-          <th onclick="sortTable(12)">Website <span class="sort-icon">↕</span></th>
-          <th onclick="sortTable(13)">Maps <span class="sort-icon">↕</span></th>
+          <th class="col-addr" onclick="sortTable(10)">Google address <span class="sort-icon">↕</span></th>
+          <th onclick="sortTable(11)">Match <span class="sort-icon">↕</span></th>
+          <th class="col-addr" onclick="sortTable(12)">Website <span class="sort-icon">↕</span></th>
+          <th class="col-addr" onclick="sortTable(13)">Maps <span class="sort-icon">↕</span></th>
           <th onclick="sortTable(14)">Pre-QA <span class="sort-icon">↕</span></th>
-          <th onclick="sortTable(15)">Registered agent <span class="sort-icon">↕</span></th>
-          <th onclick="sortTable(16)">Filing ID <span class="sort-icon">↕</span></th>
-          <th onclick="sortTable(17)">Formed <span class="sort-icon">↕</span></th>
-          <th onclick="sortTable(18)">SIC <span class="sort-icon">↕</span></th>
-          <th onclick="sortTable(19)">Industry <span class="sort-icon">↕</span></th>
-          <th onclick="sortTable(20)">Market <span class="sort-icon">↕</span></th>
+          <th class="col-detail" onclick="sortTable(15)">Registered agent <span class="sort-icon">↕</span></th>
+          <th class="col-detail" onclick="sortTable(16)">Filing ID <span class="sort-icon">↕</span></th>
+          <th class="col-detail" onclick="sortTable(17)">Formed <span class="sort-icon">↕</span></th>
+          <th class="col-detail" onclick="sortTable(18)">SIC <span class="sort-icon">↕</span></th>
+          <th class="col-detail" onclick="sortTable(19)">Industry <span class="sort-icon">↕</span></th>
+          <th class="col-detail" onclick="sortTable(20)">Market <span class="sort-icon">↕</span></th>
           <th onclick="sortTable(21)">QA <span class="sort-icon">↕</span></th>
-          <th>Notes</th>
+          <th class="col-detail">Notes</th>
           <th>Actions</th>
         </tr>
       </thead>
       <tbody>
         {% for r in records %}
         <tr class="row-{{ r.qa_status }}" id="row-{{ r.business_id }}">
-
           <td><input type="checkbox" name="ids" value="{{ r.business_id }}" class="row-check"></td>
 
           <!-- Legal name -->
-          <td style="">
+          <td>
             <div style="display:flex;align-items:center;gap:3px">
               <input class="editable" id="name-{{ r.business_id }}"
                      value="{{ r.business_name }}"
-                     style="font-weight:500;width:160px"
+                     style="font-weight:500;min-width:140px"
                      onchange="markEdited({{ r.business_id }},'name')"
                      oninput="markEdited({{ r.business_id }},'name')">
               <button class="save-btn" id="save-name-{{ r.business_id }}"
@@ -184,22 +160,20 @@
               <span class="saved-check" id="check-name-{{ r.business_id }}">✓</span>
               <span class="unsaved-dot" id="dot-name-{{ r.business_id }}"></span>
             </div>
-            {% if r.is_duplicate_of %}
-              <span class="badge dupe" style="font-size:10px;display:inline-block;margin-top:2px">dupe →#{{ r.is_duplicate_of }}</span>
-            {% endif %}
+            {% if r.is_duplicate_of %}<span class="badge dupe" style="font-size:10px">dupe →#{{ r.is_duplicate_of }}</span>{% endif %}
           </td>
 
-          <!-- Trade name -->
-          <td style="">
-            <span class="truncate" style="max-width:160px;font-size:11px;color:var(--muted)">{{ r.trade_name or '—' }}</span>
+          <!-- Trade name DBA -->
+          <td class="col-detail">
+            <span style="font-size:11px;color:var(--muted)">{{ r.trade_name or '—' }}</span>
           </td>
 
           <!-- Entity type -->
-          <td style="">
+          <td>
             <div style="display:flex;align-items:center;gap:3px">
               <input class="editable" id="type-{{ r.business_id }}"
                      value="{{ r.entity_type or '' }}"
-                     style="width:95px"
+                     style="min-width:80px"
                      onchange="markEdited({{ r.business_id }},'type')"
                      oninput="markEdited({{ r.business_id }},'type')">
               <button class="save-btn" id="save-type-{{ r.business_id }}"
@@ -210,16 +184,16 @@
           </td>
 
           <!-- Status -->
-          <td style="">
+          <td>
             <span class="badge status-{{ (r.status or 'unknown')|lower|replace(' ','') }}">{{ r.status or '—' }}</span>
           </td>
 
-          <!-- Street -->
-          <td style="">
+          <!-- Street address (addr group) -->
+          <td class="col-addr">
             <div style="display:flex;align-items:center;gap:3px">
               <input class="editable" id="addr1-{{ r.business_id }}"
                      value="{{ r.address_line1 or r.registered_address or '' }}"
-                     style="width:165px"
+                     style="min-width:150px"
                      onchange="markEdited({{ r.business_id }},'addr1')"
                      oninput="markEdited({{ r.business_id }},'addr1')">
               <button class="save-btn" id="save-addr1-{{ r.business_id }}"
@@ -230,11 +204,11 @@
           </td>
 
           <!-- City -->
-          <td style="">
+          <td>
             <div style="display:flex;align-items:center;gap:3px">
               <input class="editable" id="city-{{ r.business_id }}"
                      value="{{ r.city or '' }}"
-                     style="width:80px"
+                     style="min-width:70px"
                      onchange="markEdited({{ r.business_id }},'city')"
                      oninput="markEdited({{ r.business_id }},'city')">
               <button class="save-btn" id="save-city-{{ r.business_id }}"
@@ -244,11 +218,11 @@
           </td>
 
           <!-- State -->
-          <td style="">
+          <td>
             <div style="display:flex;align-items:center;gap:2px">
               <input class="editable" id="state-{{ r.business_id }}"
                      value="{{ r.state_province or '' }}"
-                     style="width:36px"
+                     style="min-width:30px;max-width:40px"
                      onchange="markEdited({{ r.business_id }},'state')"
                      oninput="markEdited({{ r.business_id }},'state')">
               <button class="save-btn" id="save-state-{{ r.business_id }}"
@@ -258,11 +232,11 @@
           </td>
 
           <!-- ZIP -->
-          <td style="">
+          <td>
             <div style="display:flex;align-items:center;gap:2px">
               <input class="editable" id="zip-{{ r.business_id }}"
                      value="{{ r.postal_code or '' }}"
-                     style="width:75px"
+                     style="min-width:65px"
                      onchange="markEdited({{ r.business_id }},'zip')"
                      oninput="markEdited({{ r.business_id }},'zip')">
               <button class="save-btn" id="save-zip-{{ r.business_id }}"
@@ -271,12 +245,12 @@
             </div>
           </td>
 
-          <!-- Phone -->
-          <td style="">
+          <!-- Phone + area code -->
+          <td>
             <div style="display:flex;align-items:center;gap:3px">
               <input class="editable" id="phone-{{ r.business_id }}"
                      value="{{ r.phone or '' }}"
-                     style="width:100px"
+                     style="min-width:105px"
                      onchange="markEdited({{ r.business_id }},'phone')"
                      oninput="markEdited({{ r.business_id }},'phone')">
               <button class="save-btn" id="save-phone-{{ r.business_id }}"
@@ -295,10 +269,10 @@
             {% endif %}
           </td>
 
-          <!-- Google address -->
-          <td style="">
+          <!-- Google address (addr group) -->
+          <td class="col-addr">
             {% if r.google_address %}
-              <span class="truncate" style="max-width:170px;font-size:11px;color:var(--muted)">{{ r.google_address }}</span>
+              <span style="font-size:11px;color:var(--muted)">{{ r.google_address }}</span>
             {% else %}
               <span style="font-size:11px;color:#d1d5db">not enriched</span>
             {% endif %}
@@ -308,25 +282,25 @@
           <td style="text-align:center">
             {% if r.address_match_score is not none and r.google_address %}
               {% set score = (r.address_match_score * 100)|int %}
-              <span class="{% if score >= 90 %}match-high{% elif score >= 70 %}match-medium{% elif score >= 50 %}match-low{% else %}match-none{% endif %}">
-                {{ score }}%
-              </span>
+              <span class="{% if score >= 90 %}match-high{% elif score >= 70 %}match-medium{% elif score >= 50 %}match-low{% else %}match-none{% endif %}">{{ score }}%</span>
             {% else %}
               <span class="match-none">—</span>
             {% endif %}
           </td>
 
-          <!-- Website -->
-          <td style="">
+          <!-- Website (addr group) -->
+          <td class="col-addr">
             {% if r.website_url %}
-              <a href="{{ r.website_url }}" target="_blank" class="url-link" style="display:block;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="{{ r.website_url }}">{{ r.website_url | replace('https://','') | replace('http://','') | truncate(35, true, '...') }}</a>
+              <a href="{{ r.website_url }}" target="_blank" class="url-link"
+                 style="display:block;max-width:160px;overflow:hidden;text-overflow:ellipsis"
+                 title="{{ r.website_url }}">{{ r.website_url | replace('https://','') | replace('http://','') | truncate(30,true,'...') }}</a>
             {% else %}
               <span style="font-size:11px;color:#d1d5db">—</span>
             {% endif %}
           </td>
 
-          <!-- Google Maps -->
-          <td style="">
+          <!-- Maps (addr group) -->
+          <td class="col-addr">
             {% if r.google_maps_url %}
               <a href="{{ r.google_maps_url }}" target="_blank" class="url-link">↗ maps</a>
             {% else %}
@@ -334,10 +308,11 @@
             {% endif %}
           </td>
 
-          <!-- Pre-QA status -->
-          <td style="">
+          <!-- Pre-QA -->
+          <td>
             {% if r.pre_qa_status %}
               <span class="badge pre-qa-{{ r.pre_qa_status|replace('_','-') }}"
+                    style="{% if r.pre_qa_status == 'auto_approve' %}background:#ecfdf5;color:#065f46{% elif r.pre_qa_status == 'review' %}background:#fffbeb;color:#92400e{% else %}background:#fef2f2;color:#991b1b{% endif %}"
                     title="{{ r.pre_qa_note or '' }}">
                 {{ r.pre_qa_status|replace('_',' ') }}
               </span>
@@ -346,27 +321,27 @@
             {% endif %}
           </td>
 
-          <!-- Registered agent -->
-          <td style="">
-            <span class="truncate" style="max-width:120px;font-size:11px;color:var(--muted)">{{ r.registered_agent or '—' }}</span>
+          <!-- Registered agent (detail group) -->
+          <td class="col-detail">
+            <span style="font-size:11px;color:var(--muted)">{{ r.registered_agent or '—' }}</span>
           </td>
 
-          <!-- Filing ID -->
-          <td style="">
+          <!-- Filing ID (detail group) -->
+          <td class="col-detail">
             <span style="font-size:11px;font-family:monospace">{{ r.filing_id or '—' }}</span>
           </td>
 
-          <!-- Formed -->
-          <td style="">
+          <!-- Formed (detail group) -->
+          <td class="col-detail">
             <span style="font-size:11px">{{ r.registered_date or '—' }}</span>
           </td>
 
-          <!-- SIC -->
-          <td style="">
+          <!-- SIC (detail group) -->
+          <td class="col-detail">
             <div style="display:flex;align-items:center;gap:3px">
               <input class="editable" id="sic-{{ r.business_id }}"
                      value="{{ r.sic_code or '' }}"
-                     style="width:48px"
+                     style="min-width:45px;max-width:55px"
                      onchange="markEdited({{ r.business_id }},'sic')"
                      oninput="markEdited({{ r.business_id }},'sic')">
               <button class="save-btn" id="save-sic-{{ r.business_id }}"
@@ -376,27 +351,28 @@
             </div>
           </td>
 
-          <!-- Industry -->
-          <td style="">
-            <span class="truncate" style="max-width:150px;font-size:11px;color:var(--muted)">{{ r.industry_desc or '—' }}</span>
+          <!-- Industry (detail group) -->
+          <td class="col-detail">
+            <span style="font-size:11px;color:var(--muted)">{{ (r.industry_desc or '—')[:40] }}{% if r.industry_desc and r.industry_desc|length > 40 %}…{% endif %}</span>
           </td>
 
-          <!-- Market -->
-          <td style="">
+          <!-- Market (detail group) -->
+          <td class="col-detail">
             <span class="badge market">{{ r.source_market }}</span>
           </td>
 
           <!-- QA status -->
-          <td style="">
+          <td>
             <span class="badge qa-{{ r.qa_status }}" id="badge-{{ r.business_id }}">{{ r.qa_status }}</span>
           </td>
 
-          <!-- Notes -->
-          <td style="">
+          <!-- Notes (detail group) -->
+          <td class="col-detail">
             <div style="display:flex;align-items:center;gap:3px">
               <input class="notes-input" id="notes-{{ r.business_id }}"
                      placeholder="Add note..."
                      value="{{ r.qa_notes or '' }}"
+                     style="min-width:100px"
                      onchange="markNotesEdited({{ r.business_id }})"
                      oninput="markNotesEdited({{ r.business_id }})">
               <span class="saved-check" id="check-notes-{{ r.business_id }}">✓</span>
@@ -405,7 +381,7 @@
           </td>
 
           <!-- Actions -->
-          <td style="">
+          <td>
             <div class="inline-actions">
               <form method="POST" action="{{ url_for('action') }}" style="display:contents">
                 <input type="hidden" name="business_id" value="{{ r.business_id }}">
@@ -453,6 +429,24 @@
 <script>
 const unsavedFields = {};
 let sortDir = {};
+let currentView = 'core';
+
+function setView(view) {
+  const wrap = document.getElementById('queue-wrap');
+  wrap.classList.remove('show-addr','show-detail');
+  document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+
+  if (view === 'addr') {
+    wrap.classList.add('show-addr');
+    document.getElementById('btn-addr').classList.add('active');
+  } else if (view === 'full') {
+    wrap.classList.add('show-addr','show-detail');
+    document.getElementById('btn-full').classList.add('active');
+  } else {
+    document.getElementById('btn-core').classList.add('active');
+  }
+  currentView = view;
+}
 
 function sortTable(col) {
   const table = document.getElementById('queue-table');
@@ -479,10 +473,10 @@ function sortTable(col) {
 }
 
 function markEdited(id, field) {
-  const input = document.getElementById(field + '-' + id);
-  const btn   = document.getElementById('save-' + field + '-' + id);
-  const check = document.getElementById('check-' + field + '-' + id);
-  const dot   = document.getElementById('dot-' + field + '-' + id);
+  const input = document.getElementById(field+'-'+id);
+  const btn   = document.getElementById('save-'+field+'-'+id);
+  const check = document.getElementById('check-'+field+'-'+id);
+  const dot   = document.getElementById('dot-'+field+'-'+id);
   if (input) input.classList.add('edited');
   if (btn)   btn.classList.add('visible');
   if (check) check.classList.remove('visible');
@@ -495,85 +489,68 @@ function saveField(e, id, dbField, inputId) {
   e.preventDefault();
   const fieldKey = inputId.split('-')[0];
   const input = document.getElementById(inputId);
-  const btn   = document.getElementById('save-' + fieldKey + '-' + id);
-  const check = document.getElementById('check-' + fieldKey + '-' + id);
-  const dot   = document.getElementById('dot-' + fieldKey + '-' + id);
+  const btn   = document.getElementById('save-'+fieldKey+'-'+id);
+  const check = document.getElementById('check-'+fieldKey+'-'+id);
+  const dot   = document.getElementById('dot-'+fieldKey+'-'+id);
   fetch('/update-field', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({business_id: id, field: dbField, value: input.value})
-  }).then(r => r.json()).then(data => {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({business_id:id, field:dbField, value:input.value})
+  }).then(r=>r.json()).then(data=>{
     if (data.ok) {
       if (input) input.classList.remove('edited');
       if (btn)   btn.classList.remove('visible');
       if (dot)   dot.classList.remove('visible');
-      if (check) { check.classList.add('visible'); setTimeout(() => check.classList.remove('visible'), 3000); }
+      if (check) { check.classList.add('visible'); setTimeout(()=>check.classList.remove('visible'),3000); }
       if (unsavedFields[id]) delete unsavedFields[id][fieldKey];
     }
   });
 }
 
 function markNotesEdited(id) {
-  const check = document.getElementById('check-notes-' + id);
-  const dot   = document.getElementById('dot-notes-' + id);
+  const check = document.getElementById('check-notes-'+id);
+  const dot   = document.getElementById('dot-notes-'+id);
   if (check) check.classList.remove('visible');
   if (dot)   dot.classList.add('visible');
   if (!unsavedFields[id]) unsavedFields[id] = {};
   unsavedFields[id]['notes'] = true;
-  clearTimeout(window['notesTimer' + id]);
-  window['notesTimer' + id] = setTimeout(() => {
-    const val = document.getElementById('notes-' + id).value;
-    document.getElementById('form-notes-' + id).value = val;
-    fetch('/update-field', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({business_id: id, field: 'qa_notes', value: val})
-    }).then(r => r.json()).then(data => {
+  clearTimeout(window['notesTimer'+id]);
+  window['notesTimer'+id] = setTimeout(()=>{
+    const val = document.getElementById('notes-'+id).value;
+    document.getElementById('form-notes-'+id).value = val;
+    fetch('/update-field',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({business_id:id,field:'qa_notes',value:val})
+    }).then(r=>r.json()).then(data=>{
       if (data.ok) {
         if (dot)   dot.classList.remove('visible');
-        if (check) { check.classList.add('visible'); setTimeout(() => check.classList.remove('visible'), 3000); }
+        if (check) { check.classList.add('visible'); setTimeout(()=>check.classList.remove('visible'),3000); }
         if (unsavedFields[id]) delete unsavedFields[id]['notes'];
       }
     });
-  }, 800);
+  },800);
 }
 
 function confirmAction(event, id, action) {
   const fields = unsavedFields[id] || {};
   const hasUnsaved = Object.keys(fields).length > 0;
   if (hasUnsaved) {
-    const fieldNames = Object.keys(fields).join(', ');
-    const ok = confirm(
-      'You have unsaved edits (' + fieldNames + ') on this record.\n\n' +
-      'Click OK to auto-save them and then ' + action + ' this record.\n' +
-      'Click Cancel to save manually first.'
-    );
+    const ok = confirm('You have unsaved edits on this record.\n\nClick OK to auto-save and then '+action+'.\nClick Cancel to save manually first.');
     if (!ok) return false;
     saveAllPending(id);
   }
-  document.getElementById('form-notes-' + id).value =
-    document.getElementById('notes-' + id).value;
+  document.getElementById('form-notes-'+id).value = document.getElementById('notes-'+id).value;
   return true;
 }
 
 function saveAllPending(id) {
-  const fieldMap = {
-    'name': 'business_name', 'type': 'entity_type',
-    'addr1': 'address_line1', 'addr2': 'address_line2',
-    'city': 'city', 'state': 'state_province',
-    'zip': 'postal_code', 'phone': 'phone',
-    'sic': 'sic_code', 'notes': 'qa_notes'
-  };
+  const fieldMap = {'name':'business_name','type':'entity_type','addr1':'address_line1',
+    'city':'city','state':'state_province','zip':'postal_code','phone':'phone','sic':'sic_code','notes':'qa_notes'};
   const fields = unsavedFields[id] || {};
   Object.keys(fields).forEach(fk => {
     const dbField = fieldMap[fk];
-    const el = document.getElementById(fk + '-' + id);
+    const el = document.getElementById(fk+'-'+id);
     if (dbField && el) {
-      fetch('/update-field', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({business_id: id, field: dbField, value: el.value})
-      });
+      fetch('/update-field',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({business_id:id,field:dbField,value:el.value})});
     }
   });
 }
@@ -676,10 +653,10 @@ const AREA_CODES = {
 
 function getAreaInfo(phone) {
   if (!phone) return null;
-  const digits = phone.replace(/\D/g, '');
-  const area = digits.length >= 10 ? digits.slice(-10, -7) : digits.slice(0, 3);
+  const digits = phone.replace(/\D/g,'');
+  const area = digits.length >= 10 ? digits.slice(-10,-7) : digits.slice(0,3);
   const info = AREA_CODES[area];
-  return info ? { area, city: info[0], state: info[1] } : null;
+  return info ? {area, city:info[0], state:info[1]} : null;
 }
 
 function renderAreaCodes() {
@@ -687,100 +664,83 @@ function renderAreaCodes() {
   document.querySelectorAll('[id^="area-"]').forEach(el => {
     const phone    = el.dataset.phone;
     const regState = el.dataset.state;
-    const digits   = phone.replace(/\D/g, '');
-    const area     = digits.length >= 10 ? digits.slice(-10, -7) : digits.slice(0, 3);
-
+    const digits   = phone.replace(/\D/g,'');
+    const area     = digits.length >= 10 ? digits.slice(-10,-7) : digits.slice(0,3);
     if (TOLL_FREE.includes(area)) {
-      el.textContent       = `(${area}) Toll-free — N/A`;
-      el.style.background  = '#ecfdf5';
-      el.style.color       = '#065f46';
-      el.title             = 'Toll-free number — no geographic signal';
+      el.textContent = `(${area}) Toll-free`;
+      el.style.background = '#ecfdf5'; el.style.color = '#065f46';
+      el.title = 'Toll-free — no geographic signal';
       return;
     }
-
     const info = getAreaInfo(phone);
     if (!info) return;
     const match = info.state === regState;
-    el.textContent  = `(${info.area}) ${info.city}, ${info.state}`;
+    el.textContent = `(${info.area}) ${info.city}, ${info.state}`;
     el.style.background = match ? '#ecfdf5' : '#fef2f2';
     el.style.color      = match ? '#065f46' : '#991b1b';
     el.title = match
-      ? `Phone area code matches registry state — likely local business`
-      : `Phone suggests ${info.city}, ${info.state} but registered in ${regState} — possible out-of-state operator`;
+      ? `Phone area code matches registry state — likely local`
+      : `Phone suggests ${info.city}, ${info.state} but registered in ${regState}`;
   });
 }
 
 document.addEventListener('DOMContentLoaded', renderAreaCodes);
 
 function openResearch(name, city, state, entityType, industry) {
-  const q       = encodeURIComponent(name + ' ' + city + ' ' + state);
-  const qName   = encodeURIComponent(name);
-  const qLocal  = encodeURIComponent(name + ' ' + city);
-
-  const ind = (industry || '').toLowerCase();
-  const ent = (entityType || '').toLowerCase();
-
-  const isSmallBiz = (
-    ent.includes('sole') || ent.includes('trade') ||
-    ind.match(/restaurant|salon|cleaning|repair|childcare|daycare|food|cafe|retail|plumb|electric|contrac|landscap|paint|bar|gym|yoga|massage|nail|beauty|barber/)
-  );
-  const isEnterprise = (
-    ent.includes('corporation') && !ent.includes('sole') ||
-    ind.match(/software|financial|healthcare system|pharma|insurance|hospital|bank|technology|saas/)
-  );
+  const q     = encodeURIComponent(name+' '+city+' '+state);
+  const qName = encodeURIComponent(name);
+  const qLocal= encodeURIComponent(name+' '+city);
+  const ind   = (industry||'').toLowerCase();
+  const ent   = (entityType||'').toLowerCase();
+  const isSmallBiz = (ent.includes('sole')||ent.includes('trade')||
+    ind.match(/restaurant|salon|cleaning|repair|childcare|daycare|food|cafe|retail|plumb|electric|contrac|landscap|paint|bar|gym|yoga|massage|nail|beauty|barber/));
+  const isEnterprise = (!ent.includes('sole') && ent.includes('corporation') ||
+    ind.match(/software|financial|healthcare system|pharma|insurance|hospital|bank|technology|saas/));
 
   let links = [];
-
-  links.push({ label: 'Google', url: `https://www.google.com/search?q=${q}`, always: true });
-  links.push({ label: 'BBB', url: `https://www.bbb.org/search?find_text=${qName}&find_loc=${encodeURIComponent(city + ' ' + state)}`, always: true });
-
+  links.push({label:'Google', url:`https://www.google.com/search?q=${q}`});
+  links.push({label:'BBB', url:`https://www.bbb.org/search?find_text=${qName}&find_loc=${encodeURIComponent(city+' '+state)}`});
   if (isSmallBiz || !isEnterprise) {
-    links.push({ label: 'Facebook', url: `https://www.facebook.com/search/pages/?q=${qLocal}` });
-    links.push({ label: 'Yelp', url: `https://www.yelp.com/search?find_desc=${qName}&find_loc=${encodeURIComponent(city + ' ' + state)}` });
+    links.push({label:'Facebook', url:`https://www.facebook.com/search/pages/?q=${qLocal}`});
+    links.push({label:'Yelp', url:`https://www.yelp.com/search?find_desc=${qName}&find_loc=${encodeURIComponent(city+' '+state)}`});
   }
-
   if (!isSmallBiz || isEnterprise) {
-    links.push({ label: 'LinkedIn', url: `https://www.linkedin.com/search/results/companies/?keywords=${qName}` });
-    links.push({ label: 'Crunchbase', url: `https://www.crunchbase.com/textsearch?q=${qName}` });
-  }
-
-  if (!isSmallBiz) {
-    links.push({ label: 'OpenCorporates', url: `https://opencorporates.com/companies?q=${qName}&jurisdiction_code=us_de` });
-    links.push({ label: 'SEC EDGAR', url: `https://www.sec.gov/cgi-bin/browse-edgar?company=${qName}&CIK=&type=10-K&dateb=&owner=include&count=10&search_text=&action=getcompany` });
+    links.push({label:'LinkedIn', url:`https://www.linkedin.com/search/results/companies/?keywords=${qName}`});
+    links.push({label:'Crunchbase', url:`https://www.crunchbase.com/textsearch?q=${qName}`});
+    links.push({label:'OpenCorporates', url:`https://opencorporates.com/companies?q=${qName}&jurisdiction_code=us_de`});
+    links.push({label:'SEC EDGAR', url:`https://www.sec.gov/cgi-bin/browse-edgar?company=${qName}&CIK=&type=10-K&dateb=&owner=include&count=10&search_text=&action=getcompany`});
   }
 
   const existing = document.getElementById('research-modal');
   if (existing) existing.remove();
+  const existingOv = document.getElementById('research-overlay');
+  if (existingOv) existingOv.remove();
 
   const modal = document.createElement('div');
   modal.id = 'research-modal';
-  modal.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--surface,#fff);border:1px solid var(--border,#e2e0d8);border-radius:12px;padding:24px;z-index:9999;min-width:340px;box-shadow:0 4px 24px rgba(0,0,0,.12)';
+  modal.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--surface,#fff);border:1px solid var(--border,#e2e0d8);border-radius:12px;padding:24px;z-index:9999;min-width:340px';
 
   const overlay = document.createElement('div');
+  overlay.id = 'research-overlay';
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:9998';
   overlay.onclick = () => { modal.remove(); overlay.remove(); };
 
   modal.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
       <div>
-        <div style="font-weight:500;font-size:14px;color:var(--text,#1a1a18)">${name}</div>
-        <div style="font-size:11px;color:var(--muted,#6b6a65);margin-top:2px">${city}${state ? ', ' + state : ''} &bull; ${entityType || 'unknown type'}</div>
+        <div style="font-weight:500;font-size:14px">${name}</div>
+        <div style="font-size:11px;color:var(--muted,#6b6a65);margin-top:2px">${city}${state?', '+state:''} &bull; ${entityType||'unknown'}</div>
       </div>
-      <button onclick="document.getElementById('research-modal').remove();document.getElementById('research-overlay').remove()" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--muted,#6b6a65)">&times;</button>
+      <button onclick="document.getElementById('research-modal').remove();document.getElementById('research-overlay').remove()" style="background:none;border:none;font-size:18px;cursor:pointer">&times;</button>
     </div>
-    <div style="font-size:11px;color:var(--muted,#6b6a65);margin-bottom:12px;padding:8px 10px;background:var(--bg,#f5f4f0);border-radius:6px">
-      ${isSmallBiz ? 'Small business — showing Facebook, Yelp, BBB' : isEnterprise ? 'Enterprise — showing LinkedIn, Crunchbase, EDGAR' : 'Standard — showing all sources'}
+    <div style="font-size:11px;color:var(--muted);margin-bottom:12px;padding:8px 10px;background:var(--bg,#f5f4f0);border-radius:6px">
+      ${isSmallBiz?'Small business — Facebook, Yelp, BBB, Google':isEnterprise?'Enterprise — LinkedIn, Crunchbase, EDGAR':' Standard — all sources'}
     </div>
     <div style="display:flex;flex-direction:column;gap:8px">
-      ${links.map(l => `
-        <a href="${l.url}" target="_blank" style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border:0.5px solid var(--border,#e2e0d8);border-radius:8px;text-decoration:none;color:var(--text,#1a1a18);font-size:13px;background:var(--surface,#fff)">
-          <span style="font-weight:500">${l.label}</span>
-          <span style="font-size:11px;color:var(--muted,#6b6a65)">↗ open</span>
-        </a>`).join('')}
-    </div>
-  `;
+      ${links.map(l=>`<a href="${l.url}" target="_blank" style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border:0.5px solid var(--border,#e2e0d8);border-radius:8px;text-decoration:none;color:var(--text,#1a1a18);font-size:13px">
+        <span style="font-weight:500">${l.label}</span><span style="font-size:11px;color:var(--muted)">↗ open</span></a>`).join('')}
+    </div>`;
 
-  overlay.id = 'research-overlay';
   document.body.appendChild(overlay);
   document.body.appendChild(modal);
 }
