@@ -133,6 +133,177 @@
       <span style="margin-left:auto;"><span style="background:#faf5ff;color:#6d28d9;padding:3px 10px;border-radius:10px;font-weight:500;font-size:12px;border:0.5px solid #c4b5fd;">R</span> &nbsp;Smart research links by business type</span>
     </div>
 
+    <!-- Entity track tabs -->
+    <div style="margin-bottom:12px;">
+      <div style="display:flex;gap:0;border:0.5px solid var(--border);border-radius:var(--border-radius-md) var(--border-radius-md) 0 0;overflow:hidden;width:100%;">
+        <button type="button" id="track-btn-summary" onclick="setTrack('summary')"
+          style="flex:0 0 auto;padding:10px 18px;font-size:13px;font-weight:600;border:none;border-right:0.5px solid var(--border);cursor:pointer;background:var(--text);color:#fff;text-align:left;">
+          How it works
+          <div style="font-size:11px;font-weight:400;margin-top:2px;opacity:.75;">Routing logic · cheat sheet</div>
+        </button>
+        <button type="button" id="track-btn-small" onclick="setTrack('small')"
+          style="flex:1;padding:10px 14px;font-size:13px;font-weight:500;border:none;border-right:0.5px solid var(--border);cursor:pointer;background:var(--bg);color:var(--muted);text-align:left;">
+          Track 1 — Small / new business
+          <div style="font-size:11px;font-weight:400;margin-top:2px;opacity:.8;">Trade names, sole proprietors, new LLCs · Google, BBB, Facebook, Yelp, licensing boards, SBA</div>
+        </button>
+        <button type="button" id="track-btn-mid" onclick="setTrack('mid')"
+          style="flex:1;padding:10px 14px;font-size:13px;font-weight:500;border:none;border-right:0.5px solid var(--border);cursor:pointer;background:var(--bg);color:var(--muted);text-align:left;">
+          Track 2 — Mid-market / established
+          <div style="font-size:11px;font-weight:400;margin-top:2px;opacity:.8;">LLCs, corporations with history · LinkedIn, website scrape, OpenCorporates, multi-state SOS</div>
+        </button>
+        <button type="button" id="track-btn-ent" onclick="setTrack('ent')"
+          style="flex:1;padding:10px 14px;font-size:13px;font-weight:500;border:none;cursor:pointer;background:var(--bg);color:var(--muted);text-align:left;">
+          Track 3 — Enterprise / public
+          <div style="font-size:11px;font-weight:400;margin-top:2px;opacity:.8;">Large corps, public companies · SEC EDGAR first, SAM.gov, FCC/FDA, OpenCorporates</div>
+        </button>
+      </div>
+
+      <!-- Track 1 panel -->
+      <!-- Summary panel -->
+      <div id="track-panel-summary" style="border:0.5px solid var(--border);border-top:none;border-radius:0 0 var(--border-radius-md) var(--border-radius-md);padding:16px;background:var(--surface);">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:14px;">
+
+          <div>
+            <div style="font-size:11px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px;">How track assignment works</div>
+            <div style="font-size:12px;color:var(--text);line-height:1.7;">
+              Every record is automatically assigned to a track at ingest — before any reviewer sees it. The assignment is never manual. The system reads signals already present in the registry filing and routes accordingly.
+            </div>
+            <div style="margin-top:10px;display:flex;flex-direction:column;gap:5px;">
+              <div style="font-size:11px;padding:6px 10px;background:#eaf3de;border-radius:6px;border-left:3px solid #639922;color:#27500a;line-height:1.5;">
+                <strong style="font-weight:500;">Track 1</strong> — Trade name, sole proprietor, or LLC formed within 2 years. No national registered agent detected. SIC in local services (restaurant, cleaning, contractor, salon, retail, childcare).
+              </div>
+              <div style="font-size:11px;padding:6px 10px;background:var(--bg);border-radius:6px;border-left:3px solid var(--border);color:var(--text);line-height:1.5;">
+                <strong style="font-weight:500;">Track 2</strong> — LLC or Corporation with 2+ years filing history. Professional services SIC (consulting, software, finance, healthcare practice). Regional registered agent or self-registered.
+              </div>
+              <div style="font-size:11px;padding:6px 10px;background:#e6f1fb;border-radius:6px;border-left:3px solid #85b7eb;color:#0c447c;line-height:1.5;">
+                <strong style="font-weight:500;">Track 3</strong> — Corporation with national registered agent (CT Corp, CSC, Northwest). SIC in financial services, pharma, telecom, or large-scale manufacturing. Or: name match found in SEC EDGAR.
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div style="font-size:11px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px;">What reviewers actually do</div>
+            <div style="display:flex;flex-direction:column;gap:5px;">
+              <div style="font-size:11px;padding:7px 10px;background:var(--bg);border-radius:6px;border:0.5px solid var(--border);display:flex;gap:8px;line-height:1.5;">
+                <span style="background:#ecfdf5;color:#065f46;padding:1px 7px;border-radius:8px;font-weight:500;white-space:nowrap;align-self:flex-start;margin-top:1px;">auto approve</span>
+                <span style="color:var(--text);">Record never reaches reviewer. All pre-QA checks passed 90%+. Exported directly.</span>
+              </div>
+              <div style="font-size:11px;padding:7px 10px;background:var(--bg);border-radius:6px;border:0.5px solid var(--border);display:flex;gap:8px;line-height:1.5;">
+                <span style="background:#fffbeb;color:#92400e;padding:1px 7px;border-radius:8px;font-weight:500;white-space:nowrap;align-self:flex-start;margin-top:1px;">review</span>
+                <span style="color:var(--text);">70–89% match. Reviewer sees pre-checked sources. Click R to open track-specific links. Correct any field inline. Approve or flag.</span>
+              </div>
+              <div style="font-size:11px;padding:7px 10px;background:var(--bg);border-radius:6px;border:0.5px solid var(--border);display:flex;gap:8px;line-height:1.5;">
+                <span style="background:#fef2f2;color:#991b1b;padding:1px 7px;border-radius:8px;font-weight:500;white-space:nowrap;align-self:flex-start;margin-top:1px;">flag</span>
+                <span style="color:var(--text);">Below 70% or not found. Use R button — sources shown are specific to this record's track. Investigate, correct, and approve or reject.</span>
+              </div>
+              <div style="font-size:11px;padding:7px 10px;background:var(--bg);border-radius:6px;border:0.5px solid var(--border);line-height:1.5;color:var(--muted);">
+                <strong style="color:var(--text);font-weight:500;">7-day lock:</strong> once you open a record it is locked to you for 7 days. No other reviewer will be assigned the same record within that window.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="border-top:0.5px solid var(--border);padding-top:12px;display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">
+          <div style="font-size:11px;color:var(--muted);line-height:1.5;">
+            <strong style="color:var(--text);font-weight:500;display:block;margin-bottom:3px;">SIC code</strong>
+            Pre-populated automatically from the registry business description using AI classification. Never entered manually.
+          </div>
+          <div style="font-size:11px;color:var(--muted);line-height:1.5;">
+            <strong style="color:var(--text);font-weight:500;display:block;margin-bottom:3px;">Phone area code</strong>
+            Resolved to city and state automatically. Filer's area code reveals where the person who registered likely operates — especially useful for DE filings.
+          </div>
+          <div style="font-size:11px;color:var(--muted);line-height:1.5;">
+            <strong style="color:var(--text);font-weight:500;display:block;margin-bottom:3px;">Address match score</strong>
+            Registry address vs Google Places address, computed automatically. Not a pass/fail — a signal. Low scores on DE filings are expected when the filing address is a registered agent.
+          </div>
+          <div style="font-size:11px;color:var(--muted);line-height:1.5;">
+            <strong style="color:var(--text);font-weight:500;display:block;margin-bottom:3px;">Inline editing</strong>
+            Any field can be corrected directly in the row — name, address, SIC, notes. Amber dot = unsaved. Green check = saved. No separate screen needed.
+          </div>
+        </div>
+      </div>
+
+      <div id="track-panel-small" style="display:none;border:0.5px solid #639922;border-top:none;border-radius:0 0 var(--border-radius-md) var(--border-radius-md);padding:12px 16px;background:#f6fbf0;">
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">
+          <div style="background:#fff;border:0.5px solid #c0dd97;border-radius:8px;padding:10px 12px;">
+            <div style="font-size:10px;font-weight:500;color:#3b6d11;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;">Step 1 — auto</div>
+            <div style="font-size:12px;font-weight:500;color:#1a1a18;margin-bottom:3px;">Google Places</div>
+            <div style="font-size:11px;color:#5f5e5a;line-height:1.5;">Operating address, phone, website. Fuzzy match vs registry. Area code → city/state of filer.</div>
+          </div>
+          <div style="background:#fff;border:0.5px solid #c0dd97;border-radius:8px;padding:10px 12px;">
+            <div style="font-size:10px;font-weight:500;color:#3b6d11;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;">Step 2 — auto</div>
+            <div style="font-size:12px;font-weight:500;color:#1a1a18;margin-bottom:3px;">Website contact page</div>
+            <div style="font-size:11px;color:#5f5e5a;line-height:1.5;">Auto-scrapes address from business's own contact or location page. Third independent source.</div>
+          </div>
+          <div style="background:#fff;border:0.5px solid #c0dd97;border-radius:8px;padding:10px 12px;">
+            <div style="font-size:10px;font-weight:500;color:#854f0b;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;">Step 3 — manual R</div>
+            <div style="font-size:12px;font-weight:500;color:#1a1a18;margin-bottom:3px;">BBB · Facebook · Yelp</div>
+            <div style="font-size:11px;color:#5f5e5a;line-height:1.5;">Reviewer opens pre-loaded links. BBB verifies address. Facebook/Yelp confirm local presence. Not scraped automatically.</div>
+          </div>
+          <div style="background:#fff;border:0.5px solid #c0dd97;border-radius:8px;padding:10px 12px;">
+            <div style="font-size:10px;font-weight:500;color:#3b6d11;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;">Future — auto</div>
+            <div style="font-size:12px;font-weight:500;color:#1a1a18;margin-bottom:3px;">State licensing boards · SBA</div>
+            <div style="font-size:11px;color:#5f5e5a;line-height:1.5;">Contractor, electrician, healthcare, cosmetology licenses. SBA loan data has physically verified addresses.</div>
+          </div>
+        </div>
+        <div style="margin-top:8px;font-size:11px;color:#3b6d11;padding:6px 10px;background:#eaf3de;border-radius:6px;">USPS deliverability is <strong>not</strong> used as a corroboration source — it confirms an address receives mail, not that a business operates there. Used for address normalization only.</div>
+      </div>
+
+      <!-- Track 2 panel -->
+      <div id="track-panel-mid" style="display:none;border:0.5px solid var(--border);border-top:none;border-radius:0 0 var(--border-radius-md) var(--border-radius-md);padding:12px 16px;background:var(--bg);">
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">
+          <div style="background:var(--surface);border:0.5px solid var(--border);border-radius:8px;padding:10px 12px;">
+            <div style="font-size:10px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;">Step 1 — auto</div>
+            <div style="font-size:12px;font-weight:500;color:var(--text);margin-bottom:3px;">Google Places</div>
+            <div style="font-size:11px;color:var(--muted);line-height:1.5;">Same as Track 1. Operating address, website, phone corroboration.</div>
+          </div>
+          <div style="background:var(--surface);border:0.5px solid var(--border);border-radius:8px;padding:10px 12px;">
+            <div style="font-size:10px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;">Step 2 — auto</div>
+            <div style="font-size:12px;font-weight:500;color:var(--text);margin-bottom:3px;">Website scrape + OpenCorporates</div>
+            <div style="font-size:11px;color:var(--muted);line-height:1.5;">Contact page address scrape plus cross-state SOS filing consistency check via OpenCorporates free API.</div>
+          </div>
+          <div style="background:var(--surface);border:0.5px solid var(--border);border-radius:8px;padding:10px 12px;">
+            <div style="font-size:10px;font-weight:500;color:#854f0b;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;">Step 3 — manual R</div>
+            <div style="font-size:12px;font-weight:500;color:var(--text);margin-bottom:3px;">LinkedIn · Crunchbase · BBB</div>
+            <div style="font-size:11px;color:var(--muted);line-height:1.5;">Reviewer manually checks LinkedIn company page (headquarters address) and Crunchbase. Not automatically scraped.</div>
+          </div>
+          <div style="background:var(--surface);border:0.5px solid var(--border);border-radius:8px;padding:10px 12px;">
+            <div style="font-size:10px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;">Future — auto</div>
+            <div style="font-size:12px;font-weight:500;color:var(--text);margin-bottom:3px;">Multi-state SOS consistency</div>
+            <div style="font-size:11px;color:var(--muted);line-height:1.5;">Address appearing consistently across multiple state SOS filings is strong operating address signal.</div>
+          </div>
+        </div>
+        <div style="margin-top:8px;font-size:11px;color:var(--muted);padding:6px 10px;background:var(--surface);border-radius:6px;border:0.5px solid var(--border);">LinkedIn and Crunchbase are <strong>manual review only</strong> — no automated scraping. Address consistency across OpenCorporates jurisdictions is the primary automated signal for this track.</div>
+      </div>
+
+      <!-- Track 3 panel -->
+      <div id="track-panel-ent" style="display:none;border:0.5px solid var(--border);border-top:none;border-radius:0 0 var(--border-radius-md) var(--border-radius-md);padding:12px 16px;background:var(--bg);">
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">
+          <div style="background:var(--surface);border:0.5px solid #85b7eb;border-radius:8px;padding:10px 12px;">
+            <div style="font-size:10px;font-weight:500;color:#185fa5;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;">Step 1 — auto · 99% if match</div>
+            <div style="font-size:12px;font-weight:500;color:var(--text);margin-bottom:3px;">SEC EDGAR</div>
+            <div style="font-size:11px;color:var(--muted);line-height:1.5;">Public company 10-K filing address. Legally required to be current. If EDGAR match found, record auto-approves at 99% confidence.</div>
+          </div>
+          <div style="background:var(--surface);border:0.5px solid var(--border);border-radius:8px;padding:10px 12px;">
+            <div style="font-size:10px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;">Step 2 — auto</div>
+            <div style="font-size:12px;font-weight:500;color:var(--text);margin-bottom:3px;">SAM.gov · OpenCorporates</div>
+            <div style="font-size:11px;color:var(--muted);line-height:1.5;">Federal contractor registration (SAM.gov) requires current verified address. OpenCorporates for multi-jurisdiction consistency.</div>
+          </div>
+          <div style="background:var(--surface);border:0.5px solid var(--border);border-radius:8px;padding:10px 12px;">
+            <div style="font-size:10px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;">Step 3 — auto · industry specific</div>
+            <div style="font-size:12px;font-weight:500;color:var(--text);margin-bottom:3px;">FCC · FDA · State regulators</div>
+            <div style="font-size:11px;color:var(--muted);line-height:1.5;">Industry-specific license databases. FCC for telecoms, FDA for pharma/food/devices, state boards for healthcare.</div>
+          </div>
+          <div style="background:var(--surface);border:0.5px solid var(--border);border-radius:8px;padding:10px 12px;">
+            <div style="font-size:10px;font-weight:500;color:#854f0b;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;">Step 4 — manual R</div>
+            <div style="font-size:12px;font-weight:500;color:var(--text);margin-bottom:3px;">LinkedIn · Crunchbase · IR page</div>
+            <div style="font-size:11px;color:var(--muted);line-height:1.5;">Investor relations page and LinkedIn company page for headquarters confirmation. Manual review only.</div>
+          </div>
+        </div>
+        <div style="margin-top:8px;font-size:11px;color:#185fa5;padding:6px 10px;background:#e6f1fb;border-radius:6px;">SEC EDGAR is the highest-confidence public address source available. A matching EDGAR filing bypasses all other enrichment steps and auto-approves the record.</div>
+      </div>
+    </div>
+
     <!-- Column view toggle -->
     <div class="view-toggle" style="margin-bottom:10px;">
       <span style="color:var(--muted);font-weight:500;font-size:13px;">Columns:</span>
@@ -487,6 +658,35 @@ function setView(view) {
     document.getElementById('btn-core').classList.add('active');
   }
   currentView = view;
+}
+
+function setTrack(track) {
+  const tracks = ['summary','small','mid','ent'];
+  const activeStyles = {
+    summary: {bg:'var(--text)',    color:'#fff'},
+    small:   {bg:'#eaf3de',        color:'#3b6d11'},
+    mid:     {bg:'var(--surface)', color:'var(--text)'},
+    ent:     {bg:'#e6f1fb',        color:'#185fa5'},
+  };
+  tracks.forEach(t => {
+    const btn   = document.getElementById('track-btn-'+t);
+    const panel = document.getElementById('track-panel-'+t);
+    if (t === track) {
+      if (panel) panel.style.display = 'block';
+      if (btn) {
+        btn.style.background  = activeStyles[t].bg;
+        btn.style.color       = activeStyles[t].color;
+        btn.style.fontWeight  = '600';
+      }
+    } else {
+      if (panel) panel.style.display = 'none';
+      if (btn) {
+        btn.style.background = t === 'summary' ? 'var(--bg)' : 'var(--bg)';
+        btn.style.color      = 'var(--muted)';
+        btn.style.fontWeight = '500';
+      }
+    }
+  });
 }
 
 function sortTable(col) {
