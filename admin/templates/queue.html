@@ -67,49 +67,49 @@
     {% endfor %}
   {% endwith %}
 
-  <form method="GET" class="filter-bar">
-    <select name="market">
+  <form method="GET" class="filter-bar" style="width:100%;display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px;">
+    <select name="market" style="font-size:13px;padding:7px 12px;">
       <option value="">All markets</option>
       {% for m in markets %}
         <option value="{{ m }}" {% if m == selected_market %}selected{% endif %}>{{ m }}</option>
       {% endfor %}
     </select>
-    <select name="status">
+    <select name="status" style="font-size:13px;padding:7px 12px;">
       <option value="pending"  {% if selected_status == 'pending'  %}selected{% endif %}>Pending</option>
       <option value="flagged"  {% if selected_status == 'flagged'  %}selected{% endif %}>Flagged</option>
       <option value="approved" {% if selected_status == 'approved' %}selected{% endif %}>Approved</option>
       <option value="rejected" {% if selected_status == 'rejected' %}selected{% endif %}>Rejected</option>
       <option value=""         {% if selected_status == ''         %}selected{% endif %}>All</option>
     </select>
-    <input type="text" name="search" placeholder="Search name..." value="{{ search }}">
-    <button type="submit" class="btn">Filter</button>
-    <a href="{{ url_for('queue') }}" class="btn secondary">Reset</a>
+    <input type="text" name="search" placeholder="Search name..." value="{{ search }}" style="font-size:13px;padding:7px 12px;flex:1;min-width:200px;">
+    <button type="submit" class="btn" style="font-size:13px;padding:7px 18px;">Filter</button>
+    <a href="{{ url_for('queue') }}" class="btn secondary" style="font-size:13px;padding:7px 18px;">Reset</a>
   </form>
 
   <form method="POST" action="{{ url_for('bulk_action') }}" id="bulk-form">
 
     <!-- Pre-QA legend -->
-    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:10px;padding:8px 14px;background:var(--bg);border-radius:var(--border-radius-md);font-size:11px;border:0.5px solid var(--border)">
-      <span style="font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">Pre-QA</span>
-      <span><span style="background:#ecfdf5;color:#065f46;padding:1px 7px;border-radius:10px;font-weight:500">auto approve</span> &nbsp;Google 90%+ match</span>
-      <span><span style="background:#fffbeb;color:#92400e;padding:1px 7px;border-radius:10px;font-weight:500">review</span> &nbsp;70–89% match</span>
-      <span><span style="background:#fef2f2;color:#991b1b;padding:1px 7px;border-radius:10px;font-weight:500">flag</span> &nbsp;Below 70% or not found — use R button to research</span>
-      <span><span style="background:#faf5ff;color:#6d28d9;padding:1px 7px;border-radius:10px;font-weight:500">R</span> &nbsp;Smart research links by business type</span>
+    <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;margin-bottom:12px;padding:12px 18px;background:var(--bg);border-radius:var(--border-radius-md);font-size:13px;border:0.5px solid var(--border);width:100%;">
+      <span style="font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;font-size:11px;">Pre-QA</span>
+      <span><span style="background:#ecfdf5;color:#065f46;padding:3px 10px;border-radius:10px;font-weight:500;font-size:12px;">auto approve</span> &nbsp;Google 90%+ match</span>
+      <span><span style="background:#fffbeb;color:#92400e;padding:3px 10px;border-radius:10px;font-weight:500;font-size:12px;">review</span> &nbsp;70–89% match</span>
+      <span><span style="background:#fef2f2;color:#991b1b;padding:3px 10px;border-radius:10px;font-weight:500;font-size:12px;">flag</span> &nbsp;Below 70% or not found — use R button to research</span>
+      <span style="margin-left:auto;"><span style="background:#faf5ff;color:#6d28d9;padding:3px 10px;border-radius:10px;font-weight:500;font-size:12px;border:0.5px solid #c4b5fd;">R</span> &nbsp;Smart research links by business type</span>
     </div>
 
     <!-- Column view toggle -->
-    <div class="view-toggle">
-      <span style="color:var(--muted);font-weight:500">Columns:</span>
-      <button type="button" class="view-btn active" id="btn-core" onclick="setView('core')">Core</button>
-      <button type="button" class="view-btn" id="btn-addr" onclick="setView('addr')">+ Address detail</button>
-      <button type="button" class="view-btn" id="btn-full" onclick="setView('full')">Full view</button>
+    <div class="view-toggle" style="margin-bottom:10px;">
+      <span style="color:var(--muted);font-weight:500;font-size:13px;">Columns:</span>
+      <button type="button" class="view-btn active" id="btn-core" onclick="setView('core')" style="font-size:13px;padding:6px 16px;">Core</button>
+      <button type="button" class="view-btn" id="btn-addr" onclick="setView('addr')" style="font-size:13px;padding:6px 16px;">+ Address detail</button>
+      <button type="button" class="view-btn" id="btn-full" onclick="setView('full')" style="font-size:13px;padding:6px 16px;">Full view</button>
     </div>
 
-    <div class="bulk-bar">
-      <label><input type="checkbox" id="select-all" onchange="toggleAll(this)"> Select all</label>
-      <button type="submit" name="action" value="approved" class="btn small">✓ Approve selected</button>
-      <button type="submit" name="action" value="rejected" class="btn small danger">✗ Reject selected</button>
-      <button type="submit" name="action" value="flagged"  class="btn small warn">⚑ Flag selected</button>
+    <div class="bulk-bar" style="margin-bottom:10px;">
+      <label style="font-size:13px;"><input type="checkbox" id="select-all" onchange="toggleAll(this)"> Select all</label>
+      <button type="submit" name="action" value="approved" class="btn small" style="font-size:13px;padding:6px 16px;">✓ Approve selected</button>
+      <button type="submit" name="action" value="rejected" class="btn small danger" style="font-size:13px;padding:6px 16px;">✗ Reject selected</button>
+      <button type="submit" name="action" value="flagged"  class="btn small warn" style="font-size:13px;padding:6px 16px;">⚑ Flag selected</button>
     </div>
 
     <div class="queue-wrap" id="queue-wrap">
