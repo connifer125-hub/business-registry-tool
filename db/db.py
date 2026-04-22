@@ -154,11 +154,26 @@ def get_stats():
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             cur.execute("""
                 SELECT
-                    COUNT(*) FILTER (WHERE qa_status = 'pending')   AS pending,
-                    COUNT(*) FILTER (WHERE qa_status = 'approved')  AS approved,
-                    COUNT(*) FILTER (WHERE qa_status = 'rejected')  AS rejected,
-                    COUNT(*) FILTER (WHERE qa_status = 'flagged')   AS flagged,
-                    COUNT(*)                                         AS total
+                    COUNT(*)                                                          AS total,
+                    COUNT(*) FILTER (WHERE qa_status = 'pending')                    AS pending,
+                    COUNT(*) FILTER (WHERE qa_status = 'approved')                   AS approved,
+                    COUNT(*) FILTER (WHERE qa_status = 'rejected')                   AS rejected,
+                    COUNT(*) FILTER (WHERE qa_status = 'flagged')                    AS flagged,
+                    COUNT(*) FILTER (WHERE is_duplicate_of IS NOT NULL)              AS duplicates,
+                    COUNT(*) FILTER (WHERE google_place_id IS NOT NULL)              AS google_enriched,
+                    COUNT(*) FILTER (WHERE sic_code IS NOT NULL AND sic_code != '')  AS sic_enriched,
+                    COUNT(*) FILTER (WHERE website_url IS NOT NULL)                  AS website_enriched,
+                    COUNT(*) FILTER (WHERE address_type IS NOT NULL)                 AS phone_enriched,
+                    COUNT(*) FILTER (WHERE address_match_score >= 0.90)              AS conf_high,
+                    COUNT(*) FILTER (WHERE address_match_score >= 0.70
+                                       AND address_match_score < 0.90)               AS conf_med,
+                    COUNT(*) FILTER (WHERE address_match_score >= 0.50
+                                       AND address_match_score < 0.70)               AS conf_low,
+                    COUNT(*) FILTER (WHERE address_match_score < 0.50
+                                       AND address_match_score IS NOT NULL)          AS conf_flag,
+                    COUNT(*) FILTER (WHERE entity_segment = 'small_business')        AS track_small,
+                    COUNT(*) FILTER (WHERE entity_segment = 'mid_market')            AS track_mid,
+                    COUNT(*) FILTER (WHERE entity_segment = 'enterprise')            AS track_ent
                 FROM businesses
             """)
             stats = dict(cur.fetchone())
@@ -169,4 +184,5 @@ def get_stats():
                 ORDER BY count DESC
             """)
             stats["by_market"] = [dict(r) for r in cur.fetchall()]
+            stats["unique"] = max(0, stats["total"] - stats["duplicates"])
             return stats
