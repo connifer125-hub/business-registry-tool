@@ -6,14 +6,13 @@
 <title>QA Queue — Business Registry Admin</title>
 <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
 <style>
-.queue-wrap { overflow-x: auto; width: 100%; }
+.queue-wrap { overflow-x: auto; overflow-y: auto; max-height: calc(100vh - 240px); width: 100%; border: 0.5px solid var(--border); border-radius: var(--border-radius-md); }
 .tbl { border-collapse: collapse; font-size: 12px; width: 100%; }
-.tbl th { text-align:left; padding:7px 10px; border-bottom:2px solid var(--border); font-weight:500; font-size:11px; color:var(--muted); white-space:nowrap; cursor:pointer; user-select:none; background:var(--bg); position:sticky; top:56px; z-index:2; box-shadow:0 1px 0 var(--border); }
+.tbl th { text-align:left; padding:7px 10px; border-bottom:2px solid var(--border); font-weight:500; font-size:11px; color:var(--muted); white-space:nowrap; cursor:pointer; user-select:none; background:var(--bg); position:sticky; top:0; z-index:2; box-shadow:0 1px 0 var(--border); }
 .tbl th:hover { color:var(--text); }
 .tbl th .sort-icon { margin-left:3px; opacity:.4; font-size:10px; }
 .tbl th.sorted .sort-icon { opacity:1; color:var(--accent); }
 .tbl td { padding:8px 10px; border-bottom:1px solid var(--border); vertical-align:middle; white-space:nowrap; }
-.main { overflow-x: auto; }
 .tbl tr.row-approved td { background:#f0fdf4; }
 .tbl tr.row-rejected td { background:#fef2f2; }
 .tbl tr.row-flagged  td { background:#faf5ff; }
