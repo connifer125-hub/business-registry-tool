@@ -3,350 +3,332 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>QA Queue — Business Registry Admin</title>
+<title>QA Queue — ScraperIQ</title>
 <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
 <style>
-.queue-wrap { overflow-x: auto; overflow-y: auto; max-height: calc(100vh - 240px); width: 100%; border: 0.5px solid var(--border); border-radius: var(--border-radius-md); }
-.tbl { border-collapse: collapse; font-size: 12px; width: 100%; }
-.tbl th {
-  text-align:left; padding:9px 12px;
-  border-bottom:2px solid var(--border);
-  font-weight:500; font-size:11px; color:var(--muted);
-  white-space:nowrap; cursor:pointer; user-select:none;
-  background:var(--bg); position:sticky; top:0; z-index:2;
-  box-shadow:0 1px 0 var(--border);
-  letter-spacing:.03em; text-transform:uppercase; font-size:10px;
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
+body,input,select,button,textarea { font-family: 'DM Sans', sans-serif; }
+
+/* ── Sidebar ── */
+.sidebar {
+  background: linear-gradient(160deg, #2a2927 0%, #1a1918 40%, #141312 100%) !important;
+  border-right: 1px solid rgba(255,255,255,.06) !important;
+  box-shadow: inset -1px 0 0 rgba(255,255,255,.04), 2px 0 24px rgba(0,0,0,.4) !important;
 }
-.tbl th:hover { color:var(--text); }
-.tbl th .sort-icon { margin-left:3px; opacity:.4; font-size:10px; }
-.tbl th.sorted { color:var(--accent); }
-.tbl th.sorted .sort-icon { opacity:1; }
-.tbl td { padding:10px 12px; border-bottom:1px solid var(--border); vertical-align:middle; white-space:nowrap; }
-.tbl tbody tr:nth-child(even) td { background: rgba(0,0,0,.015); }
-.tbl tr.row-approved td { background:#f0fdf4 !important; border-left:3px solid #16a34a; }
-.tbl tr.row-rejected td { background:#fef2f2 !important; border-left:3px solid #dc2626; }
-.tbl tr.row-flagged  td { background:#faf5ff !important; border-left:3px solid #7c3aed; }
-.tbl tr:hover td { background:var(--bg) !important; }
-.tbl tr.row-approved:hover td { background:#e8faf0 !important; }
-.tbl tr.row-rejected:hover td { background:#fee2e2 !important; }
-.col-addr { display:none; }
-.col-detail { display:none; }
-.show-addr .col-addr { display:table-cell; }
-.show-detail .col-detail { display:table-cell; }
-.editable { border:none; background:transparent; font-size:12px; color:var(--text); font-family:inherit; padding:2px 4px; border-radius:4px; width:100%; box-sizing:border-box; }
-.editable:hover { background:var(--bg); }
-.editable:focus { background:#fff; border:1px solid #93c5fd; outline:none; box-shadow:0 0 0 2px rgba(59,130,246,.12); }
-.editable.edited { background:#fffbeb; border:1px solid #fcd34d; }
-.save-btn { display:none; font-size:10px; padding:2px 6px; background:#16a34a; color:#fff; border:none; border-radius:3px; cursor:pointer; margin-left:3px; }
-.save-btn.visible { display:inline-block; }
-.saved-check { display:none; color:#16a34a; font-size:12px; margin-left:3px; }
-.saved-check.visible { display:inline; }
-.unsaved-dot { display:none; width:6px; height:6px; background:#f59e0b; border-radius:50%; margin-left:3px; vertical-align:middle; }
-.unsaved-dot.visible { display:inline-block; }
-.notes-input { width:100%; font-size:11px; padding:4px 7px; border:0.5px solid var(--border); border-radius:5px; background:var(--surface); color:var(--text); box-sizing:border-box; }
-.notes-input:focus { border-color:#93c5fd; outline:none; box-shadow:0 0 0 2px rgba(59,130,246,.12); }
-.inline-actions { display:flex; gap:4px; align-items:center; flex-wrap:nowrap; }
-.url-link { color:var(--accent); text-decoration:none; font-size:11px; }
-.url-link:hover { text-decoration:underline; }
-.match-high   { color:#16a34a; font-weight:600; font-size:13px; }
-.match-medium { color:#d97706; font-weight:600; font-size:13px; }
-.match-low    { color:#dc2626; font-weight:600; font-size:13px; }
-.match-none   { color:#9ca3af; }
-.view-toggle { display:flex; gap:6px; align-items:center; margin-bottom:10px; }
-.view-btn { padding:6px 14px; border:0.5px solid var(--border); border-radius:6px; background:var(--surface); color:var(--muted); cursor:pointer; font-size:13px; transition:all .15s; }
-.view-btn:hover { border-color:var(--accent); color:var(--accent); }
-.view-btn.active { background:var(--text); color:#fff; border-color:var(--text); }
-.col-name-w  { min-width:200px; }
-.col-type-w  { min-width:160px; }
-.col-street-w{ min-width:220px; }
-.col-city-w  { min-width:110px; }
-.col-state-w { min-width:55px; }
-.col-zip-w   { min-width:95px; }
-.col-phone-w { min-width:190px; }
-.col-match-w { min-width:70px; text-align:center; }
-.col-preqa-w { min-width:100px; }
-.col-qa-w    { min-width:85px; }
-.col-act-w   { min-width:130px; }
-.col-gaddr-w { min-width:200px; }
-.col-web-w   { min-width:170px; }
-.col-maps-w  { min-width:70px; }
-.col-agent-w { min-width:150px; }
-.col-filing-w{ min-width:100px; }
-.col-formed-w{ min-width:95px; }
-.col-sic-w   { min-width:70px; }
-.col-ind-w   { min-width:180px; }
-.col-mkt-w   { min-width:75px; }
-.col-notes-w { min-width:150px; }
-.dupe-name-badge { display:inline-block;margin-left:6px;padding:1px 6px;background:#fef3c7;color:#92400e;border-radius:10px;font-size:10px;font-weight:500;cursor:pointer;white-space:nowrap;border:0.5px solid #fcd34d; }
+.logo {
+  background: linear-gradient(180deg, rgba(255,255,255,.04) 0%, transparent 100%) !important;
+  border-bottom: 1px solid rgba(255,255,255,.06) !important;
+  font-size: 15px !important; font-weight: 600 !important; letter-spacing: -.01em !important;
+}
+.nav-link { border-left: 2px solid transparent !important; color: rgba(255,255,255,.45) !important; transition: all .15s !important; }
+.nav-link:hover { color: rgba(255,255,255,.85) !important; background: rgba(255,255,255,.04) !important; }
+.nav-link.active {
+  color: #fff !important;
+  background: linear-gradient(90deg, rgba(74,222,128,.12) 0%, rgba(74,222,128,.04) 100%) !important;
+  border-left-color: #4ade80 !important;
+}
+
+/* ── Main layout ── */
+.main { padding: 0 !important; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+
+/* ── Top bar ── */
+.top-bar {
+  background: #fff; border-bottom: 0.5px solid #e8e6e1;
+  padding: 14px 28px; display: flex; align-items: center; gap: 14px; flex-shrink: 0;
+}
+.top-title { font-size: 16px; font-weight: 600; letter-spacing: -.01em; color: #1c1b18; }
+.top-meta { font-size: 12px; color: #7a7870; font-family: 'DM Mono', monospace; }
+
+.filter-input {
+  padding: 7px 12px; border: 0.5px solid #e8e6e1; border-radius: 8px;
+  background: #fff; font-size: 13px; color: #1c1b18; outline: none; font-family: 'DM Sans', sans-serif;
+}
+.filter-input:focus { border-color: #93c5fd; box-shadow: 0 0 0 2px rgba(59,130,246,.1); }
+.filter-btn {
+  padding: 7px 16px; border-radius: 8px; border: 0.5px solid #e8e6e1;
+  background: #fff; font-size: 13px; cursor: pointer; color: #1c1b18;
+  font-family: 'DM Sans', sans-serif; transition: all .12s;
+}
+.filter-btn:hover { background: #f7f6f3; }
+.filter-btn.primary { background: #1c1b18; color: #fff; border-color: #1c1b18; }
+.filter-btn.approve { background: #edf7f1; color: #1a6b4a; border-color: #a3d9bc; }
+.filter-btn.reject  { background: #fce8e8; color: #b83232; border-color: #f0a0a0; }
+.filter-btn.flag    { background: #fef3c7; color: #92400e; border-color: #fcd34d; }
+
+/* ── Track tabs ── */
+.track-tabs {
+  background: #fff; border-bottom: 0.5px solid #e8e6e1;
+  padding: 0 28px; display: flex; align-items: stretch; flex-shrink: 0;
+}
+.track-tab {
+  padding: 13px 22px; font-size: 13px; font-weight: 500;
+  color: #7a7870; cursor: pointer; border-bottom: 2px solid transparent;
+  transition: all .15s; display: flex; align-items: center; gap: 8px;
+  border-top: none; border-left: none; border-right: none; background: none;
+  font-family: 'DM Sans', sans-serif;
+}
+.track-tab:hover { color: #1c1b18; }
+.track-tab.active-small { color: #1a6b4a; border-bottom-color: #1a6b4a; }
+.track-tab.active-mid   { color: #5a2d8a; border-bottom-color: #5a2d8a; }
+.track-tab.active-ent   { color: #1a4a8a; border-bottom-color: #1a4a8a; }
+.track-pill {
+  font-size: 10px; font-weight: 500; padding: 2px 7px; border-radius: 10px;
+  font-family: 'DM Mono', monospace;
+}
+.bulk-actions { margin-left: auto; display: flex; align-items: center; gap: 6px; padding: 6px 0; }
+
+/* ── Source banner ── */
+.source-banner {
+  padding: 10px 28px; border-bottom: 0.5px solid #e8e6e1; flex-shrink: 0;
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  background: linear-gradient(135deg, #1a3a6b 0%, #0f2548 60%, #0a1a35 100%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.08), inset 0 -1px 0 rgba(0,0,0,.2);
+}
+.banner-label { font-size: 12px; font-weight: 500; color: #fff; white-space: nowrap; }
+.banner-chips { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+.src-chip {
+  font-size: 11px; padding: 3px 9px 3px 6px; border-radius: 20px;
+  font-weight: 500; border: 0.5px solid; display: inline-flex; align-items: center; gap: 5px;
+  font-family: 'DM Sans', sans-serif;
+}
+.src-chip img { width: 13px; height: 13px; border-radius: 2px; flex-shrink: 0; }
+.src-auto   { background: #fff; color: #1c1b18; border-color: #1c1b18; box-shadow: 0 1px 3px rgba(0,0,0,.15); }
+.src-manual { background: rgba(255,255,255,.15); color: #fff; border-color: rgba(255,255,255,.4); }
+.src-future { background: rgba(255,255,255,.06); color: rgba(255,255,255,.4); border-color: rgba(255,255,255,.12); }
+.banner-legend { font-size: 10px; color: rgba(255,255,255,.4); margin-left: auto; white-space: nowrap; }
+
+/* ── Column toggle ── */
+.col-toggle {
+  background: #f7f6f3; border-bottom: 0.5px solid #e8e6e1;
+  padding: 8px 28px; display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+}
+.col-btn {
+  padding: 5px 14px; border-radius: 6px; border: 0.5px solid #e8e6e1;
+  background: #fff; font-size: 12px; cursor: pointer; color: #7a7870;
+  font-family: 'DM Sans', sans-serif; transition: all .12s;
+}
+.col-btn:hover { border-color: #1a6b4a; color: #1a6b4a; }
+.col-btn.active { background: #1c1b18; color: #fff; border-color: #1c1b18; }
+
+/* ── Table ── */
+.queue-wrap { flex: 1; overflow: auto; }
+.tbl { border-collapse: collapse; width: 100%; font-size: 12px; }
+.tbl th {
+  position: sticky; top: 0; z-index: 2;
+  background: #f7f6f3; padding: 9px 13px;
+  font-size: 10px; font-weight: 500; color: #7a7870;
+  text-transform: uppercase; letter-spacing: .05em;
+  white-space: nowrap; border-bottom: 0.5px solid #e8e6e1;
+  cursor: pointer; user-select: none;
+}
+.tbl th:hover { color: #1c1b18; }
+.tbl th.sorted { color: #1a6b4a; }
+.tbl th .si { margin-left: 3px; opacity: .4; font-size: 10px; }
+.tbl th.sorted .si { opacity: 1; }
+.tbl td { padding: 10px 13px; border-bottom: 0.5px solid #e8e6e1; vertical-align: middle; white-space: nowrap; background: #fff; }
+.tbl tbody tr:nth-child(even) td { background: #faf9f7; }
+.tbl tr:hover td { background: #f5f4f1 !important; }
+.tbl tr.row-approved td { background: #f6fbf3 !important; border-left: 3px solid #1a6b4a; }
+.tbl tr.row-rejected td { background: #fdf1f1 !important; border-left: 3px solid #b83232; }
+.tbl tr.row-flagged  td { background: #fffbf0 !important; border-left: 3px solid #c47b1a; }
+
+.col-addr   { display: none; }
+.col-detail { display: none; }
+.show-addr   .col-addr   { display: table-cell; }
+.show-detail .col-detail { display: table-cell; }
+
+.name-main { font-weight: 500; color: #1c1b18; }
+.name-sub  { font-size: 10px; color: #7a7870; margin-top: 1px; font-family: 'DM Mono', monospace; }
+
+.badge { display: inline-block; padding: 2px 8px; border-radius: 8px; font-size: 10px; font-weight: 500; font-family: 'DM Mono', monospace; }
+.b-active  { background: #edf7f1; color: #0f4a33; }
+.b-pending { background: #f1efe8; color: #7a7870; }
+.b-approve { background: #ecfdf5; color: #065f46; }
+.b-review  { background: #fffbeb; color: #92400e; }
+.b-flag    { background: #fef2f2; color: #991b1b; }
+.b-dupe    { background: #fef3c7; color: #92400e; border: 0.5px solid #fcd34d; }
+
+.score { font-weight: 600; font-size: 13px; font-family: 'DM Mono', monospace; }
+.s-high { color: #1a6b4a; }
+.s-med  { color: #c47b1a; }
+.s-low  { color: #b83232; }
+.s-none { color: #b4b2a9; }
+
+.area-pill { font-size: 10px; padding: 1px 6px; border-radius: 5px; font-family: 'DM Mono', monospace; margin-top: 3px; display: inline-block; }
+.area-match    { background: #edf7f1; color: #0f4a33; }
+.area-nomatch  { background: #fce8e8; color: #b83232; }
+.area-tollfree { background: #edf7f1; color: #0f4a33; }
+
+.editable { border: none; background: transparent; font-size: 12px; color: #1c1b18; font-family: 'DM Sans', sans-serif; padding: 2px 4px; border-radius: 4px; width: 100%; box-sizing: border-box; }
+.editable:hover { background: #f7f6f3; }
+.editable:focus { background: #fff; border: 1px solid #93c5fd; outline: none; box-shadow: 0 0 0 2px rgba(59,130,246,.1); }
+.editable.edited { background: #fffbeb; border: 1px solid #fcd34d; }
+.save-btn { display: none; font-size: 10px; padding: 2px 6px; background: #1a6b4a; color: #fff; border: none; border-radius: 3px; cursor: pointer; margin-left: 3px; }
+.save-btn.visible { display: inline-block; }
+.saved-check { display: none; color: #1a6b4a; font-size: 12px; margin-left: 3px; }
+.saved-check.visible { display: inline; }
+.unsaved-dot { display: none; width: 6px; height: 6px; background: #f59e0b; border-radius: 50%; margin-left: 3px; vertical-align: middle; }
+.unsaved-dot.visible { display: inline-block; }
+
+.notes-input { width: 100%; font-size: 11px; padding: 4px 7px; border: 0.5px solid #e8e6e1; border-radius: 5px; background: #fff; color: #1c1b18; box-sizing: border-box; font-family: 'DM Sans', sans-serif; }
+.notes-input:focus { border-color: #93c5fd; outline: none; }
+
+.act-row { display: flex; gap: 4px; align-items: center; }
+.act-btn {
+  width: 26px; height: 26px; border-radius: 7px;
+  border: 0.5px solid #e8e6e1; background: #fff;
+  cursor: pointer; font-size: 11px; display: flex; align-items: center; justify-content: center;
+  transition: all .12s; font-family: 'DM Sans', sans-serif;
+}
+.act-btn:hover { background: #f7f6f3; }
+.act-btn.approve:hover { background: #edf7f1; border-color: #1a6b4a; color: #1a6b4a; }
+.act-btn.reject:hover  { background: #fce8e8; border-color: #b83232; color: #b83232; }
+.act-btn.flag:hover    { background: #fef3c7; border-color: #c47b1a; color: #c47b1a; }
+.act-btn.research { background: #f5f0fc; border-color: #c4b5fd; color: #5a2d8a; }
+.act-btn.detail   { background: #f7f6f3; color: #7a7870; }
+.act-btn.delete:hover  { background: #fce8e8; border-color: #b83232; color: #b83232; }
+
+.dupe-badge { display: inline-block; margin-left: 6px; padding: 1px 6px; background: #fef3c7; color: #92400e; border-radius: 10px; font-size: 10px; font-weight: 500; cursor: pointer; white-space: nowrap; border: 0.5px solid #fcd34d; }
+
+.pagination { padding: 12px 28px; border-top: 0.5px solid #e8e6e1; background: #fff; display: flex; align-items: center; gap: 10px; flex-shrink: 0; font-size: 13px; color: #7a7870; }
+.page-btn { padding: 6px 14px; border-radius: 8px; border: 0.5px solid #e8e6e1; background: #fff; font-size: 13px; cursor: pointer; color: #1c1b18; text-decoration: none; font-family: 'DM Sans', sans-serif; }
+.page-btn:hover { background: #f7f6f3; }
+
+/* column min-widths */
+.w-name  { min-width: 200px; } .w-type { min-width: 155px; } .w-city { min-width: 100px; }
+.w-state { min-width: 50px;  } .w-zip  { min-width: 90px;  } .w-phone{ min-width: 185px; }
+.w-match { min-width: 65px; text-align:center; } .w-preqa { min-width: 100px; }
+.w-qa    { min-width: 85px;  } .w-act  { min-width: 135px; }
+.w-street{ min-width: 210px; } .w-gaddr{ min-width: 200px; } .w-web  { min-width: 170px; }
+.w-maps  { min-width: 65px;  } .w-agent{ min-width: 150px; } .w-fil  { min-width: 95px;  }
+.w-form  { min-width: 90px;  } .w-sic  { min-width: 65px;  } .w-ind  { min-width: 175px; }
+.w-mkt   { min-width: 70px;  } .w-notes{ min-width: 150px; } .w-dba  { min-width: 150px; }
 </style>
 </head>
 <body>
 <nav class="sidebar">
-  <div class="logo">Business Registry</div>
+  <div class="logo" style="padding:24px 20px 20px;">ScraperIQ
+    <div style="font-size:11px;color:rgba(255,255,255,.3);margin-top:2px;font-weight:400;font-family:'DM Mono',monospace;">Business Registry Intelligence</div>
+  </div>
+  <div style="padding:16px 12px 8px;font-size:10px;font-weight:500;color:rgba(255,255,255,.2);letter-spacing:.08em;text-transform:uppercase;">Overview</div>
   <a href="{{ url_for('dashboard') }}" class="nav-link">Dashboard</a>
+  <div style="padding:16px 12px 8px;font-size:10px;font-weight:500;color:rgba(255,255,255,.2);letter-spacing:.08em;text-transform:uppercase;">Data</div>
   <a href="{{ url_for('queue') }}" class="nav-link active">QA Queue</a>
   <a href="{{ url_for('changes') }}" class="nav-link">Change Log</a>
   <a href="{{ url_for('markets') }}" class="nav-link">Markets</a>
+  <div style="padding:16px 12px 8px;font-size:10px;font-weight:500;color:rgba(255,255,255,.2);letter-spacing:.08em;text-transform:uppercase;">Tools</div>
   <a href="{{ url_for('export') }}" class="nav-link">Export</a>
   <a href="/scrapers" class="nav-link">Scrapers</a>
+  <div style="margin-top:auto;padding:16px 20px;border-top:1px solid rgba(255,255,255,.06);font-size:11px;color:rgba(255,255,255,.25);background:linear-gradient(0deg,rgba(0,0,0,.2) 0%,transparent 100%);">
+    Delaware prototype · v1.0
+  </div>
 </nav>
 
 <main class="main">
-  <div class="page-header">
-    <h1>QA Queue</h1>
-    <span class="subtitle">{{ total }} records &mdash; page {{ page }} of {{ total_pages }}</span>
-  </div>
 
   {% with messages = get_flashed_messages(with_categories=true) %}
     {% for cat, msg in messages %}
-      <div class="flash {{ cat }}">{{ msg }}</div>
+      <div style="padding:10px 28px;background:{% if cat=='success' %}#edf7f1{% else %}#fce8e8{% endif %};border-bottom:0.5px solid #e8e6e1;font-size:13px;color:{% if cat=='success' %}#0f4a33{% else %}#b83232{% endif %};">{{ msg }}</div>
     {% endfor %}
   {% endwith %}
 
-  <form method="GET" class="filter-bar" style="width:100%;display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px;">
-    <select name="market" style="font-size:13px;padding:7px 12px;">
-      <option value="">All markets</option>
-      {% for m in markets %}
-        <option value="{{ m }}" {% if m == selected_market %}selected{% endif %}>{{ m }}</option>
-      {% endfor %}
-    </select>
-    <select name="status" style="font-size:13px;padding:7px 12px;">
-      <option value="pending"  {% if selected_status == 'pending'  %}selected{% endif %}>Pending</option>
-      <option value="flagged"  {% if selected_status == 'flagged'  %}selected{% endif %}>Flagged</option>
-      <option value="approved" {% if selected_status == 'approved' %}selected{% endif %}>Approved</option>
-      <option value="rejected" {% if selected_status == 'rejected' %}selected{% endif %}>Rejected</option>
-      <option value=""         {% if selected_status == ''         %}selected{% endif %}>All</option>
-    </select>
-    <input type="text" name="search" placeholder="Search name..." value="{{ search }}" style="font-size:13px;padding:7px 12px;flex:1;min-width:200px;">
-    <button type="submit" class="btn" style="font-size:13px;padding:7px 18px;">Filter</button>
-    <a href="{{ url_for('queue') }}" class="btn secondary" style="font-size:13px;padding:7px 18px;">Reset</a>
-  </form>
+  <!-- Top bar -->
+  <div class="top-bar">
+    <div>
+      <div class="top-title">QA Queue</div>
+    </div>
+    <div class="top-meta">{{ total }} records &middot; page {{ page }} of {{ total_pages }}</div>
+    <div style="margin-left:auto;display:flex;gap:8px;align-items:center;">
+      <form method="GET" style="display:flex;gap:8px;align-items:center;">
+        <select name="market" class="filter-input" style="width:120px;">
+          <option value="">All markets</option>
+          {% for m in markets %}
+            <option value="{{ m }}" {% if m == selected_market %}selected{% endif %}>{{ m }}</option>
+          {% endfor %}
+        </select>
+        <select name="status" class="filter-input" style="width:110px;">
+          <option value="pending"  {% if selected_status=='pending'  %}selected{% endif %}>Pending</option>
+          <option value="flagged"  {% if selected_status=='flagged'  %}selected{% endif %}>Flagged</option>
+          <option value="approved" {% if selected_status=='approved' %}selected{% endif %}>Approved</option>
+          <option value="rejected" {% if selected_status=='rejected' %}selected{% endif %}>Rejected</option>
+          <option value=""         {% if selected_status==''         %}selected{% endif %}>All</option>
+        </select>
+        <input type="text" name="search" class="filter-input" placeholder="Search name…" value="{{ search }}" style="width:220px;">
+        <button type="submit" class="filter-btn primary">Filter</button>
+        <a href="{{ url_for('queue') }}" class="filter-btn">Reset</a>
+      </form>
+    </div>
+  </div>
 
+  <!-- Track tabs -->
   <form method="POST" action="{{ url_for('bulk_action') }}" id="bulk-form">
-
-    <!-- Pre-QA legend -->
-    <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;margin-bottom:12px;padding:12px 18px;background:var(--bg);border-radius:var(--border-radius-md);font-size:13px;border:0.5px solid var(--border);width:100%;">
-      <span style="font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;font-size:11px;">Pre-QA</span>
-      <span><span style="background:#ecfdf5;color:#065f46;padding:3px 10px;border-radius:10px;font-weight:500;font-size:12px;">auto approve</span> &nbsp;Google 90%+ match</span>
-      <span><span style="background:#fffbeb;color:#92400e;padding:3px 10px;border-radius:10px;font-weight:500;font-size:12px;">review</span> &nbsp;70–89% match</span>
-      <span><span style="background:#fef2f2;color:#991b1b;padding:3px 10px;border-radius:10px;font-weight:500;font-size:12px;">flag</span> &nbsp;Below 70% or not found — use R button to research</span>
-      <span style="margin-left:auto;"><span style="background:#faf5ff;color:#6d28d9;padding:3px 10px;border-radius:10px;font-weight:500;font-size:12px;border:0.5px solid #c4b5fd;">R</span> &nbsp;Smart research links by business type</span>
+  <div class="track-tabs">
+    <button type="button" class="track-tab active-small" id="tab-small" onclick="setTrack('small')">
+      Track 1 — Small business
+      <span class="track-pill" style="background:#edf7f1;color:#0f4a33;" id="pill-small">—</span>
+    </button>
+    <button type="button" class="track-tab" id="tab-mid" onclick="setTrack('mid')">
+      Track 2 — Mid-market
+      <span class="track-pill" style="background:#f5f0fc;color:#3d1a6e;" id="pill-mid">—</span>
+    </button>
+    <button type="button" class="track-tab" id="tab-ent" onclick="setTrack('ent')">
+      Track 3 — Enterprise
+      <span class="track-pill" style="background:#eef3fb;color:#0c2d6b;" id="pill-ent">—</span>
+    </button>
+    <div class="bulk-actions">
+      <input type="checkbox" id="sel-all" onchange="toggleAll(this)" style="margin-right:4px;">
+      <label for="sel-all" style="font-size:13px;color:#7a7870;margin-right:8px;">Select all</label>
+      <button type="submit" name="action" value="approved" class="filter-btn approve">✓ Approve</button>
+      <button type="submit" name="action" value="rejected" class="filter-btn reject">✗ Reject</button>
+      <button type="submit" name="action" value="flagged"  class="filter-btn flag">⚑ Flag</button>
     </div>
+  </div>
 
-    <!-- Entity track tabs -->
-    <div style="margin-bottom:12px;">
-      <div style="display:flex;gap:0;border:0.5px solid var(--border);border-radius:var(--border-radius-md) var(--border-radius-md) 0 0;overflow:hidden;width:100%;">
-        <button type="button" id="track-btn-summary" onclick="setTrack('summary')"
-          style="flex:0 0 auto;padding:10px 18px;font-size:13px;font-weight:600;border:none;border-right:0.5px solid var(--border);cursor:pointer;background:var(--text);color:#fff;text-align:left;">
-          How it works
-          <div style="font-size:11px;font-weight:400;margin-top:2px;opacity:.75;">Routing logic · cheat sheet</div>
-        </button>
-        <button type="button" id="track-btn-small" onclick="setTrack('small')"
-          style="flex:1;padding:10px 14px;font-size:13px;font-weight:500;border:none;border-right:0.5px solid var(--border);cursor:pointer;background:var(--bg);color:var(--muted);text-align:left;">
-          Track 1 — Small / new business
-          <div style="font-size:11px;font-weight:400;margin-top:2px;opacity:.8;">Trade names, sole proprietors, new LLCs · Google, BBB, Facebook, Yelp, licensing boards, SBA</div>
-        </button>
-        <button type="button" id="track-btn-mid" onclick="setTrack('mid')"
-          style="flex:1;padding:10px 14px;font-size:13px;font-weight:500;border:none;border-right:0.5px solid var(--border);cursor:pointer;background:var(--bg);color:var(--muted);text-align:left;">
-          Track 2 — Mid-market / established
-          <div style="font-size:11px;font-weight:400;margin-top:2px;opacity:.8;">LLCs, corporations with history · LinkedIn, website scrape, OpenCorporates, multi-state SOS</div>
-        </button>
-        <button type="button" id="track-btn-ent" onclick="setTrack('ent')"
-          style="flex:1;padding:10px 14px;font-size:13px;font-weight:500;border:none;cursor:pointer;background:var(--bg);color:var(--muted);text-align:left;">
-          Track 3 — Enterprise / public
-          <div style="font-size:11px;font-weight:400;margin-top:2px;opacity:.8;">Large corps, public companies · SEC EDGAR first, SAM.gov, FCC/FDA, OpenCorporates</div>
-        </button>
-      </div>
+  <!-- Source banner -->
+  <div class="source-banner" id="source-banner">
+    <span class="banner-label" id="banner-label">Track 1 — Small business</span>
+    <div class="banner-chips" id="banner-chips"></div>
+    <span class="banner-legend">White = auto · Outline = manual R · Faded = coming</span>
+  </div>
 
-      <!-- Track 1 panel -->
-      <!-- Summary panel -->
-      <div id="track-panel-summary" style="border:0.5px solid var(--border);border-top:none;border-radius:0 0 var(--border-radius-md) var(--border-radius-md);padding:16px;background:var(--surface);">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:14px;">
+  <!-- Column toggle -->
+  <div class="col-toggle">
+    <span style="font-size:12px;color:#7a7870;font-weight:500;">Columns:</span>
+    <button type="button" class="col-btn active" id="col-core" onclick="setView('core')">Core</button>
+    <button type="button" class="col-btn" id="col-addr" onclick="setView('addr')">+ Address detail</button>
+    <button type="button" class="col-btn" id="col-full" onclick="setView('full')">Full view</button>
+    <span style="margin-left:auto;font-size:11px;color:#b4b2a9;">Click column headers to sort &nbsp;·&nbsp; All fields editable inline</span>
+  </div>
 
-          <div>
-            <div style="font-size:11px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px;">How track assignment works</div>
-            <div style="font-size:12px;color:var(--text);line-height:1.7;">
-              Every record is automatically assigned to a track at ingest — before any reviewer sees it. The assignment is never manual. The system reads signals already present in the registry filing and routes accordingly.
-            </div>
-            <div style="margin-top:10px;display:flex;flex-direction:column;gap:5px;">
-              <div style="font-size:11px;padding:6px 10px;background:#eaf3de;border-radius:6px;border-left:3px solid #639922;color:#27500a;line-height:1.5;">
-                <strong style="font-weight:500;">Track 1</strong> — Trade name, sole proprietor, or LLC formed within 2 years. No national registered agent detected. SIC in local services (restaurant, cleaning, contractor, salon, retail, childcare).
-              </div>
-              <div style="font-size:11px;padding:6px 10px;background:var(--bg);border-radius:6px;border-left:3px solid var(--border);color:var(--text);line-height:1.5;">
-                <strong style="font-weight:500;">Track 2</strong> — LLC or Corporation with 2+ years filing history. Professional services SIC (consulting, software, finance, healthcare practice). Regional registered agent or self-registered.
-              </div>
-              <div style="font-size:11px;padding:6px 10px;background:#e6f1fb;border-radius:6px;border-left:3px solid #85b7eb;color:#0c447c;line-height:1.5;">
-                <strong style="font-weight:500;">Track 3</strong> — Corporation with national registered agent (CT Corp, CSC, Northwest). SIC in financial services, pharma, telecom, or large-scale manufacturing. Or: name match found in SEC EDGAR.
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <div style="font-size:11px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px;">What reviewers actually do</div>
-            <div style="display:flex;flex-direction:column;gap:5px;">
-              <div style="font-size:11px;padding:7px 10px;background:var(--bg);border-radius:6px;border:0.5px solid var(--border);display:flex;gap:8px;line-height:1.5;">
-                <span style="background:#ecfdf5;color:#065f46;padding:1px 7px;border-radius:8px;font-weight:500;white-space:nowrap;align-self:flex-start;margin-top:1px;">auto approve</span>
-                <span style="color:var(--text);">Record never reaches reviewer. All pre-QA checks passed 90%+. Exported directly.</span>
-              </div>
-              <div style="font-size:11px;padding:7px 10px;background:var(--bg);border-radius:6px;border:0.5px solid var(--border);display:flex;gap:8px;line-height:1.5;">
-                <span style="background:#fffbeb;color:#92400e;padding:1px 7px;border-radius:8px;font-weight:500;white-space:nowrap;align-self:flex-start;margin-top:1px;">review</span>
-                <span style="color:var(--text);">70–89% match. Reviewer sees pre-checked sources. Click R to open track-specific links. Correct any field inline. Approve or flag.</span>
-              </div>
-              <div style="font-size:11px;padding:7px 10px;background:var(--bg);border-radius:6px;border:0.5px solid var(--border);display:flex;gap:8px;line-height:1.5;">
-                <span style="background:#fef2f2;color:#991b1b;padding:1px 7px;border-radius:8px;font-weight:500;white-space:nowrap;align-self:flex-start;margin-top:1px;">flag</span>
-                <span style="color:var(--text);">Below 70% or not found. Use R button — sources shown are specific to this record's track. Investigate, correct, and approve or reject.</span>
-              </div>
-              <div style="font-size:11px;padding:7px 10px;background:var(--bg);border-radius:6px;border:0.5px solid var(--border);line-height:1.5;color:var(--muted);">
-                <strong style="color:var(--text);font-weight:500;">7-day lock:</strong> once you open a record it is locked to you for 7 days. No other reviewer will be assigned the same record within that window.
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div style="border-top:0.5px solid var(--border);padding-top:12px;display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">
-          <div style="font-size:11px;color:var(--muted);line-height:1.5;">
-            <strong style="color:var(--text);font-weight:500;display:block;margin-bottom:3px;">SIC code</strong>
-            Pre-populated automatically from the registry business description using AI classification. Never entered manually.
-          </div>
-          <div style="font-size:11px;color:var(--muted);line-height:1.5;">
-            <strong style="color:var(--text);font-weight:500;display:block;margin-bottom:3px;">Phone area code</strong>
-            Resolved to city and state automatically. Filer's area code reveals where the person who registered likely operates — especially useful for DE filings.
-          </div>
-          <div style="font-size:11px;color:var(--muted);line-height:1.5;">
-            <strong style="color:var(--text);font-weight:500;display:block;margin-bottom:3px;">Address match score</strong>
-            Registry address vs Google Places address, computed automatically. Not a pass/fail — a signal. Low scores on DE filings are expected when the filing address is a registered agent.
-          </div>
-          <div style="font-size:11px;color:var(--muted);line-height:1.5;">
-            <strong style="color:var(--text);font-weight:500;display:block;margin-bottom:3px;">Inline editing</strong>
-            Any field can be corrected directly in the row — name, address, SIC, notes. Amber dot = unsaved. Green check = saved. No separate screen needed.
-          </div>
-        </div>
-      </div>
-
-      <div id="track-panel-small" style="display:none;border:0.5px solid #639922;border-top:none;border-radius:0 0 var(--border-radius-md) var(--border-radius-md);padding:12px 16px;background:#f6fbf0;">
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">
-          <div style="background:#fff;border:0.5px solid #c0dd97;border-radius:8px;padding:10px 12px;">
-            <div style="font-size:10px;font-weight:500;color:#3b6d11;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;">Step 1 — auto</div>
-            <div style="font-size:12px;font-weight:500;color:#1a1a18;margin-bottom:3px;">Google Places</div>
-            <div style="font-size:11px;color:#5f5e5a;line-height:1.5;">Operating address, phone, website. Fuzzy match vs registry. Area code → city/state of filer.</div>
-          </div>
-          <div style="background:#fff;border:0.5px solid #c0dd97;border-radius:8px;padding:10px 12px;">
-            <div style="font-size:10px;font-weight:500;color:#3b6d11;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;">Step 2 — auto</div>
-            <div style="font-size:12px;font-weight:500;color:#1a1a18;margin-bottom:3px;">Website contact page</div>
-            <div style="font-size:11px;color:#5f5e5a;line-height:1.5;">Auto-scrapes address from business's own contact or location page. Third independent source.</div>
-          </div>
-          <div style="background:#fff;border:0.5px solid #c0dd97;border-radius:8px;padding:10px 12px;">
-            <div style="font-size:10px;font-weight:500;color:#854f0b;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;">Step 3 — manual R</div>
-            <div style="font-size:12px;font-weight:500;color:#1a1a18;margin-bottom:3px;">BBB · Facebook · Yelp</div>
-            <div style="font-size:11px;color:#5f5e5a;line-height:1.5;">Reviewer opens pre-loaded links. BBB verifies address. Facebook/Yelp confirm local presence. Not scraped automatically.</div>
-          </div>
-          <div style="background:#fff;border:0.5px solid #c0dd97;border-radius:8px;padding:10px 12px;">
-            <div style="font-size:10px;font-weight:500;color:#3b6d11;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;">Future — auto</div>
-            <div style="font-size:12px;font-weight:500;color:#1a1a18;margin-bottom:3px;">State licensing boards · SBA</div>
-            <div style="font-size:11px;color:#5f5e5a;line-height:1.5;">Contractor, electrician, healthcare, cosmetology licenses. SBA loan data has physically verified addresses.</div>
-          </div>
-        </div>
-        <div style="margin-top:8px;font-size:11px;color:#3b6d11;padding:6px 10px;background:#eaf3de;border-radius:6px;">USPS deliverability is <strong>not</strong> used as a corroboration source — it confirms an address receives mail, not that a business operates there. Used for address normalization only.</div>
-      </div>
-
-      <!-- Track 2 panel -->
-      <div id="track-panel-mid" style="display:none;border:0.5px solid var(--border);border-top:none;border-radius:0 0 var(--border-radius-md) var(--border-radius-md);padding:12px 16px;background:var(--bg);">
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">
-          <div style="background:var(--surface);border:0.5px solid var(--border);border-radius:8px;padding:10px 12px;">
-            <div style="font-size:10px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;">Step 1 — auto</div>
-            <div style="font-size:12px;font-weight:500;color:var(--text);margin-bottom:3px;">Google Places</div>
-            <div style="font-size:11px;color:var(--muted);line-height:1.5;">Same as Track 1. Operating address, website, phone corroboration.</div>
-          </div>
-          <div style="background:var(--surface);border:0.5px solid var(--border);border-radius:8px;padding:10px 12px;">
-            <div style="font-size:10px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;">Step 2 — auto</div>
-            <div style="font-size:12px;font-weight:500;color:var(--text);margin-bottom:3px;">Website scrape + OpenCorporates</div>
-            <div style="font-size:11px;color:var(--muted);line-height:1.5;">Contact page address scrape plus cross-state SOS filing consistency check via OpenCorporates free API.</div>
-          </div>
-          <div style="background:var(--surface);border:0.5px solid var(--border);border-radius:8px;padding:10px 12px;">
-            <div style="font-size:10px;font-weight:500;color:#854f0b;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;">Step 3 — manual R</div>
-            <div style="font-size:12px;font-weight:500;color:var(--text);margin-bottom:3px;">LinkedIn · Crunchbase · BBB</div>
-            <div style="font-size:11px;color:var(--muted);line-height:1.5;">Reviewer manually checks LinkedIn company page (headquarters address) and Crunchbase. Not automatically scraped.</div>
-          </div>
-          <div style="background:var(--surface);border:0.5px solid var(--border);border-radius:8px;padding:10px 12px;">
-            <div style="font-size:10px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;">Future — auto</div>
-            <div style="font-size:12px;font-weight:500;color:var(--text);margin-bottom:3px;">Multi-state SOS consistency</div>
-            <div style="font-size:11px;color:var(--muted);line-height:1.5;">Address appearing consistently across multiple state SOS filings is strong operating address signal.</div>
-          </div>
-        </div>
-        <div style="margin-top:8px;font-size:11px;color:var(--muted);padding:6px 10px;background:var(--surface);border-radius:6px;border:0.5px solid var(--border);">LinkedIn and Crunchbase are <strong>manual review only</strong> — no automated scraping. Address consistency across OpenCorporates jurisdictions is the primary automated signal for this track.</div>
-      </div>
-
-      <!-- Track 3 panel -->
-      <div id="track-panel-ent" style="display:none;border:0.5px solid var(--border);border-top:none;border-radius:0 0 var(--border-radius-md) var(--border-radius-md);padding:12px 16px;background:var(--bg);">
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">
-          <div style="background:var(--surface);border:0.5px solid #85b7eb;border-radius:8px;padding:10px 12px;">
-            <div style="font-size:10px;font-weight:500;color:#185fa5;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;">Step 1 — auto · 99% if match</div>
-            <div style="font-size:12px;font-weight:500;color:var(--text);margin-bottom:3px;">SEC EDGAR</div>
-            <div style="font-size:11px;color:var(--muted);line-height:1.5;">Public company 10-K filing address. Legally required to be current. If EDGAR match found, record auto-approves at 99% confidence.</div>
-          </div>
-          <div style="background:var(--surface);border:0.5px solid var(--border);border-radius:8px;padding:10px 12px;">
-            <div style="font-size:10px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;">Step 2 — auto</div>
-            <div style="font-size:12px;font-weight:500;color:var(--text);margin-bottom:3px;">SAM.gov · OpenCorporates</div>
-            <div style="font-size:11px;color:var(--muted);line-height:1.5;">Federal contractor registration (SAM.gov) requires current verified address. OpenCorporates for multi-jurisdiction consistency.</div>
-          </div>
-          <div style="background:var(--surface);border:0.5px solid var(--border);border-radius:8px;padding:10px 12px;">
-            <div style="font-size:10px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;">Step 3 — auto · industry specific</div>
-            <div style="font-size:12px;font-weight:500;color:var(--text);margin-bottom:3px;">FCC · FDA · State regulators</div>
-            <div style="font-size:11px;color:var(--muted);line-height:1.5;">Industry-specific license databases. FCC for telecoms, FDA for pharma/food/devices, state boards for healthcare.</div>
-          </div>
-          <div style="background:var(--surface);border:0.5px solid var(--border);border-radius:8px;padding:10px 12px;">
-            <div style="font-size:10px;font-weight:500;color:#854f0b;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;">Step 4 — manual R</div>
-            <div style="font-size:12px;font-weight:500;color:var(--text);margin-bottom:3px;">LinkedIn · Crunchbase · IR page</div>
-            <div style="font-size:11px;color:var(--muted);line-height:1.5;">Investor relations page and LinkedIn company page for headquarters confirmation. Manual review only.</div>
-          </div>
-        </div>
-        <div style="margin-top:8px;font-size:11px;color:#185fa5;padding:6px 10px;background:#e6f1fb;border-radius:6px;">SEC EDGAR is the highest-confidence public address source available. A matching EDGAR filing bypasses all other enrichment steps and auto-approves the record.</div>
-      </div>
-    </div>
-
-    <!-- Column view toggle -->
-    <div class="view-toggle" style="margin-bottom:10px;">
-      <span style="color:var(--muted);font-weight:500;font-size:13px;">Columns:</span>
-      <button type="button" class="view-btn active" id="btn-core" onclick="setView('core')" style="font-size:13px;padding:6px 16px;">Core</button>
-      <button type="button" class="view-btn" id="btn-addr" onclick="setView('addr')" style="font-size:13px;padding:6px 16px;">+ Address detail</button>
-      <button type="button" class="view-btn" id="btn-full" onclick="setView('full')" style="font-size:13px;padding:6px 16px;">Full view</button>
-    </div>
-
-    <div class="bulk-bar" style="margin-bottom:10px;">
-      <label style="font-size:13px;"><input type="checkbox" id="select-all" onchange="toggleAll(this)"> Select all</label>
-      <button type="submit" name="action" value="approved" class="btn small" style="font-size:13px;padding:6px 16px;">✓ Approve selected</button>
-      <button type="submit" name="action" value="rejected" class="btn small danger" style="font-size:13px;padding:6px 16px;">✗ Reject selected</button>
-      <button type="submit" name="action" value="flagged"  class="btn small warn" style="font-size:13px;padding:6px 16px;">⚑ Flag selected</button>
-    </div>
-
-    <div class="queue-wrap" id="queue-wrap">
+  <!-- Queue table -->
+  <div class="queue-wrap" id="queue-wrap">
     <table class="tbl" id="queue-table">
       <thead>
         <tr>
-          <th style="width:28px"><input type="checkbox" onchange="toggleAll(this)"></th>
-          <th class="col-name-w" onclick="sortTable(1)">Legal name <span class="sort-icon">↕</span></th>
-          <th class="col-detail col-name-w" onclick="sortTable(2)">Trade name / DBA <span class="sort-icon">↕</span></th>
-          <th class="col-type-w" onclick="sortTable(3)">Entity type <span class="sort-icon">↕</span></th>
-          <th onclick="sortTable(4)">Status <span class="sort-icon">↕</span></th>
-          <th class="col-addr col-street-w" onclick="sortTable(5)">Street address <span class="sort-icon">↕</span></th>
-          <th class="col-city-w" onclick="sortTable(6)">City <span class="sort-icon">↕</span></th>
-          <th class="col-state-w" onclick="sortTable(7)">State <span class="sort-icon">↕</span></th>
-          <th class="col-zip-w" onclick="sortTable(8)">ZIP <span class="sort-icon">↕</span></th>
-          <th class="col-phone-w" onclick="sortTable(9)">Phone / area <span class="sort-icon">↕</span></th>
-          <th class="col-addr col-gaddr-w" onclick="sortTable(10)">Google address <span class="sort-icon">↕</span></th>
-          <th class="col-match-w" onclick="sortTable(11)">Match <span class="sort-icon">↕</span></th>
-          <th class="col-addr col-web-w" onclick="sortTable(12)">Website <span class="sort-icon">↕</span></th>
-          <th class="col-addr col-maps-w" onclick="sortTable(13)">Maps <span class="sort-icon">↕</span></th>
-          <th class="col-preqa-w" onclick="sortTable(14)">Pre-QA <span class="sort-icon">↕</span></th>
-          <th class="col-detail col-agent-w" onclick="sortTable(15)">Registered agent <span class="sort-icon">↕</span></th>
-          <th class="col-detail col-filing-w" onclick="sortTable(16)">Filing ID <span class="sort-icon">↕</span></th>
-          <th class="col-detail col-formed-w" onclick="sortTable(17)">Formed <span class="sort-icon">↕</span></th>
-          <th class="col-detail col-sic-w" onclick="sortTable(18)">SIC <span class="sort-icon">↕</span></th>
-          <th class="col-detail col-ind-w" onclick="sortTable(19)">Industry <span class="sort-icon">↕</span></th>
-          <th class="col-detail col-mkt-w" onclick="sortTable(20)">Market <span class="sort-icon">↕</span></th>
-          <th class="col-qa-w" onclick="sortTable(21)">QA <span class="sort-icon">↕</span></th>
-          <th class="col-detail col-notes-w">Notes</th>
-          <th class="col-act-w">Actions</th>
+          <th style="width:32px;"><input type="checkbox" onchange="toggleAll(this)"></th>
+          <th class="w-name"  onclick="sortTable(1)">Legal name <span class="si">↕</span></th>
+          <th class="w-dba col-detail" onclick="sortTable(2)">Trade name / DBA <span class="si">↕</span></th>
+          <th class="w-type"  onclick="sortTable(3)">Entity type <span class="si">↕</span></th>
+          <th onclick="sortTable(4)">Status <span class="si">↕</span></th>
+          <th class="w-street col-addr" onclick="sortTable(5)">Street address <span class="si">↕</span></th>
+          <th class="w-city"  onclick="sortTable(6)">City <span class="si">↕</span></th>
+          <th class="w-state" onclick="sortTable(7)">St <span class="si">↕</span></th>
+          <th class="w-zip"   onclick="sortTable(8)">ZIP <span class="si">↕</span></th>
+          <th class="w-phone" onclick="sortTable(9)">Phone · filer area <span class="si">↕</span></th>
+          <th class="w-gaddr col-addr" onclick="sortTable(10)">Google address <span class="si">↕</span></th>
+          <th class="w-match" onclick="sortTable(11)">Match <span class="si">↕</span></th>
+          <th class="w-web col-addr" onclick="sortTable(12)">Website <span class="si">↕</span></th>
+          <th class="w-maps col-addr" onclick="sortTable(13)">Maps <span class="si">↕</span></th>
+          <th class="w-preqa" onclick="sortTable(14)">Pre-QA <span class="si">↕</span></th>
+          <th class="w-agent col-detail" onclick="sortTable(15)">Reg. agent <span class="si">↕</span></th>
+          <th class="w-fil col-detail"   onclick="sortTable(16)">Filing ID <span class="si">↕</span></th>
+          <th class="w-form col-detail"  onclick="sortTable(17)">Formed <span class="si">↕</span></th>
+          <th class="w-sic col-detail"   onclick="sortTable(18)">SIC <span class="si">↕</span></th>
+          <th class="w-ind col-detail"   onclick="sortTable(19)">Industry <span class="si">↕</span></th>
+          <th class="w-mkt col-detail"   onclick="sortTable(20)">Market <span class="si">↕</span></th>
+          <th class="w-qa"    onclick="sortTable(21)">QA <span class="si">↕</span></th>
+          <th class="w-notes col-detail">Notes</th>
+          <th class="w-act">Actions</th>
         </tr>
       </thead>
       <tbody>
@@ -354,288 +336,215 @@
         <tr class="row-{{ r.qa_status }}" id="row-{{ r.business_id }}">
           <td><input type="checkbox" name="ids" value="{{ r.business_id }}" class="row-check"></td>
 
-          <!-- Legal name -->
-          <td>
-            <div style="display:flex;align-items:center;gap:3px">
-              <input class="editable" id="name-{{ r.business_id }}"
-                     value="{{ r.business_name }}"
-                     style="font-weight:500;min-width:140px"
-                     onchange="markEdited({{ r.business_id }},'name')"
-                     oninput="markEdited({{ r.business_id }},'name')">
+          <td class="w-name">
+            <div style="display:flex;align-items:center;gap:3px;">
+              <input class="editable" id="name-{{ r.business_id }}" value="{{ r.business_name }}"
+                style="font-weight:500;min-width:140px;"
+                onchange="markEdited({{ r.business_id }},'name')" oninput="markEdited({{ r.business_id }},'name')">
               <button class="save-btn" id="save-name-{{ r.business_id }}"
-                      onclick="saveField(event,{{ r.business_id }},'business_name','name-{{ r.business_id }}')">✓</button>
+                onclick="saveField(event,{{ r.business_id }},'business_name','name-{{ r.business_id }}')">✓</button>
               <span class="saved-check" id="check-name-{{ r.business_id }}">✓</span>
               <span class="unsaved-dot" id="dot-name-{{ r.business_id }}"></span>
             </div>
-            {% if r.is_duplicate_of %}<span class="badge dupe" style="font-size:10px">dupe →#{{ r.is_duplicate_of }}</span>{% endif %}
+            <div class="name-sub">#{{ r.filing_id or r.business_id }}</div>
+            {% if r.is_duplicate_of %}<span class="dupe-badge">{{ r.business_name|lower }} 2 filings</span>{% endif %}
           </td>
 
-          <!-- Trade name DBA -->
-          <td class="col-detail">
-            <span style="font-size:11px;color:var(--muted)">{{ r.trade_name or '—' }}</span>
-          </td>
+          <td class="w-dba col-detail"><span style="font-size:11px;color:#7a7870;">{{ r.trade_name or '—' }}</span></td>
 
-          <!-- Entity type -->
-          <td>
-            <div style="display:flex;align-items:center;gap:3px">
-              <input class="editable" id="type-{{ r.business_id }}"
-                     value="{{ r.entity_type or '' }}"
-                     style="min-width:80px"
-                     onchange="markEdited({{ r.business_id }},'type')"
-                     oninput="markEdited({{ r.business_id }},'type')">
+          <td class="w-type">
+            <div style="display:flex;align-items:center;gap:3px;">
+              <input class="editable" id="type-{{ r.business_id }}" value="{{ r.entity_type or '' }}"
+                style="min-width:110px;"
+                onchange="markEdited({{ r.business_id }},'type')" oninput="markEdited({{ r.business_id }},'type')">
               <button class="save-btn" id="save-type-{{ r.business_id }}"
-                      onclick="saveField(event,{{ r.business_id }},'entity_type','type-{{ r.business_id }}')">✓</button>
+                onclick="saveField(event,{{ r.business_id }},'entity_type','type-{{ r.business_id }}')">✓</button>
               <span class="saved-check" id="check-type-{{ r.business_id }}">✓</span>
               <span class="unsaved-dot" id="dot-type-{{ r.business_id }}"></span>
             </div>
           </td>
 
-          <!-- Status -->
-          <td>
-            <span class="badge status-{{ (r.status or 'unknown')|lower|replace(' ','') }}">{{ r.status or '—' }}</span>
-          </td>
+          <td><span class="badge b-active">{{ r.status or '—' }}</span></td>
 
-          <!-- Street address (addr group) -->
-          <td class="col-addr">
-            <div style="display:flex;align-items:center;gap:3px">
-              <input class="editable" id="addr1-{{ r.business_id }}"
-                     value="{{ r.address_line1 or r.registered_address or '' }}"
-                     style="min-width:150px"
-                     onchange="markEdited({{ r.business_id }},'addr1')"
-                     oninput="markEdited({{ r.business_id }},'addr1')">
+          <td class="w-street col-addr">
+            <div style="display:flex;align-items:center;gap:3px;">
+              <input class="editable" id="addr1-{{ r.business_id }}" value="{{ r.address_line1 or r.registered_address or '' }}"
+                style="min-width:170px;"
+                onchange="markEdited({{ r.business_id }},'addr1')" oninput="markEdited({{ r.business_id }},'addr1')">
               <button class="save-btn" id="save-addr1-{{ r.business_id }}"
-                      onclick="saveField(event,{{ r.business_id }},'address_line1','addr1-{{ r.business_id }}')">✓</button>
+                onclick="saveField(event,{{ r.business_id }},'address_line1','addr1-{{ r.business_id }}')">✓</button>
               <span class="saved-check" id="check-addr1-{{ r.business_id }}">✓</span>
               <span class="unsaved-dot" id="dot-addr1-{{ r.business_id }}"></span>
             </div>
           </td>
 
-          <!-- City -->
-          <td>
-            <div style="display:flex;align-items:center;gap:3px">
-              <input class="editable" id="city-{{ r.business_id }}"
-                     value="{{ r.city or '' }}"
-                     style="min-width:70px"
-                     onchange="markEdited({{ r.business_id }},'city')"
-                     oninput="markEdited({{ r.business_id }},'city')">
-              <button class="save-btn" id="save-city-{{ r.business_id }}"
-                      onclick="saveField(event,{{ r.business_id }},'city','city-{{ r.business_id }}')">✓</button>
-              <span class="unsaved-dot" id="dot-city-{{ r.business_id }}"></span>
-            </div>
+          <td class="w-city">
+            <input class="editable" id="city-{{ r.business_id }}" value="{{ r.city or '' }}"
+              style="min-width:75px;"
+              onchange="markEdited({{ r.business_id }},'city')" oninput="markEdited({{ r.business_id }},'city')">
+            <button class="save-btn" id="save-city-{{ r.business_id }}"
+              onclick="saveField(event,{{ r.business_id }},'city','city-{{ r.business_id }}')">✓</button>
+            <span class="unsaved-dot" id="dot-city-{{ r.business_id }}"></span>
           </td>
 
-          <!-- State -->
-          <td>
-            <div style="display:flex;align-items:center;gap:2px">
-              <input class="editable" id="state-{{ r.business_id }}"
-                     value="{{ r.state_province or '' }}"
-                     style="min-width:30px;max-width:40px"
-                     onchange="markEdited({{ r.business_id }},'state')"
-                     oninput="markEdited({{ r.business_id }},'state')">
-              <button class="save-btn" id="save-state-{{ r.business_id }}"
-                      onclick="saveField(event,{{ r.business_id }},'state_province','state-{{ r.business_id }}')">✓</button>
-              <span class="unsaved-dot" id="dot-state-{{ r.business_id }}"></span>
-            </div>
+          <td class="w-state">
+            <input class="editable" id="state-{{ r.business_id }}" value="{{ r.state_province or '' }}"
+              style="min-width:32px;max-width:42px;"
+              onchange="markEdited({{ r.business_id }},'state')" oninput="markEdited({{ r.business_id }},'state')">
+            <button class="save-btn" id="save-state-{{ r.business_id }}"
+              onclick="saveField(event,{{ r.business_id }},'state_province','state-{{ r.business_id }}')">✓</button>
+            <span class="unsaved-dot" id="dot-state-{{ r.business_id }}"></span>
           </td>
 
-          <!-- ZIP -->
-          <td>
-            <div style="display:flex;align-items:center;gap:2px">
-              <input class="editable" id="zip-{{ r.business_id }}"
-                     value="{{ r.postal_code or '' }}"
-                     style="min-width:65px"
-                     onchange="markEdited({{ r.business_id }},'zip')"
-                     oninput="markEdited({{ r.business_id }},'zip')">
-              <button class="save-btn" id="save-zip-{{ r.business_id }}"
-                      onclick="saveField(event,{{ r.business_id }},'postal_code','zip-{{ r.business_id }}')">✓</button>
-              <span class="unsaved-dot" id="dot-zip-{{ r.business_id }}"></span>
-            </div>
+          <td class="w-zip">
+            <input class="editable" id="zip-{{ r.business_id }}" value="{{ r.postal_code or '' }}"
+              style="min-width:70px;"
+              onchange="markEdited({{ r.business_id }},'zip')" oninput="markEdited({{ r.business_id }},'zip')">
+            <button class="save-btn" id="save-zip-{{ r.business_id }}"
+              onclick="saveField(event,{{ r.business_id }},'postal_code','zip-{{ r.business_id }}')">✓</button>
+            <span class="unsaved-dot" id="dot-zip-{{ r.business_id }}"></span>
           </td>
 
-          <!-- Phone + area code -->
-          <td>
-            <div style="display:flex;align-items:center;gap:3px">
-              <input class="editable" id="phone-{{ r.business_id }}"
-                     value="{{ r.phone or '' }}"
-                     style="min-width:105px"
-                     onchange="markEdited({{ r.business_id }},'phone')"
-                     oninput="markEdited({{ r.business_id }},'phone')">
+          <td class="w-phone">
+            <div style="display:flex;align-items:center;gap:3px;">
+              <input class="editable" id="phone-{{ r.business_id }}" value="{{ r.phone or '' }}"
+                style="min-width:110px;"
+                onchange="markEdited({{ r.business_id }},'phone')" oninput="markEdited({{ r.business_id }},'phone')">
               <button class="save-btn" id="save-phone-{{ r.business_id }}"
-                      onclick="saveField(event,{{ r.business_id }},'phone','phone-{{ r.business_id }}')">✓</button>
+                onclick="saveField(event,{{ r.business_id }},'phone','phone-{{ r.business_id }}')">✓</button>
               <span class="saved-check" id="check-phone-{{ r.business_id }}">✓</span>
               <span class="unsaved-dot" id="dot-phone-{{ r.business_id }}"></span>
             </div>
             {% if r.phone %}
-            <div style="margin-top:3px">
-              <span id="area-{{ r.business_id }}"
-                    style="font-size:10px;padding:1px 5px;border-radius:3px;font-weight:500"
-                    data-phone="{{ r.phone }}"
-                    data-state="{{ r.state_province or '' }}">
-              </span>
-            </div>
+              <span id="area-{{ r.business_id }}" class="area-pill"
+                data-phone="{{ r.phone }}" data-state="{{ r.state_province or '' }}"></span>
             {% endif %}
           </td>
 
-          <!-- Google address (addr group) -->
-          <td class="col-addr">
+          <td class="w-gaddr col-addr">
             {% if r.google_address %}
-              <span style="font-size:11px;color:var(--muted)">{{ r.google_address }}</span>
+              <span style="font-size:11px;color:#5f5e5a;">{{ r.google_address[:35] }}{% if r.google_address|length > 35 %}…{% endif %}</span>
             {% else %}
-              <span style="font-size:11px;color:#d1d5db">not enriched</span>
+              <span style="font-size:11px;color:#b4b2a9;">not enriched</span>
             {% endif %}
           </td>
 
-          <!-- Address match score -->
-          <td style="text-align:center">
+          <td class="w-match" style="text-align:center;">
             {% if r.address_match_score is not none and r.google_address %}
-              {% set score = (r.address_match_score * 100)|int %}
-              <span class="{% if score >= 90 %}match-high{% elif score >= 70 %}match-medium{% elif score >= 50 %}match-low{% else %}match-none{% endif %}">{{ score }}%</span>
+              {% set sc = (r.address_match_score * 100)|int %}
+              <span class="score {% if sc >= 90 %}s-high{% elif sc >= 70 %}s-med{% elif sc >= 50 %}s-low{% else %}s-none{% endif %}">{{ sc }}%</span>
             {% else %}
-              <span class="match-none">—</span>
+              <span class="score s-none">—</span>
             {% endif %}
           </td>
 
-          <!-- Website (addr group) -->
-          <td class="col-addr">
+          <td class="w-web col-addr">
             {% if r.website_url %}
-              <a href="{{ r.website_url }}" target="_blank" class="url-link"
-                 style="display:block;max-width:160px;overflow:hidden;text-overflow:ellipsis"
-                 title="{{ r.website_url }}">{{ r.website_url | replace('https://','') | replace('http://','') | truncate(30,true,'...') }}</a>
+              <a href="{{ r.website_url }}" target="_blank"
+                style="font-size:11px;color:#1a4a8a;text-decoration:none;display:block;max-width:160px;overflow:hidden;text-overflow:ellipsis;"
+                title="{{ r.website_url }}">{{ r.website_url|replace('https://','') |replace('http://','')|truncate(28,true,'…') }}</a>
             {% else %}
-              <span style="font-size:11px;color:#d1d5db">—</span>
+              <span style="font-size:11px;color:#b4b2a9;">—</span>
             {% endif %}
           </td>
 
-          <!-- Maps (addr group) -->
-          <td class="col-addr">
+          <td class="w-maps col-addr">
             {% if r.google_maps_url %}
-              <a href="{{ r.google_maps_url }}" target="_blank" class="url-link">↗ maps</a>
+              <a href="{{ r.google_maps_url }}" target="_blank" style="font-size:11px;color:#1a4a8a;text-decoration:none;">↗ maps</a>
             {% else %}
-              <span style="font-size:11px;color:#d1d5db">—</span>
+              <span style="color:#b4b2a9;">—</span>
             {% endif %}
           </td>
 
-          <!-- Pre-QA -->
-          <td>
+          <td class="w-preqa">
             {% if r.pre_qa_status %}
-              <span class="badge pre-qa-{{ r.pre_qa_status|replace('_','-') }}"
-                    style="{% if r.pre_qa_status == 'auto_approve' %}background:#ecfdf5;color:#065f46{% elif r.pre_qa_status == 'review' %}background:#fffbeb;color:#92400e{% else %}background:#fef2f2;color:#991b1b{% endif %}"
-                    title="{{ r.pre_qa_note or '' }}">
-                {{ r.pre_qa_status|replace('_',' ') }}
-              </span>
+              <span class="badge {% if r.pre_qa_status == 'auto_approve' %}b-approve{% elif r.pre_qa_status == 'review' %}b-review{% else %}b-flag{% endif %}"
+                title="{{ r.pre_qa_note or '' }}">{{ r.pre_qa_status|replace('_',' ') }}</span>
             {% else %}
-              <span style="font-size:11px;color:#d1d5db">—</span>
+              <span style="color:#b4b2a9;font-size:11px;">—</span>
             {% endif %}
           </td>
 
-          <!-- Registered agent (detail group) -->
-          <td class="col-detail">
-            <span style="font-size:11px;color:var(--muted)">{{ r.registered_agent or '—' }}</span>
-          </td>
+          <td class="w-agent col-detail"><span style="font-size:11px;color:#7a7870;">{{ r.registered_agent or '—' }}</span></td>
+          <td class="w-fil col-detail"><span style="font-size:11px;font-family:'DM Mono',monospace;">{{ r.filing_id or '—' }}</span></td>
+          <td class="w-form col-detail"><span style="font-size:11px;">{{ r.registered_date or '—' }}</span></td>
 
-          <!-- Filing ID (detail group) -->
-          <td class="col-detail">
-            <span style="font-size:11px;font-family:monospace">{{ r.filing_id or '—' }}</span>
-          </td>
-
-          <!-- Formed (detail group) -->
-          <td class="col-detail">
-            <span style="font-size:11px">{{ r.registered_date or '—' }}</span>
-          </td>
-
-          <!-- SIC (detail group) -->
-          <td class="col-detail">
-            <div style="display:flex;align-items:center;gap:3px">
-              <input class="editable" id="sic-{{ r.business_id }}"
-                     value="{{ r.sic_code or '' }}"
-                     style="min-width:45px;max-width:55px"
-                     onchange="markEdited({{ r.business_id }},'sic')"
-                     oninput="markEdited({{ r.business_id }},'sic')">
+          <td class="w-sic col-detail">
+            <div style="display:flex;align-items:center;gap:3px;">
+              <input class="editable" id="sic-{{ r.business_id }}" value="{{ r.sic_code or '' }}"
+                style="min-width:45px;max-width:55px;"
+                onchange="markEdited({{ r.business_id }},'sic')" oninput="markEdited({{ r.business_id }},'sic')">
               <button class="save-btn" id="save-sic-{{ r.business_id }}"
-                      onclick="saveField(event,{{ r.business_id }},'sic_code','sic-{{ r.business_id }}')">✓</button>
+                onclick="saveField(event,{{ r.business_id }},'sic_code','sic-{{ r.business_id }}')">✓</button>
               <span class="saved-check" id="check-sic-{{ r.business_id }}">✓</span>
               <span class="unsaved-dot" id="dot-sic-{{ r.business_id }}"></span>
             </div>
           </td>
 
-          <!-- Industry (detail group) -->
-          <td class="col-detail">
-            <span style="font-size:11px;color:var(--muted)">{{ (r.industry_desc or '—')[:40] }}{% if r.industry_desc and r.industry_desc|length > 40 %}…{% endif %}</span>
-          </td>
+          <td class="w-ind col-detail"><span style="font-size:11px;color:#7a7870;">{{ (r.industry_desc or '—')[:35] }}{% if r.industry_desc and r.industry_desc|length > 35 %}…{% endif %}</span></td>
+          <td class="w-mkt col-detail"><span class="badge b-pending">{{ r.source_market }}</span></td>
 
-          <!-- Market (detail group) -->
-          <td class="col-detail">
-            <span class="badge market">{{ r.source_market }}</span>
-          </td>
+          <td class="w-qa"><span class="badge {% if r.qa_status=='approved' %}b-approve{% elif r.qa_status=='flagged' %}b-review{% elif r.qa_status=='rejected' %}b-flag{% else %}b-pending{% endif %}" id="badge-{{ r.business_id }}">{{ r.qa_status }}</span></td>
 
-          <!-- QA status -->
-          <td>
-            <span class="badge qa-{{ r.qa_status }}" id="badge-{{ r.business_id }}">{{ r.qa_status }}</span>
-          </td>
-
-          <!-- Notes (detail group) -->
-          <td class="col-detail">
-            <div style="display:flex;align-items:center;gap:3px">
+          <td class="w-notes col-detail">
+            <div style="display:flex;align-items:center;gap:3px;">
               <input class="notes-input" id="notes-{{ r.business_id }}"
-                     placeholder="Add note..."
-                     value="{{ r.qa_notes or '' }}"
-                     style="min-width:100px"
-                     onchange="markNotesEdited({{ r.business_id }})"
-                     oninput="markNotesEdited({{ r.business_id }})">
+                placeholder="Add note…" value="{{ r.qa_notes or '' }}"
+                onchange="markNotesEdited({{ r.business_id }})" oninput="markNotesEdited({{ r.business_id }})">
               <span class="saved-check" id="check-notes-{{ r.business_id }}">✓</span>
               <span class="unsaved-dot" id="dot-notes-{{ r.business_id }}"></span>
             </div>
           </td>
 
-          <!-- Actions -->
-          <td>
-            <div class="inline-actions">
-              <form method="POST" action="{{ url_for('action') }}" style="display:contents">
+          <td class="w-act">
+            <div class="act-row">
+              <form method="POST" action="{{ url_for('action') }}" style="display:contents;">
                 <input type="hidden" name="business_id" value="{{ r.business_id }}">
                 <input type="hidden" name="notes" id="form-notes-{{ r.business_id }}" value="{{ r.qa_notes or '' }}">
                 {% if r.qa_status != 'approved' %}
-                  <button name="action" value="approved" class="btn-sm btn-approve" title="Approve"
-                          onclick="return confirmAction(event,{{ r.business_id }},'approved')">✓</button>
+                  <button type="submit" name="action" value="approved" class="act-btn approve" title="Approve"
+                    onclick="return confirmAction(event,{{ r.business_id }},'approved')">✓</button>
                 {% endif %}
                 {% if r.qa_status != 'rejected' %}
-                  <button name="action" value="rejected" class="btn-sm btn-reject" title="Reject"
-                          onclick="return confirmAction(event,{{ r.business_id }},'rejected')">✗</button>
+                  <button type="submit" name="action" value="rejected" class="act-btn reject" title="Reject"
+                    onclick="return confirmAction(event,{{ r.business_id }},'rejected')">✗</button>
                 {% endif %}
                 {% if r.qa_status != 'flagged' %}
-                  <button name="action" value="flagged" class="btn-sm btn-flag" title="Flag"
-                          onclick="return confirmAction(event,{{ r.business_id }},'flagged')">⚑</button>
+                  <button type="submit" name="action" value="flagged" class="act-btn flag" title="Flag"
+                    onclick="return confirmAction(event,{{ r.business_id }},'flagged')">⚑</button>
                 {% endif %}
               </form>
-              <a href="{{ url_for('record_detail', business_id=r.business_id) }}" class="btn-sm" title="Full detail">↗</a>
-              <button type="button" class="btn-sm" style="color:#7c3aed;border-color:#c4b5fd"
-                      onclick="openResearch('{{ r.business_name|replace("'","") }}','{{ r.city or "" }}','{{ r.state_province or "" }}','{{ r.entity_type or "" }}','{{ r.industry_desc or "" }}')"
-                      title="Research this business">R</button>
-              <form method="POST" action="{{ url_for('delete_record', business_id=r.business_id) }}"
-                    style="display:inline"
-                    onsubmit="return confirm('Delete record #{{ r.business_id }} — {{ r.business_name }}?\n\nThis cannot be undone.')">
-                <button type="submit" class="btn-sm btn-reject" title="Delete this record" style="font-size:10px">🗑</button>
+              <button type="button" class="act-btn research" title="Research this business"
+                onclick="openResearch('{{ r.business_name|replace("'","") }}','{{ r.city or "" }}','{{ r.state_province or "" }}','{{ r.entity_type or "" }}','{{ r.industry_desc or "" }}')">R</button>
+              <a href="{{ url_for('record_detail', business_id=r.business_id) }}" class="act-btn detail" title="Full detail">↗</a>
+              <form method="POST" action="{{ url_for('delete_record', business_id=r.business_id) }}" style="display:contents;"
+                onsubmit="return confirm('Delete #{{ r.business_id }} — {{ r.business_name }}?\n\nThis cannot be undone.')">
+                <button type="submit" class="act-btn delete" title="Delete">🗑</button>
               </form>
             </div>
           </td>
 
         </tr>
         {% else %}
-        <tr><td colspan="24" class="empty">No records found.</td></tr>
+        <tr><td colspan="24" style="padding:40px;text-align:center;color:#7a7870;font-size:13px;">No records found.</td></tr>
         {% endfor %}
       </tbody>
     </table>
-    </div>
+  </div>
   </form>
 
+  <!-- Pagination -->
   <div class="pagination">
     {% if page > 1 %}
-      <a href="{{ url_for('queue', page=page-1, market=selected_market, status=selected_status, search=search) }}" class="btn secondary">← Prev</a>
+      <a href="{{ url_for('queue', page=page-1, market=selected_market, status=selected_status, search=search) }}" class="page-btn">← Prev</a>
     {% endif %}
     <span>Page {{ page }} of {{ total_pages }}</span>
     {% if page < total_pages %}
-      <a href="{{ url_for('queue', page=page+1, market=selected_market, status=selected_status, search=search) }}" class="btn secondary">Next →</a>
+      <a href="{{ url_for('queue', page=page+1, market=selected_market, status=selected_status, search=search) }}" class="page-btn">Next →</a>
     {% endif %}
+    <span style="margin-left:auto;font-size:11px;color:#b4b2a9;">{{ total }} total records</span>
   </div>
+
 </main>
 
 <script>
@@ -643,72 +552,88 @@ const unsavedFields = {};
 let sortDir = {};
 let currentView = 'core';
 
+const FAV = d => `https://www.google.com/s2/favicons?domain=${d}&sz=16`;
+const chip = (label, cls, icon) =>
+  `<span class="src-chip ${cls}">${icon ? `<img src="${FAV(icon)}">` : ''}${label}</span>`;
+
+const TRACKS = {
+  small: {
+    label: 'Track 1 — Small business',
+    sources: [
+      {label:'Google Places',cls:'src-auto',icon:'google.com'},
+      {label:'Website scrape',cls:'src-auto',icon:null},
+      {label:'Agent detection',cls:'src-auto',icon:'opencorporates.com'},
+      {label:'SIC classification',cls:'src-auto',icon:'anthropic.com'},
+      {label:'Phone area code',cls:'src-auto',icon:null},
+      {label:'BBB',cls:'src-manual',icon:'bbb.org'},
+      {label:'Facebook',cls:'src-manual',icon:'facebook.com'},
+      {label:'Yelp',cls:'src-manual',icon:'yelp.com'},
+      {label:'SBA · coming',cls:'src-future',icon:null},
+      {label:'Licensing boards · coming',cls:'src-future',icon:null},
+    ]
+  },
+  mid: {
+    label: 'Track 2 — Mid-market',
+    sources: [
+      {label:'Google Places',cls:'src-auto',icon:'google.com'},
+      {label:'Website scrape',cls:'src-auto',icon:null},
+      {label:'OpenCorporates',cls:'src-auto',icon:'opencorporates.com'},
+      {label:'Agent detection',cls:'src-auto',icon:null},
+      {label:'SIC classification',cls:'src-auto',icon:'anthropic.com'},
+      {label:'Phone area code',cls:'src-auto',icon:null},
+      {label:'LinkedIn',cls:'src-manual',icon:'linkedin.com'},
+      {label:'Crunchbase',cls:'src-manual',icon:'crunchbase.com'},
+      {label:'BBB',cls:'src-manual',icon:'bbb.org'},
+    ]
+  },
+  ent: {
+    label: 'Track 3 — Enterprise',
+    sources: [
+      {label:'SEC EDGAR · 99% if match',cls:'src-auto',icon:'sec.gov'},
+      {label:'SAM.gov',cls:'src-auto',icon:'sam.gov'},
+      {label:'OpenCorporates',cls:'src-auto',icon:'opencorporates.com'},
+      {label:'FCC · FDA',cls:'src-auto',icon:'fcc.gov'},
+      {label:'SIC classification',cls:'src-auto',icon:'anthropic.com'},
+      {label:'LinkedIn',cls:'src-manual',icon:'linkedin.com'},
+      {label:'Crunchbase',cls:'src-manual',icon:'crunchbase.com'},
+      {label:'IR page',cls:'src-manual',icon:null},
+    ]
+  }
+};
+
+function setTrack(track) {
+  ['small','mid','ent'].forEach(t => {
+    document.getElementById('tab-'+t).className = 'track-tab';
+  });
+  document.getElementById('tab-'+track).className = 'track-tab active-'+track;
+  const cfg = TRACKS[track];
+  document.getElementById('banner-label').textContent = cfg.label;
+  document.getElementById('banner-chips').innerHTML = cfg.sources.map(s => chip(s.label,s.cls,s.icon)).join('');
+}
+
 function setView(view) {
   const wrap = document.getElementById('queue-wrap');
   wrap.classList.remove('show-addr','show-detail');
-  document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
-
-  if (view === 'addr') {
-    wrap.classList.add('show-addr');
-    document.getElementById('btn-addr').classList.add('active');
-  } else if (view === 'full') {
-    wrap.classList.add('show-addr','show-detail');
-    document.getElementById('btn-full').classList.add('active');
-  } else {
-    document.getElementById('btn-core').classList.add('active');
-  }
+  ['core','addr','full'].forEach(v => document.getElementById('col-'+v).classList.remove('active'));
+  if (view === 'addr') { wrap.classList.add('show-addr'); }
+  else if (view === 'full') { wrap.classList.add('show-addr','show-detail'); }
+  document.getElementById('col-'+view).classList.add('active');
   currentView = view;
 }
 
-function setTrack(track) {
-  const tracks = ['summary','small','mid','ent'];
-  const activeStyles = {
-    summary: {bg:'var(--text)',    color:'#fff'},
-    small:   {bg:'#eaf3de',        color:'#3b6d11'},
-    mid:     {bg:'var(--surface)', color:'var(--text)'},
-    ent:     {bg:'#e6f1fb',        color:'#185fa5'},
-  };
-  tracks.forEach(t => {
-    const btn   = document.getElementById('track-btn-'+t);
-    const panel = document.getElementById('track-panel-'+t);
-    if (t === track) {
-      if (panel) panel.style.display = 'block';
-      if (btn) {
-        btn.style.background  = activeStyles[t].bg;
-        btn.style.color       = activeStyles[t].color;
-        btn.style.fontWeight  = '600';
-      }
-    } else {
-      if (panel) panel.style.display = 'none';
-      if (btn) {
-        btn.style.background = t === 'summary' ? 'var(--bg)' : 'var(--bg)';
-        btn.style.color      = 'var(--muted)';
-        btn.style.fontWeight = '500';
-      }
-    }
-  });
-}
-
 function sortTable(col) {
-  const table = document.getElementById('queue-table');
-  const tbody = table.querySelector('tbody');
+  const tbody = document.querySelector('#queue-table tbody');
   const rows  = Array.from(tbody.querySelectorAll('tr'));
   const dir   = sortDir[col] === 'asc' ? 'desc' : 'asc';
-  sortDir = {};
-  sortDir[col] = dir;
-  document.querySelectorAll('.tbl th .sort-icon').forEach(i => i.textContent = '↕');
+  sortDir = {}; sortDir[col] = dir;
+  document.querySelectorAll('.tbl th .si').forEach(i => i.textContent = '↕');
   document.querySelectorAll('.tbl th').forEach(h => h.classList.remove('sorted'));
-  const headers = document.querySelectorAll('.tbl th');
-  if (headers[col]) {
-    headers[col].classList.add('sorted');
-    headers[col].querySelector('.sort-icon').textContent = dir === 'asc' ? '↑' : '↓';
-  }
-  rows.sort((a, b) => {
-    const aVal = (a.cells[col] ? a.cells[col].innerText : '').trim().toLowerCase();
-    const bVal = (b.cells[col] ? b.cells[col].innerText : '').trim().toLowerCase();
-    if (aVal < bVal) return dir === 'asc' ? -1 : 1;
-    if (aVal > bVal) return dir === 'asc' ?  1 : -1;
-    return 0;
+  const ths = document.querySelectorAll('.tbl th');
+  if (ths[col]) { ths[col].classList.add('sorted'); ths[col].querySelector('.si').textContent = dir==='asc'?'↑':'↓'; }
+  rows.sort((a,b) => {
+    const av = (a.cells[col]?.innerText||'').trim().toLowerCase();
+    const bv = (b.cells[col]?.innerText||'').trim().toLowerCase();
+    return dir==='asc' ? av.localeCompare(bv) : bv.localeCompare(av);
   });
   rows.forEach(r => tbody.appendChild(r));
 }
@@ -728,11 +653,11 @@ function markEdited(id, field) {
 
 function saveField(e, id, dbField, inputId) {
   e.preventDefault();
-  const fieldKey = inputId.split('-')[0];
+  const fk    = inputId.split('-')[0];
   const input = document.getElementById(inputId);
-  const btn   = document.getElementById('save-'+fieldKey+'-'+id);
-  const check = document.getElementById('check-'+fieldKey+'-'+id);
-  const dot   = document.getElementById('dot-'+fieldKey+'-'+id);
+  const btn   = document.getElementById('save-'+fk+'-'+id);
+  const check = document.getElementById('check-'+fk+'-'+id);
+  const dot   = document.getElementById('dot-'+fk+'-'+id);
   fetch('/update-field', {
     method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({business_id:id, field:dbField, value:input.value})
@@ -742,7 +667,7 @@ function saveField(e, id, dbField, inputId) {
       if (btn)   btn.classList.remove('visible');
       if (dot)   dot.classList.remove('visible');
       if (check) { check.classList.add('visible'); setTimeout(()=>check.classList.remove('visible'),3000); }
-      if (unsavedFields[id]) delete unsavedFields[id][fieldKey];
+      if (unsavedFields[id]) delete unsavedFields[id][fk];
     }
   });
 }
@@ -754,8 +679,8 @@ function markNotesEdited(id) {
   if (dot)   dot.classList.add('visible');
   if (!unsavedFields[id]) unsavedFields[id] = {};
   unsavedFields[id]['notes'] = true;
-  clearTimeout(window['notesTimer'+id]);
-  window['notesTimer'+id] = setTimeout(()=>{
+  clearTimeout(window['nt'+id]);
+  window['nt'+id] = setTimeout(()=>{
     const val = document.getElementById('notes-'+id).value;
     document.getElementById('form-notes-'+id).value = val;
     fetch('/update-field',{method:'POST',headers:{'Content-Type':'application/json'},
@@ -772,28 +697,16 @@ function markNotesEdited(id) {
 
 function confirmAction(event, id, action) {
   const fields = unsavedFields[id] || {};
-  const hasUnsaved = Object.keys(fields).length > 0;
-  if (hasUnsaved) {
-    const ok = confirm('You have unsaved edits on this record.\n\nClick OK to auto-save and then '+action+'.\nClick Cancel to save manually first.');
-    if (!ok) return false;
-    saveAllPending(id);
+  if (Object.keys(fields).length > 0) {
+    if (!confirm(`You have unsaved edits on this record.\n\nClick OK to auto-save and ${action}.\nClick Cancel to save manually first.`)) return false;
+    Object.keys(fields).forEach(fk => {
+      const fm = {name:'business_name',type:'entity_type',addr1:'address_line1',city:'city',state:'state_province',zip:'postal_code',phone:'phone',sic:'sic_code',notes:'qa_notes'};
+      const el = document.getElementById(fk+'-'+id);
+      if (fm[fk] && el) fetch('/update-field',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({business_id:id,field:fm[fk],value:el.value})});
+    });
   }
-  document.getElementById('form-notes-'+id).value = document.getElementById('notes-'+id).value;
+  document.getElementById('form-notes-'+id).value = document.getElementById('notes-'+id)?.value || '';
   return true;
-}
-
-function saveAllPending(id) {
-  const fieldMap = {'name':'business_name','type':'entity_type','addr1':'address_line1',
-    'city':'city','state':'state_province','zip':'postal_code','phone':'phone','sic':'sic_code','notes':'qa_notes'};
-  const fields = unsavedFields[id] || {};
-  Object.keys(fields).forEach(fk => {
-    const dbField = fieldMap[fk];
-    const el = document.getElementById(fk+'-'+id);
-    if (dbField && el) {
-      fetch('/update-field',{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({business_id:id,field:dbField,value:el.value})});
-    }
-  });
 }
 
 function toggleAll(cb) {
@@ -801,243 +714,127 @@ function toggleAll(cb) {
 }
 
 const AREA_CODES = {
-  "201":["Jersey City","NJ"],"202":["Washington","DC"],"203":["Bridgeport","CT"],"205":["Birmingham","AL"],
-  "206":["Seattle","WA"],"207":["Portland","ME"],"208":["Boise","ID"],"209":["Stockton","CA"],
-  "210":["San Antonio","TX"],"212":["New York City","NY"],"213":["Los Angeles","CA"],"214":["Dallas","TX"],
-  "215":["Philadelphia","PA"],"216":["Cleveland","OH"],"217":["Springfield","IL"],"218":["Duluth","MN"],
-  "219":["Gary","IN"],"224":["Chicago (suburbs)","IL"],"225":["Baton Rouge","LA"],"228":["Biloxi","MS"],
-  "229":["Albany","GA"],"231":["Traverse City","MI"],"234":["Akron","OH"],"239":["Fort Myers","FL"],
-  "240":["Rockville","MD"],"248":["Detroit (suburbs)","MI"],"251":["Mobile","AL"],"252":["Greenville","NC"],
-  "253":["Tacoma","WA"],"254":["Waco","TX"],"256":["Huntsville","AL"],"260":["Fort Wayne","IN"],
-  "262":["Racine","WI"],"267":["Philadelphia","PA"],"269":["Kalamazoo","MI"],"270":["Bowling Green","KY"],
-  "276":["Bristol","VA"],"281":["Houston (suburbs)","TX"],"301":["Rockville","MD"],"302":["Wilmington","DE"],
-  "303":["Denver","CO"],"304":["Charleston","WV"],"305":["Miami","FL"],"307":["Cheyenne","WY"],
-  "308":["Grand Island","NE"],"309":["Peoria","IL"],"310":["Los Angeles (west)","CA"],"312":["Chicago","IL"],
-  "313":["Detroit","MI"],"314":["St. Louis","MO"],"315":["Syracuse","NY"],"316":["Wichita","KS"],
-  "317":["Indianapolis","IN"],"318":["Shreveport","LA"],"319":["Cedar Rapids","IA"],"320":["St. Cloud","MN"],
-  "321":["Orlando","FL"],"323":["Los Angeles","CA"],"325":["Abilene","TX"],"330":["Youngstown","OH"],
-  "331":["Aurora","IL"],"332":["New York City","NY"],"334":["Montgomery","AL"],"336":["Greensboro","NC"],
-  "337":["Lafayette","LA"],"339":["Boston (suburbs)","MA"],"346":["Houston","TX"],"347":["New York City","NY"],
-  "351":["Lowell","MA"],"352":["Gainesville","FL"],"360":["Olympia","WA"],"361":["Corpus Christi","TX"],
-  "380":["Columbus","OH"],"385":["Salt Lake City","UT"],"386":["Daytona Beach","FL"],"401":["Providence","RI"],
-  "402":["Omaha","NE"],"404":["Atlanta","GA"],"405":["Oklahoma City","OK"],"406":["Billings","MT"],
-  "407":["Orlando","FL"],"408":["San Jose","CA"],"409":["Beaumont","TX"],"410":["Baltimore","MD"],
-  "412":["Pittsburgh","PA"],"413":["Springfield","MA"],"414":["Milwaukee","WI"],"415":["San Francisco","CA"],
-  "417":["Springfield","MO"],"419":["Toledo","OH"],"423":["Chattanooga","TN"],"424":["Los Angeles","CA"],
-  "425":["Bellevue","WA"],"430":["Tyler","TX"],"432":["Midland","TX"],"434":["Charlottesville","VA"],
-  "435":["St. George","UT"],"440":["Cleveland (suburbs)","OH"],"442":["Palm Springs","CA"],
-  "443":["Baltimore","MD"],"458":["Eugene","OR"],"463":["Indianapolis","IN"],"469":["Dallas","TX"],
-  "470":["Atlanta","GA"],"475":["Bridgeport","CT"],"478":["Macon","GA"],"479":["Fayetteville","AR"],
-  "480":["Scottsdale","AZ"],"484":["Allentown","PA"],"501":["Little Rock","AR"],"502":["Louisville","KY"],
-  "503":["Portland","OR"],"504":["New Orleans","LA"],"505":["Albuquerque","NM"],"507":["Rochester","MN"],
-  "508":["Worcester","MA"],"509":["Spokane","WA"],"510":["Oakland","CA"],"512":["Austin","TX"],
-  "513":["Cincinnati","OH"],"515":["Des Moines","IA"],"516":["Long Island","NY"],"517":["Lansing","MI"],
-  "518":["Albany","NY"],"520":["Tucson","AZ"],"530":["Redding","CA"],"531":["Omaha","NE"],
-  "539":["Tulsa","OK"],"540":["Roanoke","VA"],"541":["Eugene","OR"],"551":["Jersey City","NJ"],
-  "559":["Fresno","CA"],"561":["West Palm Beach","FL"],"562":["Long Beach","CA"],"563":["Davenport","IA"],
-  "567":["Toledo","OH"],"570":["Scranton","PA"],"571":["Arlington","VA"],"573":["Columbia","MO"],
-  "574":["South Bend","IN"],"575":["Las Cruces","NM"],"580":["Lawton","OK"],"585":["Rochester","NY"],
-  "586":["Detroit (suburbs)","MI"],"601":["Jackson","MS"],"602":["Phoenix","AZ"],"603":["Manchester","NH"],
-  "605":["Sioux Falls","SD"],"606":["Ashland","KY"],"607":["Binghamton","NY"],"608":["Madison","WI"],
-  "609":["Trenton","NJ"],"610":["Allentown","PA"],"612":["Minneapolis","MN"],"614":["Columbus","OH"],
-  "615":["Nashville","TN"],"616":["Grand Rapids","MI"],"617":["Boston","MA"],"618":["Carbondale","IL"],
-  "619":["San Diego","CA"],"620":["Dodge City","KS"],"623":["Phoenix (west)","AZ"],"626":["Pasadena","CA"],
-  "628":["San Francisco","CA"],"629":["Nashville","TN"],"630":["Chicago (suburbs)","IL"],
-  "631":["Long Island","NY"],"636":["St. Louis (suburbs)","MO"],"641":["Mason City","IA"],
-  "646":["New York City","NY"],"650":["San Mateo","CA"],"651":["St. Paul","MN"],"657":["Anaheim","CA"],
-  "660":["Sedalia","MO"],"661":["Bakersfield","CA"],"662":["Tupelo","MS"],"667":["Baltimore","MD"],
-  "669":["San Jose","CA"],"678":["Atlanta","GA"],"681":["Charleston","WV"],"682":["Fort Worth","TX"],
-  "689":["Orlando","FL"],"701":["Fargo","ND"],"702":["Las Vegas","NV"],"703":["Arlington","VA"],
-  "704":["Charlotte","NC"],"706":["Augusta","GA"],"707":["Santa Rosa","CA"],"708":["Chicago (suburbs)","IL"],
-  "712":["Sioux City","IA"],"713":["Houston","TX"],"714":["Anaheim","CA"],"715":["Eau Claire","WI"],
-  "716":["Buffalo","NY"],"717":["Harrisburg","PA"],"718":["New York City","NY"],"719":["Colorado Springs","CO"],
-  "720":["Denver","CO"],"724":["Pittsburgh (suburbs)","PA"],"725":["Las Vegas","NV"],"726":["San Antonio","TX"],
-  "727":["St. Petersburg","FL"],"731":["Jackson","TN"],"732":["New Brunswick","NJ"],"734":["Ann Arbor","MI"],
-  "737":["Austin","TX"],"740":["Columbus (suburbs)","OH"],"747":["Los Angeles","CA"],"754":["Fort Lauderdale","FL"],
-  "757":["Virginia Beach","VA"],"760":["Palm Springs","CA"],"762":["Augusta","GA"],"763":["Minneapolis (suburbs)","MN"],
-  "765":["Lafayette","IN"],"769":["Jackson","MS"],"770":["Atlanta (suburbs)","GA"],"772":["Port St. Lucie","FL"],
-  "773":["Chicago","IL"],"774":["Worcester","MA"],"775":["Reno","NV"],"779":["Rockford","IL"],
-  "781":["Boston (suburbs)","MA"],"785":["Topeka","KS"],"786":["Miami","FL"],"801":["Salt Lake City","UT"],
-  "802":["Burlington","VT"],"803":["Columbia","SC"],"804":["Richmond","VA"],"805":["Santa Barbara","CA"],
-  "806":["Amarillo","TX"],"808":["Honolulu","HI"],"810":["Flint","MI"],"812":["Evansville","IN"],
-  "813":["Tampa","FL"],"814":["Erie","PA"],"815":["Rockford","IL"],"816":["Kansas City","MO"],
-  "817":["Fort Worth","TX"],"818":["Los Angeles (valley)","CA"],"828":["Asheville","NC"],
-  "830":["San Antonio (suburbs)","TX"],"831":["Monterey","CA"],"832":["Houston","TX"],
-  "843":["Charleston","SC"],"845":["Poughkeepsie","NY"],"847":["Chicago (north suburbs)","IL"],
-  "848":["New Brunswick","NJ"],"850":["Tallahassee","FL"],"856":["Camden","NJ"],"857":["Boston","MA"],
-  "858":["San Diego","CA"],"859":["Lexington","KY"],"860":["Hartford","CT"],"862":["Newark","NJ"],
-  "863":["Lakeland","FL"],"864":["Greenville","SC"],"865":["Knoxville","TN"],"870":["Jonesboro","AR"],
-  "872":["Chicago","IL"],"901":["Memphis","TN"],"903":["Tyler","TX"],"904":["Jacksonville","FL"],
-  "906":["Marquette","MI"],"907":["Anchorage","AK"],"908":["Elizabeth","NJ"],"909":["San Bernardino","CA"],
-  "910":["Wilmington","NC"],"912":["Savannah","GA"],"913":["Kansas City (KS)","KS"],"914":["White Plains","NY"],
-  "915":["El Paso","TX"],"916":["Sacramento","CA"],"917":["New York City","NY"],"918":["Tulsa","OK"],
-  "919":["Raleigh","NC"],"920":["Green Bay","WI"],"925":["Concord","CA"],"928":["Flagstaff","AZ"],
-  "929":["New York City","NY"],"931":["Clarksville","TN"],"936":["Lufkin","TX"],"937":["Dayton","OH"],
-  "940":["Wichita Falls","TX"],"941":["Sarasota","FL"],"947":["Detroit (suburbs)","MI"],
-  "949":["Irvine","CA"],"951":["Riverside","CA"],"952":["Minneapolis (suburbs)","MN"],
-  "954":["Fort Lauderdale","FL"],"956":["Laredo","TX"],"970":["Fort Collins","CO"],"971":["Portland","OR"],
-  "972":["Dallas","TX"],"973":["Newark","NJ"],"978":["Lowell","MA"],"979":["Bryan","TX"],
-  "980":["Charlotte","NC"],"984":["Raleigh","NC"],"985":["Houma","LA"],"989":["Saginaw","MI"],
-  "204":["Winnipeg","MB"],"226":["London","ON"],"236":["Vancouver","BC"],"249":["Sudbury","ON"],
-  "250":["Victoria","BC"],"289":["Hamilton","ON"],"306":["Saskatoon","SK"],"343":["Ottawa","ON"],
-  "365":["Hamilton","ON"],"403":["Calgary","AB"],"416":["Toronto","ON"],"418":["Quebec City","QC"],
-  "431":["Winnipeg","MB"],"437":["Toronto","ON"],"438":["Montreal","QC"],
-  "450":["Montreal (suburbs)","QC"],"506":["Moncton","NB"],"514":["Montreal","QC"],
-  "519":["Windsor","ON"],"548":["London","ON"],"579":["Montreal (suburbs)","QC"],
-  "581":["Quebec City","QC"],"587":["Edmonton","AB"],"604":["Vancouver","BC"],
-  "613":["Ottawa","ON"],"639":["Saskatoon","SK"],"647":["Toronto","ON"],"672":["Vancouver","BC"],
-  "705":["Sudbury","ON"],"709":["St. Johns","NL"],"778":["Vancouver","BC"],
-  "780":["Edmonton","AB"],"782":["Halifax","NS"],"807":["Thunder Bay","ON"],"819":["Sherbrooke","QC"],
-  "825":["Edmonton","AB"],"867":["Whitehorse","YT"],"873":["Quebec City","QC"],"902":["Halifax","NS"],
-  "905":["Hamilton","ON"],"942":["Toronto","ON"]
+  "201":["Jersey City","NJ"],"202":["Washington","DC"],"203":["Bridgeport","CT"],"205":["Birmingham","AL"],"206":["Seattle","WA"],"207":["Portland","ME"],"208":["Boise","ID"],"209":["Stockton","CA"],"210":["San Antonio","TX"],"212":["New York City","NY"],"213":["Los Angeles","CA"],"214":["Dallas","TX"],"215":["Philadelphia","PA"],"216":["Cleveland","OH"],"217":["Springfield","IL"],"218":["Duluth","MN"],"219":["Gary","IN"],"224":["Chicago (suburbs)","IL"],"225":["Baton Rouge","LA"],"228":["Biloxi","MS"],"229":["Albany","GA"],"231":["Traverse City","MI"],"234":["Akron","OH"],"239":["Fort Myers","FL"],"240":["Rockville","MD"],"248":["Detroit (suburbs)","MI"],"251":["Mobile","AL"],"252":["Greenville","NC"],"253":["Tacoma","WA"],"254":["Waco","TX"],"256":["Huntsville","AL"],"260":["Fort Wayne","IN"],"262":["Racine","WI"],"267":["Philadelphia","PA"],"269":["Kalamazoo","MI"],"270":["Bowling Green","KY"],"276":["Bristol","VA"],"281":["Houston (suburbs)","TX"],"301":["Rockville","MD"],"302":["Wilmington","DE"],"303":["Denver","CO"],"304":["Charleston","WV"],"305":["Miami","FL"],"307":["Cheyenne","WY"],"308":["Grand Island","NE"],"309":["Peoria","IL"],"310":["Los Angeles (west)","CA"],"312":["Chicago","IL"],"313":["Detroit","MI"],"314":["St. Louis","MO"],"315":["Syracuse","NY"],"316":["Wichita","KS"],"317":["Indianapolis","IN"],"318":["Shreveport","LA"],"319":["Cedar Rapids","IA"],"320":["St. Cloud","MN"],"321":["Orlando","FL"],"323":["Los Angeles","CA"],"325":["Abilene","TX"],"330":["Youngstown","OH"],"331":["Aurora","IL"],"332":["New York City","NY"],"334":["Montgomery","AL"],"336":["Greensboro","NC"],"337":["Lafayette","LA"],"339":["Boston (suburbs)","MA"],"346":["Houston","TX"],"347":["New York City","NY"],"351":["Lowell","MA"],"352":["Gainesville","FL"],"360":["Olympia","WA"],"361":["Corpus Christi","TX"],"380":["Columbus","OH"],"385":["Salt Lake City","UT"],"386":["Daytona Beach","FL"],"401":["Providence","RI"],"402":["Omaha","NE"],"404":["Atlanta","GA"],"405":["Oklahoma City","OK"],"406":["Billings","MT"],"407":["Orlando","FL"],"408":["San Jose","CA"],"409":["Beaumont","TX"],"410":["Baltimore","MD"],"412":["Pittsburgh","PA"],"413":["Springfield","MA"],"414":["Milwaukee","WI"],"415":["San Francisco","CA"],"417":["Springfield","MO"],"419":["Toledo","OH"],"423":["Chattanooga","TN"],"424":["Los Angeles","CA"],"425":["Bellevue","WA"],"430":["Tyler","TX"],"432":["Midland","TX"],"434":["Charlottesville","VA"],"435":["St. George","UT"],"440":["Cleveland (suburbs)","OH"],"442":["Palm Springs","CA"],"443":["Baltimore","MD"],"458":["Eugene","OR"],"463":["Indianapolis","IN"],"469":["Dallas","TX"],"470":["Atlanta","GA"],"475":["Bridgeport","CT"],"478":["Macon","GA"],"479":["Fayetteville","AR"],"480":["Scottsdale","AZ"],"484":["Allentown","PA"],"501":["Little Rock","AR"],"502":["Louisville","KY"],"503":["Portland","OR"],"504":["New Orleans","LA"],"505":["Albuquerque","NM"],"507":["Rochester","MN"],"508":["Worcester","MA"],"509":["Spokane","WA"],"510":["Oakland","CA"],"512":["Austin","TX"],"513":["Cincinnati","OH"],"515":["Des Moines","IA"],"516":["Long Island","NY"],"517":["Lansing","MI"],"518":["Albany","NY"],"520":["Tucson","AZ"],"530":["Redding","CA"],"531":["Omaha","NE"],"539":["Tulsa","OK"],"540":["Roanoke","VA"],"541":["Eugene","OR"],"551":["Jersey City","NJ"],"559":["Fresno","CA"],"561":["West Palm Beach","FL"],"562":["Long Beach","CA"],"563":["Davenport","IA"],"567":["Toledo","OH"],"570":["Scranton","PA"],"571":["Arlington","VA"],"573":["Columbia","MO"],"574":["South Bend","IN"],"575":["Las Cruces","NM"],"580":["Lawton","OK"],"585":["Rochester","NY"],"586":["Detroit (suburbs)","MI"],"601":["Jackson","MS"],"602":["Phoenix","AZ"],"603":["Manchester","NH"],"605":["Sioux Falls","SD"],"606":["Ashland","KY"],"607":["Binghamton","NY"],"608":["Madison","WI"],"609":["Trenton","NJ"],"610":["Allentown","PA"],"612":["Minneapolis","MN"],"614":["Columbus","OH"],"615":["Nashville","TN"],"616":["Grand Rapids","MI"],"617":["Boston","MA"],"618":["Carbondale","IL"],"619":["San Diego","CA"],"620":["Dodge City","KS"],"623":["Phoenix (west)","AZ"],"626":["Pasadena","CA"],"628":["San Francisco","CA"],"629":["Nashville","TN"],"630":["Chicago (suburbs)","IL"],"631":["Long Island","NY"],"636":["St. Louis (suburbs)","MO"],"641":["Mason City","IA"],"646":["New York City","NY"],"650":["San Mateo","CA"],"651":["St. Paul","MN"],"657":["Anaheim","CA"],"660":["Sedalia","MO"],"661":["Bakersfield","CA"],"662":["Tupelo","MS"],"667":["Baltimore","MD"],"669":["San Jose","CA"],"678":["Atlanta","GA"],"681":["Charleston","WV"],"682":["Fort Worth","TX"],"689":["Orlando","FL"],"701":["Fargo","ND"],"702":["Las Vegas","NV"],"703":["Arlington","VA"],"704":["Charlotte","NC"],"706":["Augusta","GA"],"707":["Santa Rosa","CA"],"708":["Chicago (suburbs)","IL"],"712":["Sioux City","IA"],"713":["Houston","TX"],"714":["Anaheim","CA"],"715":["Eau Claire","WI"],"716":["Buffalo","NY"],"717":["Harrisburg","PA"],"718":["New York City","NY"],"719":["Colorado Springs","CO"],"720":["Denver","CO"],"724":["Pittsburgh (suburbs)","PA"],"725":["Las Vegas","NV"],"726":["San Antonio","TX"],"727":["St. Petersburg","FL"],"731":["Jackson","TN"],"732":["New Brunswick","NJ"],"734":["Ann Arbor","MI"],"737":["Austin","TX"],"740":["Columbus (suburbs)","OH"],"747":["Los Angeles","CA"],"754":["Fort Lauderdale","FL"],"757":["Virginia Beach","VA"],"760":["Palm Springs","CA"],"762":["Augusta","GA"],"763":["Minneapolis (suburbs)","MN"],"765":["Lafayette","IN"],"769":["Jackson","MS"],"770":["Atlanta (suburbs)","GA"],"772":["Port St. Lucie","FL"],"773":["Chicago","IL"],"774":["Worcester","MA"],"775":["Reno","NV"],"779":["Rockford","IL"],"781":["Boston (suburbs)","MA"],"785":["Topeka","KS"],"786":["Miami","FL"],"801":["Salt Lake City","UT"],"802":["Burlington","VT"],"803":["Columbia","SC"],"804":["Richmond","VA"],"805":["Santa Barbara","CA"],"806":["Amarillo","TX"],"808":["Honolulu","HI"],"810":["Flint","MI"],"812":["Evansville","IN"],"813":["Tampa","FL"],"814":["Erie","PA"],"815":["Rockford","IL"],"816":["Kansas City","MO"],"817":["Fort Worth","TX"],"818":["Los Angeles (valley)","CA"],"828":["Asheville","NC"],"830":["San Antonio (suburbs)","TX"],"831":["Monterey","CA"],"832":["Houston","TX"],"843":["Charleston","SC"],"845":["Poughkeepsie","NY"],"847":["Chicago (north suburbs)","IL"],"848":["New Brunswick","NJ"],"850":["Tallahassee","FL"],"856":["Camden","NJ"],"857":["Boston","MA"],"858":["San Diego","CA"],"859":["Lexington","KY"],"860":["Hartford","CT"],"862":["Newark","NJ"],"863":["Lakeland","FL"],"864":["Greenville","SC"],"865":["Knoxville","TN"],"870":["Jonesboro","AR"],"872":["Chicago","IL"],"901":["Memphis","TN"],"903":["Tyler","TX"],"904":["Jacksonville","FL"],"906":["Marquette","MI"],"907":["Anchorage","AK"],"908":["Elizabeth","NJ"],"909":["San Bernardino","CA"],"910":["Wilmington","NC"],"912":["Savannah","GA"],"913":["Kansas City (KS)","KS"],"914":["White Plains","NY"],"915":["El Paso","TX"],"916":["Sacramento","CA"],"917":["New York City","NY"],"918":["Tulsa","OK"],"919":["Raleigh","NC"],"920":["Green Bay","WI"],"925":["Concord","CA"],"928":["Flagstaff","AZ"],"929":["New York City","NY"],"931":["Clarksville","TN"],"936":["Lufkin","TX"],"937":["Dayton","OH"],"940":["Wichita Falls","TX"],"941":["Sarasota","FL"],"947":["Detroit (suburbs)","MI"],"949":["Irvine","CA"],"951":["Riverside","CA"],"952":["Minneapolis (suburbs)","MN"],"954":["Fort Lauderdale","FL"],"956":["Laredo","TX"],"970":["Fort Collins","CO"],"971":["Portland","OR"],"972":["Dallas","TX"],"973":["Newark","NJ"],"978":["Lowell","MA"],"979":["Bryan","TX"],"980":["Charlotte","NC"],"984":["Raleigh","NC"],"985":["Houma","LA"],"989":["Saginaw","MI"],
+  "204":["Winnipeg","MB"],"226":["London","ON"],"236":["Vancouver","BC"],"249":["Sudbury","ON"],"250":["Victoria","BC"],"289":["Hamilton","ON"],"306":["Saskatoon","SK"],"343":["Ottawa","ON"],"365":["Hamilton","ON"],"403":["Calgary","AB"],"416":["Toronto","ON"],"418":["Quebec City","QC"],"431":["Winnipeg","MB"],"437":["Toronto","ON"],"438":["Montreal","QC"],"450":["Montreal (suburbs)","QC"],"506":["Moncton","NB"],"514":["Montreal","QC"],"519":["Windsor","ON"],"548":["London","ON"],"579":["Montreal (suburbs)","QC"],"581":["Quebec City","QC"],"587":["Edmonton","AB"],"604":["Vancouver","BC"],"613":["Ottawa","ON"],"639":["Saskatoon","SK"],"647":["Toronto","ON"],"672":["Vancouver","BC"],"705":["Sudbury","ON"],"709":["St. Johns","NL"],"778":["Vancouver","BC"],"780":["Edmonton","AB"],"782":["Halifax","NS"],"807":["Thunder Bay","ON"],"819":["Sherbrooke","QC"],"825":["Edmonton","AB"],"867":["Whitehorse","YT"],"873":["Quebec City","QC"],"902":["Halifax","NS"],"905":["Hamilton","ON"],"942":["Toronto","ON"]
 };
 
-function getAreaInfo(phone) {
-  if (!phone) return null;
-  const digits = phone.replace(/\D/g,'');
-  const area = digits.length >= 10 ? digits.slice(-10,-7) : digits.slice(0,3);
-  const info = AREA_CODES[area];
-  return info ? {area, city:info[0], state:info[1]} : null;
-}
+const TOLL_FREE = ["800","833","844","855","866","877","888"];
 
 function renderAreaCodes() {
-  const TOLL_FREE = ["800","833","844","855","866","877","888"];
   document.querySelectorAll('[id^="area-"]').forEach(el => {
     const phone    = el.dataset.phone;
     const regState = el.dataset.state;
-    const digits   = phone.replace(/\D/g,'');
-    const area     = digits.length >= 10 ? digits.slice(-10,-7) : digits.slice(0,3);
+    if (!phone) return;
+    const digits = phone.replace(/\D/g,'');
+    const area   = digits.length >= 10 ? digits.slice(-10,-7) : digits.slice(0,3);
     if (TOLL_FREE.includes(area)) {
       el.textContent = `(${area}) Toll-free`;
-      el.style.background = '#ecfdf5'; el.style.color = '#065f46';
+      el.className = 'area-pill area-tollfree';
       el.title = 'Toll-free — no geographic signal';
       return;
     }
-    const info = getAreaInfo(phone);
+    const info = AREA_CODES[area];
     if (!info) return;
-    const match = info.state === regState;
-    el.textContent = `(${info.area}) ${info.city}, ${info.state}`;
-    el.style.background = match ? '#ecfdf5' : '#fef2f2';
-    el.style.color      = match ? '#065f46' : '#991b1b';
-    el.title = match
-      ? `Phone area code matches registry state — likely local`
-      : `Phone suggests ${info.city}, ${info.state} but registered in ${regState}`;
+    const match = info[1] === regState;
+    el.textContent = `(${area}) ${info[0]}, ${info[1]}`;
+    el.className = 'area-pill ' + (match ? 'area-match' : 'area-nomatch');
+    el.title = match ? 'Phone area code matches registry state' : `Phone suggests ${info[0]}, ${info[1]} — differs from registry state ${regState}`;
   });
+}
+
+function highlightDuplicateNames() {
+  const tbody = document.querySelector('#queue-table tbody');
+  if (!tbody) return;
+  const rows = Array.from(tbody.querySelectorAll('tr'));
+  const nameMap = {};
+  rows.forEach(row => {
+    const input = row.querySelector('input[id^="name-"]');
+    if (!input) return;
+    const name = input.value.trim().toLowerCase();
+    if (!nameMap[name]) nameMap[name] = [];
+    nameMap[name].push(row);
+  });
+  Object.entries(nameMap).forEach(([name, dupeRows]) => {
+    if (dupeRows.length < 2) return;
+    dupeRows.forEach((row, idx) => {
+      row.style.borderLeft = '3px solid #f59e0b';
+      const badge = row.querySelector('.dupe-badge');
+      if (badge) {
+        badge.textContent = `${dupeRows.length} filings`;
+        badge.onclick = () => {
+          const next = dupeRows[(dupeRows.indexOf(row)+1) % dupeRows.length];
+          next.scrollIntoView({behavior:'smooth',block:'center'});
+          next.style.outline = '2px solid #f59e0b';
+          setTimeout(()=>next.style.outline='',2000);
+        };
+      }
+    });
+  });
+}
+
+function openResearch(name, city, state, entityType, industry) {
+  const q    = encodeURIComponent(name+' '+city+' '+state);
+  const qN   = encodeURIComponent(name);
+  const qL   = encodeURIComponent(name+' '+city);
+  const ind  = (industry||'').toLowerCase();
+  const ent  = (entityType||'').toLowerCase();
+  const isSmall = ent.includes('sole')||ent.includes('trade')||
+    /restaurant|salon|cleaning|repair|childcare|food|cafe|retail|plumb|electric|contrac|landscap|paint|bar|gym|nail|beauty|barber/.test(ind);
+  const isEnt = (!ent.includes('sole') && ent.includes('corporation'))||
+    /software|financial|pharma|insurance|hospital|bank|technology|saas/.test(ind);
+
+  let links = [
+    {label:'Google',url:`https://www.google.com/search?q=${q}`},
+    {label:'BBB',url:`https://www.bbb.org/search?find_text=${qN}&find_loc=${encodeURIComponent(city+' '+state)}`},
+  ];
+  if (isSmall || !isEnt) {
+    links.push({label:'Facebook',url:`https://www.facebook.com/search/pages/?q=${qL}`});
+    links.push({label:'Yelp',url:`https://www.yelp.com/search?find_desc=${qN}&find_loc=${encodeURIComponent(city+' '+state)}`});
+  }
+  if (!isSmall || isEnt) {
+    links.push({label:'LinkedIn',url:`https://www.linkedin.com/search/results/companies/?keywords=${qN}`});
+    links.push({label:'Crunchbase',url:`https://www.crunchbase.com/textsearch?q=${qN}`});
+    links.push({label:'OpenCorporates',url:`https://opencorporates.com/companies?q=${qN}&jurisdiction_code=us_de`});
+    links.push({label:'SEC EDGAR',url:`https://www.sec.gov/cgi-bin/browse-edgar?company=${qN}&CIK=&type=10-K&dateb=&owner=include&count=10&search_text=&action=getcompany`});
+  }
+
+  ['research-modal','research-overlay'].forEach(id => document.getElementById(id)?.remove());
+  const overlay = document.createElement('div');
+  overlay.id = 'research-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:9998;';
+  const modal = document.createElement('div');
+  modal.id = 'research-modal';
+  modal.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;border:0.5px solid #e8e6e1;border-radius:14px;padding:20px;z-index:9999;min-width:340px;box-shadow:0 8px 40px rgba(0,0,0,.15);font-family:DM Sans,sans-serif;';
+  modal.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;">
+      <div>
+        <div style="font-size:14px;font-weight:600;color:#1c1b18;">${name}</div>
+        <div style="font-size:11px;color:#7a7870;margin-top:2px;">${city}${state?', '+state:''} · ${entityType||'unknown'}</div>
+      </div>
+      <button onclick="['research-modal','research-overlay'].forEach(id=>document.getElementById(id)?.remove())"
+        style="background:none;border:none;font-size:20px;cursor:pointer;color:#7a7870;line-height:1;">×</button>
+    </div>
+    <div style="font-size:11px;padding:6px 10px;background:#f7f6f3;border-radius:6px;margin-bottom:12px;color:#7a7870;">
+      ${isSmall?'Small business — Facebook, Yelp, BBB, Google':isEnt?'Enterprise — EDGAR, LinkedIn, Crunchbase':'Standard — all sources'}
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px;">
+      ${links.map(l=>`<a href="${l.url}" target="_blank" style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border:0.5px solid #e8e6e1;border-radius:8px;text-decoration:none;color:#1c1b18;font-size:13px;font-weight:500;transition:background .1s;" onmouseover="this.style.background='#f7f6f3'" onmouseout="this.style.background='#fff'">
+        <span>${l.label}</span><span style="font-size:11px;color:#7a7870;">↗ open</span>
+      </a>`).join('')}
+    </div>
+    <div style="font-size:10px;color:#b4b2a9;margin-top:12px;padding-top:10px;border-top:0.5px solid #e8e6e1;line-height:1.5;">
+      Links open for manual visual verification only. LinkedIn and Facebook are never scraped automatically.
+    </div>`;
+  overlay.onclick = () => ['research-modal','research-overlay'].forEach(id=>document.getElementById(id)?.remove());
+  document.body.appendChild(overlay);
+  document.body.appendChild(modal);
 }
 
 document.addEventListener('DOMContentLoaded', () => {
   renderAreaCodes();
   highlightDuplicateNames();
+  setTrack('small');
 });
-
-function highlightDuplicateNames() {
-  const tbody = document.querySelector('#queue-table tbody');
-  if (!tbody) return;
-  const rows  = Array.from(tbody.querySelectorAll('tr'));
-
-  // Build name → [rows] map
-  const nameMap = {};
-  rows.forEach(row => {
-    const nameInput = row.querySelector('input[id^="name-"]');
-    if (!nameInput) return;
-    const name = nameInput.value.trim().toLowerCase();
-    if (!nameMap[name]) nameMap[name] = [];
-    nameMap[name].push(row);
-  });
-
-  // For each name with 2+ rows, add badge and group them
-  Object.entries(nameMap).forEach(([name, dupeRows]) => {
-    if (dupeRows.length < 2) return;
-
-    dupeRows.forEach((row, idx) => {
-      const nameInput = row.querySelector('input[id^="name-"]');
-      if (!nameInput) return;
-
-      // Add duplicate badge next to name
-      const existing = row.querySelector('.dupe-name-badge');
-      if (!existing) {
-        const badge = document.createElement('span');
-        badge.className = 'dupe-name-badge';
-        badge.style.cssText = 'display:inline-block;margin-left:6px;padding:1px 6px;background:#fef3c7;color:#92400e;border-radius:10px;font-size:10px;font-weight:500;cursor:pointer;white-space:nowrap';
-        badge.textContent = `${dupeRows.length} filings`;
-        badge.title = `${dupeRows.length} records share this name — click to scroll between them`;
-        badge.onclick = () => scrollToDupe(dupeRows, row);
-        nameInput.parentNode.appendChild(badge);
-      }
-
-      // Add colored left border to visually group
-      row.style.borderLeft = '3px solid #f59e0b';
-    });
-  });
-}
-
-function scrollToDupe(rows, currentRow) {
-  // Find the next row in the group and scroll to it
-  const idx = rows.indexOf(currentRow);
-  const next = rows[(idx + 1) % rows.length];
-  next.scrollIntoView({behavior:'smooth', block:'center'});
-  next.style.outline = '2px solid #f59e0b';
-  setTimeout(() => next.style.outline = '', 2000);
-}
-
-function openResearch(name, city, state, entityType, industry) {
-  const q     = encodeURIComponent(name+' '+city+' '+state);
-  const qName = encodeURIComponent(name);
-  const qLocal= encodeURIComponent(name+' '+city);
-  const ind   = (industry||'').toLowerCase();
-  const ent   = (entityType||'').toLowerCase();
-  const isSmallBiz = (ent.includes('sole')||ent.includes('trade')||
-    ind.match(/restaurant|salon|cleaning|repair|childcare|daycare|food|cafe|retail|plumb|electric|contrac|landscap|paint|bar|gym|yoga|massage|nail|beauty|barber/));
-  const isEnterprise = (!ent.includes('sole') && ent.includes('corporation') ||
-    ind.match(/software|financial|healthcare system|pharma|insurance|hospital|bank|technology|saas/));
-
-  let links = [];
-  links.push({label:'Google', url:`https://www.google.com/search?q=${q}`});
-  links.push({label:'BBB', url:`https://www.bbb.org/search?find_text=${qName}&find_loc=${encodeURIComponent(city+' '+state)}`});
-  if (isSmallBiz || !isEnterprise) {
-    links.push({label:'Facebook', url:`https://www.facebook.com/search/pages/?q=${qLocal}`});
-    links.push({label:'Yelp', url:`https://www.yelp.com/search?find_desc=${qName}&find_loc=${encodeURIComponent(city+' '+state)}`});
-  }
-  if (!isSmallBiz || isEnterprise) {
-    links.push({label:'LinkedIn', url:`https://www.linkedin.com/search/results/companies/?keywords=${qName}`});
-    links.push({label:'Crunchbase', url:`https://www.crunchbase.com/textsearch?q=${qName}`});
-    links.push({label:'OpenCorporates', url:`https://opencorporates.com/companies?q=${qName}&jurisdiction_code=us_de`});
-    links.push({label:'SEC EDGAR', url:`https://www.sec.gov/cgi-bin/browse-edgar?company=${qName}&CIK=&type=10-K&dateb=&owner=include&count=10&search_text=&action=getcompany`});
-  }
-
-  const existing = document.getElementById('research-modal');
-  if (existing) existing.remove();
-  const existingOv = document.getElementById('research-overlay');
-  if (existingOv) existingOv.remove();
-
-  const modal = document.createElement('div');
-  modal.id = 'research-modal';
-  modal.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--surface,#fff);border:1px solid var(--border,#e2e0d8);border-radius:12px;padding:24px;z-index:9999;min-width:340px';
-
-  const overlay = document.createElement('div');
-  overlay.id = 'research-overlay';
-  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:9998';
-  overlay.onclick = () => { modal.remove(); overlay.remove(); };
-
-  modal.innerHTML = `
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-      <div>
-        <div style="font-weight:500;font-size:14px">${name}</div>
-        <div style="font-size:11px;color:var(--muted,#6b6a65);margin-top:2px">${city}${state?', '+state:''} &bull; ${entityType||'unknown'}</div>
-      </div>
-      <button onclick="document.getElementById('research-modal').remove();document.getElementById('research-overlay').remove()" style="background:none;border:none;font-size:18px;cursor:pointer">&times;</button>
-    </div>
-    <div style="font-size:11px;color:var(--muted);margin-bottom:12px;padding:8px 10px;background:var(--bg,#f5f4f0);border-radius:6px">
-      ${isSmallBiz?'Small business — Facebook, Yelp, BBB, Google':isEnterprise?'Enterprise — LinkedIn, Crunchbase, EDGAR':' Standard — all sources'}
-    </div>
-    <div style="display:flex;flex-direction:column;gap:8px">
-      ${links.map(l=>`<a href="${l.url}" target="_blank" style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border:0.5px solid var(--border,#e2e0d8);border-radius:8px;text-decoration:none;color:var(--text,#1a1a18);font-size:13px">
-        <span style="font-weight:500">${l.label}</span><span style="font-size:11px;color:var(--muted)">↗ open</span></a>`).join('')}
-    </div>`;
-
-  document.body.appendChild(overlay);
-  document.body.appendChild(modal);
-}
 </script>
 </body>
 </html>
