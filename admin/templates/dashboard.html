@@ -3,81 +3,278 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Business Registry Admin</title>
+<title>Dashboard — ScraperIQ</title>
 <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
+body { font-family: 'DM Sans', sans-serif; }
+
+.sidebar {
+  background: linear-gradient(160deg, #2a2927 0%, #1a1918 40%, #141312 100%);
+  border-right: 1px solid rgba(255,255,255,.06);
+  box-shadow: inset -1px 0 0 rgba(255,255,255,.04), 2px 0 24px rgba(0,0,0,.4);
+}
+.logo {
+  background: linear-gradient(180deg, rgba(255,255,255,.04) 0%, transparent 100%);
+  border-bottom: 1px solid rgba(255,255,255,.06) !important;
+  font-size: 15px; font-weight: 600; letter-spacing: -.01em;
+}
+.nav-link { border-left: 2px solid transparent; color: rgba(255,255,255,.45) !important; transition: all .15s; }
+.nav-link:hover { color: rgba(255,255,255,.85) !important; background: rgba(255,255,255,.04) !important; }
+.nav-link.active {
+  color: #fff !important;
+  background: linear-gradient(90deg, rgba(74,222,128,.12) 0%, rgba(74,222,128,.04) 100%) !important;
+  border-left-color: #4ade80 !important;
+}
+
+.stat-grid { display: grid; grid-template-columns: repeat(5,1fr); gap: 12px; margin-bottom: 28px; }
+.stat-card {
+  background: #fff; border: 0.5px solid #e8e6e1; border-radius: 12px;
+  padding: 18px 20px; position: relative; overflow: hidden;
+}
+.stat-card::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:3px;
+  background: var(--cc, #e8e6e1);
+}
+.stat-label { font-size: 11px; font-weight: 500; color: #7a7870; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 8px; }
+.stat-num { font-size: 30px; font-weight: 600; color: #1c1b18; letter-spacing: -.02em; line-height: 1; font-family: 'DM Mono', monospace; }
+.stat-sub { font-size: 11px; color: #7a7870; margin-top: 6px; }
+.stat-badge { display: inline-block; padding: 2px 8px; border-radius: 8px; font-size: 10px; font-weight: 500; margin-top: 5px; }
+
+.track-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; margin-bottom: 28px; }
+.track-card {
+  background: #fff; border: 0.5px solid #e8e6e1; border-radius: 14px;
+  padding: 22px 24px; position: relative; overflow: hidden; transition: transform .2s, box-shadow .2s;
+}
+.track-card:hover { transform: translateY(-2px); box-shadow: 0 4px 20px rgba(0,0,0,.08); }
+.track-card::after { content:''; position:absolute; bottom:0; left:0; right:0; height:3px; background: var(--tc, #e8e6e1); }
+.track-icon { width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 14px; font-size: 18px; }
+.track-title { font-size: 14px; font-weight: 600; color: #1c1b18; margin-bottom: 5px; }
+.track-desc { font-size: 12px; color: #7a7870; line-height: 1.6; margin-bottom: 14px; }
+.track-sources { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 14px; }
+.source-pill { font-size: 10px; padding: 2px 8px; border-radius: 20px; font-family: 'DM Mono', monospace; font-weight: 500; }
+.track-stats { display: flex; gap: 18px; padding-top: 14px; border-top: 0.5px solid #e8e6e1; }
+.track-stat { font-size: 11px; color: #7a7870; }
+.track-stat strong { color: #1c1b18; font-weight: 600; font-size: 18px; display: block; font-family: 'DM Mono', monospace; }
+
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 0; }
+.panel-card { background: #fff; border: 0.5px solid #e8e6e1; border-radius: 12px; padding: 20px 22px; }
+.panel-title { font-size: 13px; font-weight: 600; color: #1c1b18; margin-bottom: 16px; }
+
+.pip-row { display: flex; align-items: center; gap: 10px; margin-bottom: 11px; }
+.pip-label { font-size: 12px; color: #7a7870; min-width: 120px; }
+.pip-track { flex: 1; height: 6px; background: #f1efe8; border-radius: 3px; overflow: hidden; }
+.pip-fill { height: 100%; border-radius: 3px; transition: width 1s ease; }
+.pip-count { font-size: 12px; font-weight: 500; color: #1c1b18; min-width: 28px; text-align: right; font-family: 'DM Mono', monospace; }
+
+.conf-row { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+.conf-label { font-size: 11px; min-width: 65px; font-family: 'DM Mono', monospace; font-weight: 500; }
+.conf-track { flex: 1; height: 8px; background: #f1efe8; border-radius: 4px; overflow: hidden; }
+.conf-fill { height: 100%; border-radius: 4px; transition: width 1s ease; }
+.conf-count { font-size: 11px; font-weight: 500; min-width: 28px; text-align: right; font-family: 'DM Mono', monospace; }
+.conf-note { font-size: 10px; color: #7a7870; margin: -2px 0 8px 75px; }
+
+.section-hdr { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+.section-title { font-size: 14px; font-weight: 600; color: #1c1b18; }
+.section-link { font-size: 12px; color: #1a6b4a; text-decoration: none; }
+.section-link:hover { text-decoration: underline; }
+
+.main { padding: 32px 36px; }
+.page-header { margin-bottom: 28px; }
+.page-header h1 { font-size: 22px; font-weight: 600; letter-spacing: -.02em; }
+.page-header p { font-size: 13px; color: #7a7870; margin-top: 4px; }
+</style>
 </head>
 <body>
 <nav class="sidebar">
-  <div class="logo">Business Registry</div>
+  <div class="logo" style="padding:24px 20px 20px;">ScraperIQ
+    <div style="font-size:11px;color:rgba(255,255,255,.3);margin-top:2px;font-weight:400;font-family:'DM Mono',monospace;">Business Registry Intelligence</div>
+  </div>
+  <div style="padding:16px 12px 8px;font-size:10px;font-weight:500;color:rgba(255,255,255,.2);letter-spacing:.08em;text-transform:uppercase;">Overview</div>
   <a href="{{ url_for('dashboard') }}" class="nav-link active">Dashboard</a>
+  <div style="padding:16px 12px 8px;font-size:10px;font-weight:500;color:rgba(255,255,255,.2);letter-spacing:.08em;text-transform:uppercase;">Data</div>
   <a href="{{ url_for('queue') }}" class="nav-link">QA Queue</a>
+  <a href="{{ url_for('changes') }}" class="nav-link">Change Log</a>
   <a href="{{ url_for('markets') }}" class="nav-link">Markets</a>
+  <div style="padding:16px 12px 8px;font-size:10px;font-weight:500;color:rgba(255,255,255,.2);letter-spacing:.08em;text-transform:uppercase;">Tools</div>
   <a href="{{ url_for('export') }}" class="nav-link">Export</a>
+  <a href="/scrapers" class="nav-link">Scrapers</a>
+  <div style="margin-top:auto;padding:16px 20px;border-top:1px solid rgba(255,255,255,.06);font-size:11px;color:rgba(255,255,255,.25);background:linear-gradient(0deg,rgba(0,0,0,.2) 0%,transparent 100%);">
+    Delaware prototype · v1.0
+  </div>
 </nav>
 
 <main class="main">
   <div class="page-header">
     <h1>Dashboard</h1>
-    <span class="subtitle">Business Registry QA Overview</span>
+    <p>
+      {% if stats.by_market %}
+        {{ stats.by_market[0].market if stats.by_market[0].get('market') else stats.by_market[0].source_market }} registry
+        &nbsp;·&nbsp; {{ stats.total }} records ingested
+      {% endif %}
+    </p>
   </div>
 
   <!-- Stat cards -->
   <div class="stat-grid">
-    <div class="stat-card pending">
-      <div class="stat-num">{{ stats.pending }}</div>
-      <div class="stat-label">Pending review</div>
-    </div>
-    <div class="stat-card approved">
-      <div class="stat-num">{{ stats.approved }}</div>
-      <div class="stat-label">Approved</div>
-    </div>
-    <div class="stat-card flagged">
-      <div class="stat-num">{{ stats.flagged }}</div>
-      <div class="stat-label">Flagged / dupes</div>
-    </div>
-    <div class="stat-card rejected">
-      <div class="stat-num">{{ stats.rejected }}</div>
-      <div class="stat-label">Rejected</div>
-    </div>
-    <div class="stat-card total">
-      <div class="stat-num">{{ stats.total }}</div>
+    <div class="stat-card" style="--cc:#1a6b4a">
       <div class="stat-label">Total records</div>
+      <div class="stat-num">{{ stats.total }}</div>
+      <div class="stat-sub">All markets combined</div>
+    </div>
+    <div class="stat-card" style="--cc:#c47b1a">
+      <div class="stat-label">Duplicate filings</div>
+      <div class="stat-num">{{ stats.duplicates }}</div>
+      <div class="stat-sub">Same name, multiple filings</div>
+      <span class="stat-badge" style="background:#fef3c7;color:#92400e;">flagged for review</span>
+    </div>
+    <div class="stat-card" style="--cc:#1a6b4a">
+      <div class="stat-label">Unique businesses</div>
+      <div class="stat-num">{{ stats.unique }}</div>
+      <div class="stat-sub">After deduplication</div>
+    </div>
+    <div class="stat-card" style="--cc:#1a4a8a">
+      <div class="stat-label">Auto-approved</div>
+      <div class="stat-num">{{ stats.approved }}</div>
+      <div class="stat-sub">90%+ confidence · no review needed</div>
+      <span class="stat-badge" style="background:#ecfdf5;color:#065f46;">exported</span>
+    </div>
+    <div class="stat-card" style="--cc:#b83232">
+      <div class="stat-label">Pending review</div>
+      <div class="stat-num">{{ stats.pending }}</div>
+      <div class="stat-sub">In QA queue across 3 tracks</div>
     </div>
   </div>
 
-  <!-- By market breakdown -->
-  <div class="card">
-    <h2>Records by market</h2>
-    <table class="data-table">
-      <thead>
-        <tr><th>Market</th><th>Count</th><th>Actions</th></tr>
-      </thead>
-      <tbody>
-        {% for m in stats.by_market %}
-        <tr>
-          <td><span class="badge market">{{ m.source_market }}</span></td>
-          <td>{{ m.count }}</td>
-          <td>
-            <a href="{{ url_for('queue', market=m.source_market) }}" class="btn-sm">Review</a>
-            <a href="{{ url_for('export', market=m.source_market, status='approved') }}" class="btn-sm secondary">Export CSV</a>
-          </td>
-        </tr>
-        {% else %}
-        <tr><td colspan="3" class="empty">No data yet. Run a scraper to populate records.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
+  <!-- Track cards -->
+  <div class="section-hdr">
+    <div class="section-title">Entity tracks — auto-assigned at ingest</div>
+    <a href="{{ url_for('queue') }}" class="section-link">Open QA Queue →</a>
+  </div>
+  <div class="track-grid">
+
+    <div class="track-card" style="--tc:#1a6b4a;">
+      <div class="track-icon" style="background:#edf7f1;">🏪</div>
+      <div class="track-title">Track 1 — Small / new business</div>
+      <div class="track-desc">Trade names, sole proprietors, LLCs under 2 years. Local operators. Filing phone is often the owner's direct line — area code signals real location.</div>
+      <div class="track-sources">
+        <span class="source-pill" style="background:#edf7f1;color:#0f4a33;">Google Places</span>
+        <span class="source-pill" style="background:#edf7f1;color:#0f4a33;">Website scrape</span>
+        <span class="source-pill" style="background:#edf7f1;color:#0f4a33;">BBB</span>
+        <span class="source-pill" style="background:#edf7f1;color:#0f4a33;">Facebook</span>
+        <span class="source-pill" style="background:#edf7f1;color:#0f4a33;">Yelp</span>
+        <span class="source-pill" style="background:#f1efe8;color:#7a7870;">SBA · future</span>
+      </div>
+      <div class="track-stats">
+        <div class="track-stat"><strong>{{ stats.track_small or '—' }}</strong>records</div>
+        <div class="track-stat"><strong>{{ stats.conf_high or '—' }}</strong>high conf.</div>
+        <div class="track-stat"><strong>{{ stats.pending or '—' }}</strong>pending</div>
+      </div>
+    </div>
+
+    <div class="track-card" style="--tc:#5a2d8a;">
+      <div class="track-icon" style="background:#f5f0fc;">🏢</div>
+      <div class="track-title">Track 2 — Mid-market / established</div>
+      <div class="track-desc">LLCs and corporations with operating history. Professional services, regional companies. Multi-state filing consistency is a key corroboration signal.</div>
+      <div class="track-sources">
+        <span class="source-pill" style="background:#f5f0fc;color:#3d1a6e;">Google Places</span>
+        <span class="source-pill" style="background:#f5f0fc;color:#3d1a6e;">Website scrape</span>
+        <span class="source-pill" style="background:#f5f0fc;color:#3d1a6e;">OpenCorporates</span>
+        <span class="source-pill" style="background:#f5f0fc;color:#3d1a6e;">LinkedIn · manual</span>
+      </div>
+      <div class="track-stats">
+        <div class="track-stat"><strong>{{ stats.track_mid or '—' }}</strong>records</div>
+        <div class="track-stat"><strong>{{ stats.conf_med or '—' }}</strong>review band</div>
+        <div class="track-stat"><strong>{{ stats.flagged or '—' }}</strong>flagged</div>
+      </div>
+    </div>
+
+    <div class="track-card" style="--tc:#1a4a8a;">
+      <div class="track-icon" style="background:#eef3fb;">🏦</div>
+      <div class="track-title">Track 3 — Enterprise / public</div>
+      <div class="track-desc">Large corporations, public companies, subsidiaries. SEC EDGAR checked first — a match auto-approves at 99% confidence without any further enrichment.</div>
+      <div class="track-sources">
+        <span class="source-pill" style="background:#eef3fb;color:#0c2d6b;">SEC EDGAR</span>
+        <span class="source-pill" style="background:#eef3fb;color:#0c2d6b;">SAM.gov</span>
+        <span class="source-pill" style="background:#eef3fb;color:#0c2d6b;">OpenCorporates</span>
+        <span class="source-pill" style="background:#eef3fb;color:#0c2d6b;">FCC · FDA</span>
+      </div>
+      <div class="track-stats">
+        <div class="track-stat"><strong>{{ stats.track_ent or '—' }}</strong>records</div>
+        <div class="track-stat"><strong>{{ stats.conf_high or '—' }}</strong>high conf.</div>
+        <div class="track-stat"><strong>{{ stats.approved or '—' }}</strong>approved</div>
+      </div>
+    </div>
+
   </div>
 
-  <!-- Quick actions -->
-  <div class="card">
-    <h2>Quick actions</h2>
-    <div class="action-row">
-      <a href="{{ url_for('queue', status='pending') }}" class="btn">Review pending ({{ stats.pending }})</a>
-      <a href="{{ url_for('queue', status='flagged') }}" class="btn secondary">Review flagged ({{ stats.flagged }})</a>
-      <a href="{{ url_for('export', status='approved', format='csv') }}" class="btn secondary">Export all approved</a>
+  <!-- Pipeline + confidence -->
+  <div class="two-col">
+    <div class="panel-card">
+      <div class="panel-title">Enrichment pipeline status</div>
+      {% set total = stats.total or 1 %}
+      <div class="pip-row">
+        <div class="pip-label">Scraped</div>
+        <div class="pip-track"><div class="pip-fill" style="width:100%;background:#1a6b4a;"></div></div>
+        <div class="pip-count">{{ stats.total }}</div>
+      </div>
+      <div class="pip-row">
+        <div class="pip-label">Phone enriched</div>
+        <div class="pip-track"><div class="pip-fill" style="width:{{ ((stats.phone_enriched or 0) / total * 100)|int }}%;background:#1a6b4a;"></div></div>
+        <div class="pip-count">{{ stats.phone_enriched or 0 }}</div>
+      </div>
+      <div class="pip-row">
+        <div class="pip-label">Google Places</div>
+        <div class="pip-track"><div class="pip-fill" style="width:{{ ((stats.google_enriched or 0) / total * 100)|int }}%;background:#1a6b4a;"></div></div>
+        <div class="pip-count">{{ stats.google_enriched or 0 }}</div>
+      </div>
+      <div class="pip-row">
+        <div class="pip-label">Website scraped</div>
+        <div class="pip-track"><div class="pip-fill" style="width:{{ ((stats.website_enriched or 0) / total * 100)|int }}%;background:#c47b1a;"></div></div>
+        <div class="pip-count">{{ stats.website_enriched or 0 }}</div>
+      </div>
+      <div class="pip-row">
+        <div class="pip-label">SIC classified</div>
+        <div class="pip-track"><div class="pip-fill" style="width:{{ ((stats.sic_enriched or 0) / total * 100)|int }}%;background:#1a6b4a;"></div></div>
+        <div class="pip-count">{{ stats.sic_enriched or 0 }}</div>
+      </div>
+      <div class="pip-row">
+        <div class="pip-label">QA approved</div>
+        <div class="pip-track"><div class="pip-fill" style="width:{{ ((stats.approved or 0) / total * 100)|int }}%;background:#1a4a8a;"></div></div>
+        <div class="pip-count">{{ stats.approved or 0 }}</div>
+      </div>
+    </div>
+
+    <div class="panel-card">
+      <div class="panel-title">Confidence score distribution</div>
+      {% set total = stats.total or 1 %}
+      <div class="conf-row">
+        <div class="conf-label" style="color:#1a6b4a;">90–100%</div>
+        <div class="conf-track"><div class="conf-fill" style="width:{{ ((stats.conf_high or 0) / total * 100)|int }}%;background:#1a6b4a;"></div></div>
+        <div class="conf-count" style="color:#1a6b4a;">{{ stats.conf_high or 0 }}</div>
+      </div>
+      <div class="conf-note">Auto-approved · bypassed queue entirely</div>
+      <div class="conf-row">
+        <div class="conf-label" style="color:#1a4a8a;">70–89%</div>
+        <div class="conf-track"><div class="conf-fill" style="width:{{ ((stats.conf_med or 0) / total * 100)|int }}%;background:#1a4a8a;"></div></div>
+        <div class="conf-count" style="color:#1a4a8a;">{{ stats.conf_med or 0 }}</div>
+      </div>
+      <div class="conf-note">Review queue · one reviewer · ~45 seconds</div>
+      <div class="conf-row">
+        <div class="conf-label" style="color:#c47b1a;">50–69%</div>
+        <div class="conf-track"><div class="conf-fill" style="width:{{ ((stats.conf_low or 0) / total * 100)|int }}%;background:#c47b1a;"></div></div>
+        <div class="conf-count" style="color:#c47b1a;">{{ stats.conf_low or 0 }}</div>
+      </div>
+      <div class="conf-note">Flagged · address discrepancy · R button</div>
+      <div class="conf-row">
+        <div class="conf-label" style="color:#b83232;">0–49%</div>
+        <div class="conf-track"><div class="conf-fill" style="width:{{ ((stats.conf_flag or 0) / total * 100)|int }}%;background:#b83232;"></div></div>
+        <div class="conf-count" style="color:#b83232;">{{ stats.conf_flag or 0 }}</div>
+      </div>
+      <div class="conf-note">Flagged · cannot corroborate · investigation needed</div>
     </div>
   </div>
+
 </main>
 </body>
 </html>
