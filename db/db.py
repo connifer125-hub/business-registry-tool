@@ -159,7 +159,7 @@ def get_stats():
                     COUNT(*) FILTER (WHERE qa_status = 'approved')                   AS approved,
                     COUNT(*) FILTER (WHERE qa_status = 'rejected')                   AS rejected,
                     COUNT(*) FILTER (WHERE qa_status = 'flagged')                    AS flagged,
-                    COUNT(*) FILTER (WHERE is_duplicate_of IS NOT NULL)              AS duplicates,
+            COUNT(*) FILTER (WHERE is_duplicate_of IS NOT NULL)              AS duplicates,
                     COUNT(*) FILTER (WHERE google_place_id IS NOT NULL)              AS google_enriched,
                     COUNT(*) FILTER (WHERE sic_code IS NOT NULL AND sic_code != '')  AS sic_enriched,
                     COUNT(*) FILTER (WHERE website_url IS NOT NULL)                  AS website_enriched,
@@ -184,5 +184,16 @@ def get_stats():
                 ORDER BY count DESC
             """)
             stats["by_market"] = [dict(r) for r in cur.fetchall()]
-            stats["unique"] = max(0, stats["total"] - stats["duplicates"])
+            # Count businesses where the same name appears more than once
+            cur.execute("""
+                SELECT COUNT(*) FROM businesses
+                WHERE LOWER(TRIM(business_name)) IN (
+                    SELECT LOWER(TRIM(business_name))
+                    FROM businesses
+                    GROUP BY LOWER(TRIM(business_name))
+                    HAVING COUNT(*) > 1
+                )
+            """)
+            stats["name_duplicates"] = cur.fetchone()["count"]
+            stats["unique"] = max(0, stats["total"] - stats["name_duplicates"])
             return stats
