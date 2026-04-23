@@ -124,7 +124,7 @@ body { font-family: 'DM Sans', sans-serif; }
     </div>
     <div class="stat-card" style="--cc:#c47b1a">
       <div class="stat-label">Duplicate filings</div>
-      <div class="stat-num">{{ stats.duplicates }}</div>
+      <div class="stat-num">{{ stats.name_duplicates or 0 }}</div>
       <div class="stat-sub">Same name, multiple filings</div>
       <span class="stat-badge" style="background:#fef3c7;color:#92400e;">flagged for review</span>
     </div>
@@ -145,6 +145,18 @@ body { font-family: 'DM Sans', sans-serif; }
       <div class="stat-sub">In QA queue across 3 tracks</div>
     </div>
   </div>
+
+  <!-- Duplicates callout -->
+  {% if stats.name_duplicates > 0 %}
+  <div style="background:#fffbf0;border:0.5px solid #fcd34d;border-left:3px solid #c47b1a;border-radius:10px;padding:14px 20px;margin-bottom:24px;display:flex;align-items:center;gap:16px;">
+    <div style="font-size:22px;font-weight:600;color:#c47b1a;font-family:'DM Mono',monospace;flex-shrink:0;">{{ stats.name_duplicates }}</div>
+    <div>
+      <div style="font-size:13px;font-weight:600;color:#1c1b18;margin-bottom:3px;">Duplicate filings detected</div>
+      <div style="font-size:12px;color:#7a7870;line-height:1.5;">Same business name filed more than once in the registry. These are flagged automatically at ingest. Review pairs together — one should be rejected or merged.</div>
+    </div>
+    <a href="{{ url_for('queue') }}?status=flagged" style="margin-left:auto;padding:8px 16px;border-radius:8px;border:0.5px solid #fcd34d;background:#fff;font-size:13px;color:#c47b1a;text-decoration:none;white-space:nowrap;font-family:'DM Sans',sans-serif;">Review duplicates →</a>
+  </div>
+  {% endif %}
 
   <!-- Track cards -->
   <div class="section-hdr">
