@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Identity Review — ScraperIQ</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=DM+Mono:wght@400;500&display=swap');
+
+:root {
+  /* Dark workspace palette */
+  --bg0:    #0d0d0c;
+  --bg1:    #141412;
+  --bg2:    #1a1918;
+  --bg3:    #222120;
+  --bg4:    #2a2927;
+  --bg5:    #333230;
+
+  --border0: rgba(255,255,255,.04);
+  --border1: rgba(255,255,255,.08);
+  --border2: rgba(255,255,255,.13);
+  --border3: rgba(255,255,255,.2);
+
+  --t0: #ffffff;
+  --t1: rgba(255,255,255,.85);
+  --t2: rgba(255,255,255,.55);
+  --t3: rgba(255,255,255,.3);
+  --t4: rgba(255,255,255,.18);
+
+  --green:  #22c55e;
+  --green-dim: rgba(34,197,94,.12);
+  --green-border: rgba(34,197,94,.25);
+  --amber:  #f59e0b;
+  --amber-dim: rgba(245,158,11,.1);
+  --amber-border: rgba(245,158,11,.25);
+  --red:    #ef4444;
+  --red-dim: rgba(239,68,68,.1);
+  --red-border: rgba(239,68,68,.25);
+  --teal:   #2dd4bf;
+  --teal-dim: rgba(45,212,191,.1);
+  --teal-border: rgba(45,212,191,.25);
+  --blue:   #60a5fa;
+
+  --sidebar-w: 200px;
+  --left-w:    340px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg0);
+  color: var(--t1);
+  display: flex;
+}
+
+/* ── Sidebar ── */
+.sidebar {
+  width: var(--sidebar-w);
+  flex-shrink: 0;
+  background: linear-gradient(175deg, var(--bg4) 0%, var(--bg2) 50%, var(--bg1) 100%);
+  border-right: 1px solid var(--border1);
+  display: flex;
+  flex-direction: column;
+  box-shadow: inset -1px 0 0 var(--border0), 2px 0 20px rgba(0,0,0,.5);
+}
+.sidebar-logo {
+  padding: 20px 18px 18px;
+  border-bottom: 1px solid var(--border1);
+  background: linear-gradient(180deg, rgba(255,255,255,.03) 0%, transparent 100%);
+}
+.sidebar-logo .name { font-size: 14px; font-weight: 600; color: var(--t0); letter-spacing: -.01em; }
+.sidebar-logo .sub  { font-size: 10px; color: var(--t4); margin-top: 2px; font-family: 'DM Mono', monospace; letter-spacing: .03em; }
+.sidebar-section {
+  padding: 14px 12px 6px;
+  font-size: 9px; font-weight: 500; color: var(--t4);
+  letter-spacing: .1em; text-transform: uppercase;
+}
+.nav-item {
+  display: flex; align-items: center; gap: 9px;
+  padding: 8px 18px; font-size: 12px; color: var(--t3);
+  cursor: pointer; transition: all .12s; text-decoration: none;
+  border-left: 2px solid transparent;
+}
+.nav-item:hover { color: var(--t1); background: rgba(255,255,255,.03); }
+.nav-item.active {
+  color: var(--t0);
+  background: linear-gradient(90deg, rgba(45,212,191,.1) 0%, transparent 100%);
+  border-left-color: var(--teal);
+}
+.nav-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--border2); flex-shrink: 0; }
+.nav-item.active .nav-dot { background: var(--teal); box-shadow: 0 0 6px rgba(45,212,191,.5); }
+.nav-badge {
+  margin-left: auto; font-size: 9px; font-family: 'DM Mono', monospace;
+  padding: 1px 5px; border-radius: 4px;
+  background: var(--amber-dim); color: var(--amber); border: 0.5px solid var(--amber-border);
+}
+.sidebar-footer {
+  margin-top: auto; padding: 14px 18px;
+  border-top: 1px solid var(--border0);
+  font-size: 10px; color: var(--t4);
+  background: linear-gradient(0deg, rgba(0,0,0,.3) 0%, transparent 100%);
+}
+
+/* ── App shell ── */
+.app-shell {
+  flex: 1; display: flex; flex-direction: column; overflow: hidden;
+}
+
+/* ── Top bar ── */
+.topbar {
+  padding: 12px 24px;
+  border-bottom: 1px solid var(--border1);
+  background: var(--bg2);
+  display: flex; align-items: center; gap: 16px; flex-shrink: 0;
+}
+.topbar-title { font-size: 15px; font-weight: 600; color: var(--t0); letter-spacing: -.01em; }
+.topbar-meta  { font-size: 11px; color: var(--t3); font-family: 'DM Mono', monospace; }
+.topbar-badge {
+  padding: 3px 10px; border-radius: 6px; font-size: 11px; font-weight: 500;
+  background: var(--amber-dim); color: var(--amber); border: 0.5px solid var(--amber-border);
+}
+.topbar-actions { margin-left: auto; display: flex; gap: 6px; }
+.topbar-btn {
+  padding: 6px 14px; border-radius: 7px; font-size: 12px; font-weight: 500;
+  border: 0.5px solid var(--border2); background: var(--bg4); color: var(--t2);
+  cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all .12s;
+}
+.topbar-btn:hover { color: var(--t0); border-color: var(--border3); background: var(--bg5); }
+
+/* ── Split pane ── */
+.split-pane {
+  flex: 1; display: flex; overflow: hidden;
+}
+
+/* ── LEFT PANE ── */
+.left-pane {
+  width: var(--left-w);
+  flex-shrink: 0;
+  border-right: 1px solid var(--border1);
+  display: flex; flex-direction: column;
+  background: var(--bg1);
+}
+.left-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border1);
+  display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+}
+.left-search {
+  flex: 1; padding: 6px 10px; border-radius: 7px;
+  border: 0.5px solid var(--border2); background: var(--bg3);
+  font-size: 12px; color: var(--t1); font-family: 'DM Sans', sans-serif;
+  outline: none;
+}
+.left-search:focus { border-color: var(--teal); box-shadow: 0 0 0 2px rgba(45,212,191,.1); }
+.left-search::placeholder { color: var(--t4); }
+.filter-btn {
+  padding: 6px 10px; border-radius: 7px; font-size: 11px;
+  border: 0.5px solid var(--border2); background: var(--bg3); color: var(--t3);
+  cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all .12s; white-space: nowrap;
+}
+.filter-btn:hover { color: var(--t1); border-color: var(--border3); }
+.filter-btn.active { background: var(--amber-dim); color: var(--amber); border-color: var(--amber-border); }
+
+.candidates-list { flex: 1; overflow-y: auto; padding: 8px; }
+.candidates-list::-webkit-scrollbar { width: 4px; }
+.candidates-list::-webkit-scrollbar-track { background: transparent; }
+.candidates-list::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+/* ── Candidate Card ── */
+.candidate-card {
+  padding: 12px 14px; border-radius: 10px; margin-bottom: 6px;
+  border: 0.5px solid var(--border1); background: var(--bg2);
+  cursor: pointer; transition: all .15s; position: relative;
+}
+.candidate-card:hover { border-color: var(--border2); background: var(--bg3); }
+.candidate-card.selected {
+  border-color: var(--teal-border);
+  background: linear-gradient(135deg, var(--teal-dim) 0%, var(--bg2) 100%);
+  box-shadow: 0 0 0 1px var(--teal-border) inset;
+}
+.candidate-card::before {
+  content: ''; position: absolute; left: 0; top: 8px; bottom: 8px;
+  width: 2px; border-radius: 0 2px 2px 0;
+  background: var(--amber); opacity: 0;
+  transition: opacity .15s;
+}
+.candidate-card.selected::before { background: var(--teal); opacity: 1; }
+.candidate-card.needs-decision::before { background: var(--amber); opacity: 1; }
+.candidate-card.confirmed::before { background: var(--green); opacity: 1; }
+.candidate-card.conflict::before { background: var(--red); opacity: 1; }
+
+.card-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.card-name { font-size: 13px; font-weight: 500; color: var(--t0); line-height: 1.3; }
+.card-entity { font-size: 11px; color: var(--t3); margin-top: 2px; line-height: 1.4; }
+.conf-badge {
+  flex-shrink: 0; font-size: 11px; font-weight: 500; font-family: 'DM Mono', monospace;
+  padding: 2px 7px; border-radius: 5px; margin-top: 1px;
+}
+.conf-high   { background: var(--green-dim); color: var(--green); border: 0.5px solid var(--green-border); }
+.conf-medium { background: var(--amber-dim); color: var(--amber); border: 0.5px solid var(--amber-border); }
+.conf-low    { background: var(--red-dim);   color: var(--red);   border: 0.5px solid var(--red-border); }
+
+.card-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+.tag {
+  font-size: 10px; padding: 1px 7px; border-radius: 4px;
+  background: var(--bg4); color: var(--t3); border: 0.5px solid var(--border1);
+  font-family: 'DM Mono', monospace; letter-spacing: .01em;
+}
+.tag.name-variant   { color: var(--blue);  border-color: rgba(96,165,250,.2); background: rgba(96,165,250,.07); }
+.tag.shared-website { color: var(--teal);  border-color: var(--teal-border);  background: var(--teal-dim); }
+.tag.addr-overlap   { color: var(--amber); border-color: var(--amber-border); background: var(--amber-dim); }
+.tag.needs-decision { color: var(--red);   border-color: var(--red-border);   background: var(--red-dim); }
+
+.card-filings { font-size: 10px; color: var(--t4); margin-top: 6px; font-family: 'DM Mono', monospace; }
+
+/* ── RIGHT PANE ── */
+.right-pane {
+  flex: 1; display: flex; flex-direction: column; overflow: hidden;
+  background: var(--bg0);
+}
+
+/* Sticky action toolbar */
+.action-toolbar {
+  padding: 12px 24px;
+  border-bottom: 1px solid var(--border1);
+  background: var(--bg1);
+  display: flex; align-items: center; gap: 10px; flex-shrink: 0;
+}
+.filing-name-big { font-size: 16px; font-weight: 600; color: var(--t0); letter-spacing: -.01em; }
+.filing-entity   { font-size: 12px; color: var(--t3); margin-top: 2px; }
+.conf-large {
+  padding: 4px 12px; border-radius: 7px; font-size: 13px; font-weight: 500;
+  font-family: 'DM Mono', monospace; margin-left: 8px;
+}
+.action-btns { margin-left: auto; display: flex; gap: 6px; }
+.action-btn {
+  padding: 7px 14px; border-radius: 8px; font-size: 12px; font-weight: 500;
+  border: 0.5px solid; cursor: pointer; font-family: 'DM Sans', sans-serif;
+  transition: all .12s; white-space: nowrap;
+}
+.btn-link    { background: var(--green-dim); color: var(--green); border-color: var(--green-border); }
+.btn-link:hover { background: rgba(34,197,94,.2); }
+.btn-create  { background: var(--bg4); color: var(--t1); border-color: var(--border2); }
+.btn-create:hover { background: var(--bg5); border-color: var(--border3); }
+.btn-reject  { background: var(--red-dim); color: var(--red); border-color: var(--red-border); }
+.btn-reject:hover { background: rgba(239,68,68,.18); }
+.btn-split   { background: var(--bg4); color: var(--t2); border-color: var(--border2); }
+.btn-split:hover { background: var(--bg5); color: var(--t1); }
+.btn-escalate { background: var(--amber-dim); color: var(--amber); border-color: var(--amber-border); }
+.btn-escalate:hover { background: rgba(245,158,11,.18); }
+
+/* Scrollable workspace */
+.workspace { flex: 1; overflow-y: auto; padding: 20px 24px; }
+.workspace::-webkit-scrollbar { width: 4px; }
+.workspace::-webkit-scrollbar-track { background: transparent; }
+.workspace::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+/* Section */
+.section { margin-bottom: 20px; }
+.section-label {
+  font-size: 10px; font-weight: 500; color: var(--t4);
+  text-transform: uppercase; letter-spacing: .1em;
+  margin-bottom: 10px; display: flex; align-items: center; gap: 8px;
+}
+.section-label::after {
+  content: ''; flex: 1; height: 0.5px; background: var(--border1);
+}
+
+/* Comparison cards */
+.compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.compare-card {
+  border-radius: 10px; border: 0.5px solid var(--border1);
+  background: var(--bg1); overflow: hidden;
+}
+.compare-card-header {
+  padding: 10px 14px;
+  border-bottom: 0.5px solid var(--border1);
+  font-size: 10px; font-weight: 500; color: var(--t3);
+  text-transform: uppercase; letter-spacing: .08em;
+  display: flex; align-items: center; gap: 6px;
+}
+.compare-card-header.filing-header { color: var(--teal); border-bottom-color: var(--teal-border); }
+.compare-card-header.entity-header { color: var(--blue); border-bottom-color: rgba(96,165,250,.25); }
+.header-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+.compare-field { padding: 8px 14px; border-bottom: 0.5px solid var(--border0); display: flex; flex-direction: column; gap: 2px; }
+.compare-field:last-child { border-bottom: none; }
+.field-label { font-size: 10px; color: var(--t4); text-transform: uppercase; letter-spacing: .06em; font-family: 'DM Mono', monospace; }
+.field-val   { font-size: 12px; color: var(--t1); line-height: 1.4; }
+.field-val.match    { color: var(--green); }
+.field-val.conflict { color: var(--red); }
+.field-val.empty    { color: var(--t4); font-style: italic; }
+
+/* Match reasoning */
+.reasoning-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.reasoning-item {
+  padding: 10px 12px; border-radius: 8px;
+  border: 0.5px solid var(--border1); background: var(--bg1);
+}
+.reasoning-label { font-size: 10px; color: var(--t4); text-transform: uppercase; letter-spacing: .07em; font-family: 'DM Mono', monospace; margin-bottom: 5px; }
+.reasoning-val {
+  font-size: 13px; font-weight: 500;
+}
+.r-strong { color: var(--green); }
+.r-medium { color: var(--amber); }
+.r-weak   { color: var(--red); }
+.r-none   { color: var(--t4); }
+.r-yes    { color: var(--green); }
+.r-no     { color: var(--red); }
+
+.system-confidence {
+  margin-top: 10px; padding: 10px 14px; border-radius: 8px;
+  border: 0.5px solid var(--border1); background: var(--bg1);
+  display: flex; align-items: center; gap: 10px;
+}
+.sys-conf-label { font-size: 11px; color: var(--t3); }
+.sys-conf-val {
+  font-size: 15px; font-weight: 600; font-family: 'DM Mono', monospace;
+}
+.sys-conf-bar {
+  flex: 1; height: 4px; background: var(--bg4); border-radius: 2px; overflow: hidden;
+}
+.sys-conf-fill { height: 100%; border-radius: 2px; transition: width .6s ease; }
+.sys-conf-note { font-size: 11px; color: var(--t4); margin-left: auto; }
+
+/* Timeline */
+.timeline { position: relative; padding-left: 20px; }
+.timeline::before {
+  content: ''; position: absolute; left: 5px; top: 6px; bottom: 6px;
+  width: 1px; background: var(--border1);
+}
+.timeline-item { position: relative; margin-bottom: 14px; }
+.timeline-dot {
+  position: absolute; left: -18px; top: 4px;
+  width: 7px; height: 7px; border-radius: 50%;
+  border: 1.5px solid var(--border2); background: var(--bg3);
+}
+.timeline-dot.formation { border-color: var(--green); background: var(--green-dim); }
+.timeline-dot.amendment { border-color: var(--amber); background: var(--amber-dim); }
+.timeline-dot.address   { border-color: var(--blue);  background: rgba(96,165,250,.1); }
+.timeline-dot.dissolution { border-color: var(--red); background: var(--red-dim); }
+.timeline-year  { font-size: 10px; color: var(--t4); font-family: 'DM Mono', monospace; margin-bottom: 2px; }
+.timeline-event { font-size: 12px; color: var(--t1); font-weight: 500; }
+.timeline-detail{ font-size: 11px; color: var(--t3); margin-top: 2px; line-height: 1.5; }
+.timeline-badge {
+  display: inline-block; font-size: 9px; padding: 1px 6px; border-radius: 4px;
+  font-family: 'DM Mono', monospace; margin-left: 6px; vertical-align: middle;
+}
+
+/* Notes section */
+.notes-section {
+  border-radius: 10px; border: 0.5px solid var(--border1); background: var(--bg1); overflow: hidden;
+}
+.notes-toggle {
+  padding: 10px 14px; cursor: pointer; user-select: none;
+  display: flex; align-items: center; gap: 8px;
+  font-size: 11px; font-weight: 500; color: var(--t2);
+  transition: color .12s;
+}
+.notes-toggle:hover { color: var(--t0); }
+.notes-toggle-icon { font-size: 10px; transition: transform .2s; color: var(--t4); }
+.notes-toggle-icon.open { transform: rotate(90deg); }
+.notes-body { display: none; padding: 0 14px 14px; border-top: 0.5px solid var(--border0); }
+.notes-body.visible { display: block; }
+.notes-textarea {
+  width: 100%; padding: 8px 10px; border-radius: 7px; margin-top: 10px;
+  border: 0.5px solid var(--border2); background: var(--bg3);
+  font-size: 12px; color: var(--t1); font-family: 'DM Sans', sans-serif;
+  resize: vertical; min-height: 70px; outline: none; line-height: 1.5;
+}
+.notes-textarea:focus { border-color: var(--teal); box-shadow: 0 0 0 2px rgba(45,212,191,.08); }
+.notes-textarea::placeholder { color: var(--t4); }
+
+.audit-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 7px 0; border-bottom: 0.5px solid var(--border0);
+  font-size: 11px;
+}
+.audit-row:last-child { border-bottom: none; }
+.audit-time { color: var(--t4); font-family: 'DM Mono', monospace; white-space: nowrap; }
+.audit-reviewer { color: var(--teal); font-weight: 500; }
+.audit-action { color: var(--t2); flex: 1; }
+.audit-badge {
+  font-size: 9px; padding: 1px 6px; border-radius: 4px;
+  font-family: 'DM Mono', monospace;
+}
+
+/* Empty state */
+.empty-state {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  color: var(--t4); gap: 10px; text-align: center; padding: 40px;
+}
+.empty-icon { font-size: 32px; opacity: .3; }
+.empty-text { font-size: 13px; color: var(--t3); }
+.empty-sub  { font-size: 11px; color: var(--t4); max-width: 220px; line-height: 1.6; }
+
+/* Scrollbar utility */
+* { scrollbar-width: thin; scrollbar-color: var(--border2) transparent; }
+
+@keyframes fadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+.fade-in { animation: fadeIn .25s ease forwards; }
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="name">ScraperIQ</div>
+    <div class="sub">Business Registry Intelligence</div>
+  </div>
+  <div class="sidebar-section">Overview</div>
+  <a class="nav-item" href="#"><span class="nav-dot"></span>Dashboard</a>
+  <div class="sidebar-section">Data</div>
+  <a class="nav-item" href="#"><span class="nav-dot"></span>Filing Review</a>
+  <a class="nav-item active" href="#"><span class="nav-dot"></span>Identity Review <span class="nav-badge">24</span></a>
+  <a class="nav-item" href="#"><span class="nav-dot"></span>Change Log</a>
+  <a class="nav-item" href="#"><span class="nav-dot"></span>Markets</a>
+  <div class="sidebar-section">Tools</div>
+  <a class="nav-item" href="#"><span class="nav-dot"></span>Export</a>
+  <a class="nav-item" href="#"><span class="nav-dot"></span>Scrapers</a>
+  <div class="sidebar-footer">Delaware prototype · v1.0</div>
+</aside>
+
+<!-- App shell -->
+<div class="app-shell">
+
+  <!-- Top bar -->
+  <div class="topbar">
+    <div>
+      <div class="topbar-title">Identity Review</div>
+      <div class="topbar-meta">Pre-DUNS entity resolution · US-DE · 24 candidates pending</div>
+    </div>
+    <span class="topbar-badge">24 needs decision</span>
+    <div class="topbar-actions">
+      <button class="topbar-btn">Export decisions</button>
+      <button class="topbar-btn">Settings</button>
+    </div>
+  </div>
+
+  <!-- Split pane -->
+  <div class="split-pane">
+
+    <!-- LEFT PANE -->
+    <div class="left-pane">
+      <div class="left-header">
+        <input class="left-search" placeholder="Search filings or entities…" id="search-input" oninput="filterCards()">
+        <button class="filter-btn active" id="filter-pending" onclick="setFilter('pending')">Pending</button>
+        <button class="filter-btn" id="filter-all" onclick="setFilter('all')">All</button>
+      </div>
+      <div class="candidates-list" id="candidates-list">
+        <!-- Cards injected by JS -->
+      </div>
+    </div>
+
+    <!-- RIGHT PANE -->
+    <div class="right-pane" id="right-pane">
+      <div class="empty-state" id="empty-state">
+        <div class="empty-icon">⊞</div>
+        <div class="empty-text">Select a filing to review</div>
+        <div class="empty-sub">Click any candidate on the left to open the identity comparison workspace.</div>
+      </div>
+      <div id="workspace-shell" style="display:none;flex-direction:column;height:100%;">
+
+        <!-- Action toolbar -->
+        <div class="action-toolbar">
+          <div>
+            <div class="filing-name-big" id="ws-name">—</div>
+            <div class="filing-entity" id="ws-entity">—</div>
+          </div>
+          <span class="conf-large conf-medium" id="ws-conf-badge">—</span>
+          <div class="action-btns">
+            <button class="action-btn btn-link"    onclick="logDecision('linked')">✓ Link to existing</button>
+            <button class="action-btn btn-create"  onclick="logDecision('created')">+ Create new entity</button>
+            <button class="action-btn btn-reject"  onclick="logDecision('rejected')">✗ Reject match</button>
+            <button class="action-btn btn-split"   onclick="logDecision('split')">⋮ Split cluster</button>
+            <button class="action-btn btn-escalate" onclick="logDecision('escalated')">↑ Escalate</button>
+          </div>
+        </div>
+
+        <!-- Scrollable workspace -->
+        <div class="workspace" id="workspace-body">
+          <!-- Section 2: Comparison -->
+          <div class="section">
+            <div class="section-label">Side-by-side comparison</div>
+            <div class="compare-grid">
+              <div class="compare-card">
+                <div class="compare-card-header filing-header">
+                  <div class="header-dot" style="background:var(--teal);box-shadow:0 0 5px rgba(45,212,191,.4);"></div>
+                  Filing data
+                </div>
+                <div class="compare-field"><div class="field-label">Business name</div><div class="field-val" id="c-name-l">—</div></div>
+                <div class="compare-field"><div class="field-label">Address</div><div class="field-val" id="c-addr-l">—</div></div>
+                <div class="compare-field"><div class="field-label">Phone</div><div class="field-val" id="c-phone-l">—</div></div>
+                <div class="compare-field"><div class="field-label">Website</div><div class="field-val" id="c-web-l">—</div></div>
+                <div class="compare-field"><div class="field-label">Registered agent</div><div class="field-val" id="c-agent-l">—</div></div>
+                <div class="compare-field"><div class="field-label">Filing date</div><div class="field-val" id="c-date-l">—</div></div>
+              </div>
+              <div class="compare-card">
+                <div class="compare-card-header entity-header">
+                  <div class="header-dot" style="background:var(--blue);box-shadow:0 0 5px rgba(96,165,250,.4);"></div>
+                  Suggested entity
+                </div>
+                <div class="compare-field"><div class="field-label">Entity name</div><div class="field-val" id="c-name-r">—</div></div>
+                <div class="compare-field"><div class="field-label">Address</div><div class="field-val" id="c-addr-r">—</div></div>
+                <div class="compare-field"><div class="field-label">Phone</div><div class="field-val" id="c-phone-r">—</div></div>
+                <div class="compare-field"><div class="field-label">Website</div><div class="field-val" id="c-web-r">—</div></div>
+                <div class="compare-field"><div class="field-label">Registered agent</div><div class="field-val" id="c-agent-r">—</div></div>
+                <div class="compare-field"><div class="field-label">Linked filings</div><div class="field-val" id="c-filings-r">—</div></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 3: Match reasoning -->
+          <div class="section">
+            <div class="section-label">Match reasoning</div>
+            <div class="reasoning-grid" id="reasoning-grid">
+              <!-- Injected by JS -->
+            </div>
+            <div class="system-confidence">
+              <div class="sys-conf-label">System confidence</div>
+              <div class="sys-conf-val" id="sys-conf-val">—</div>
+              <div class="sys-conf-bar">
+                <div class="sys-conf-fill" id="sys-conf-fill" style="width:0%;background:var(--amber);"></div>
+              </div>
+              <div class="sys-conf-note" id="sys-conf-note">—</div>
+            </div>
+          </div>
+
+          <!-- Section 4: Timeline -->
+          <div class="section">
+            <div class="section-label">Related filings timeline</div>
+            <div class="timeline" id="timeline">
+              <!-- Injected by JS -->
+            </div>
+          </div>
+
+          <!-- Section 5: Notes + Audit -->
+          <div class="section">
+            <div class="section-label">Notes &amp; audit log</div>
+            <div class="notes-section">
+              <div class="notes-toggle" onclick="toggleNotes()">
+                <span class="notes-toggle-icon" id="notes-icon">▶</span>
+                Reviewer notes &amp; decision history
+              </div>
+              <div class="notes-body" id="notes-body">
+                <textarea class="notes-textarea" id="reviewer-notes" placeholder="Add notes for this identity decision…"></textarea>
+                <div style="margin-top:12px;font-size:10px;color:var(--t4);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;">Decision history</div>
+                <div id="audit-log">
+                  <!-- Injected by JS -->
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div><!-- /workspace -->
+      </div><!-- /workspace-shell -->
+    </div><!-- /right-pane -->
+
+  </div><!-- /split-pane -->
+</div><!-- /app-shell -->
+
+<script>
+const CANDIDATES = [
+  {
+    id: 1,
+    filingName: 'HELOC.com LLC',
+    entityName: 'HELOC.com',
+    conf: 91, confLabel: 'high',
+    filingCount: 2,
+    tags: ['name-variant', 'shared-website'],
+    status: 'needs-decision',
+    filing: {
+      name: 'HELOC.com LLC',
+      address: '33431 Boca Raton, FL',
+      phone: '(800) 220-3333',
+      website: 'heloc.com',
+      agent: 'Self-registered',
+      date: '2023-04-12',
+    },
+    entity: {
+      name: 'HELOC.com',
+      address: '1800 NW Corporate Blvd, Boca Raton, FL 33431',
+      phone: '(800) 220-3333',
+      website: 'heloc.com',
+      agent: 'Self-registered',
+      filings: '2 filings · 1 market',
+    },
+    reasoning: [
+      { label:'Name similarity',       val:'Strong',  cls:'r-strong' },
+      { label:'Domain match',          val:'Exact',   cls:'r-strong' },
+      { label:'Phone match',           val:'Yes',     cls:'r-yes' },
+      { label:'Address proximity',     val:'High',    cls:'r-strong' },
+      { label:'Reg. agent signal',     val:'Weak',    cls:'r-weak' },
+      { label:'Filing age gap',        val:'<1 year', cls:'r-medium' },
+    ],
+    sysConf: { val:'High', pct:91, color:'var(--green)', note:'4 of 5 signals agree' },
+    timeline: [
+      { year:'2022', event:'First filing', detail:'HELOC.com — Boca Raton, FL · Trade name', type:'formation' },
+      { year:'2023', event:'Second filing', detail:'HELOC.com LLC — same address, different entity type', type:'amendment', badge:'Duplicate candidate' },
+      { year:'2024', event:'Address verified', detail:'Google Places confirmed 1800 NW Corporate Blvd', type:'address' },
+    ],
+    audit: [
+      { time:'2026-04-22 09:14', reviewer:'system', action:'Auto-flagged as identity candidate · conf 91%', badge:'auto', badgeCls:'conf-high' },
+    ],
+  },
+  {
+    id: 2,
+    filingName: 'JCM Electrical Services',
+    entityName: 'JCM Electrical',
+    conf: 78, confLabel: 'medium',
+    filingCount: 1,
+    tags: ['name-variant', 'addr-overlap'],
+    status: 'needs-decision',
+    filing: {
+      name: 'JCM Electrical Services',
+      address: '317 Hackberry Dr, New Castle, DE 19720',
+      phone: '(302) 419-3232',
+      website: 'jcmelec.com',
+      agent: 'Self-registered',
+      date: '2019-03-15',
+    },
+    entity: {
+      name: 'JCM Electrical',
+      address: '317 Hackberry Dr Ste B110, New Castle, DE 19720',
+      phone: '(302) 419-3232',
+      website: 'jcmelec.com',
+      agent: 'Self-registered',
+      filings: '1 filing · 1 market',
+    },
+    reasoning: [
+      { label:'Name similarity',       val:'Strong',  cls:'r-strong' },
+      { label:'Domain match',          val:'Exact',   cls:'r-strong' },
+      { label:'Phone match',           val:'Yes',     cls:'r-yes' },
+      { label:'Address proximity',     val:'Medium',  cls:'r-medium' },
+      { label:'Reg. agent signal',     val:'None',    cls:'r-none' },
+      { label:'Filing age gap',        val:'5 years', cls:'r-medium' },
+    ],
+    sysConf: { val:'Medium', pct:78, color:'var(--amber)', note:'Suite number differs' },
+    timeline: [
+      { year:'2019', event:'Formation', detail:'JCM Electrical Services · Trade name · New Castle, DE', type:'formation' },
+      { year:'2024', event:'Google verified', detail:'Operating address confirmed — suite number differs from registry', type:'address' },
+    ],
+    audit: [
+      { time:'2026-04-21 14:22', reviewer:'system', action:'Auto-flagged · name variant + shared domain', badge:'auto', badgeCls:'conf-medium' },
+    ],
+  },
+  {
+    id: 3,
+    filingName: 'Scope Content LLC',
+    entityName: 'Scope Content, Inc.',
+    conf: 44, confLabel: 'low',
+    filingCount: 2,
+    tags: ['needs-decision', 'addr-overlap'],
+    status: 'needs-decision',
+    filing: {
+      name: 'Scope Content LLC',
+      address: 'Dover, DE 19901',
+      phone: '(302) 248-1896',
+      website: '—',
+      agent: 'CT Corporation System',
+      date: '2021-08-30',
+    },
+    entity: {
+      name: 'Scope Content, Inc.',
+      address: '560 Mission St, San Francisco, CA 94105',
+      phone: '(415) 555-0108',
+      website: 'scopecontent.com',
+      agent: 'CT Corporation System',
+      filings: '2 filings · 3 markets',
+    },
+    reasoning: [
+      { label:'Name similarity',       val:'Medium',  cls:'r-medium' },
+      { label:'Domain match',          val:'None',    cls:'r-none' },
+      { label:'Phone match',           val:'No',      cls:'r-no' },
+      { label:'Address proximity',     val:'Low',     cls:'r-weak' },
+      { label:'Reg. agent signal',     val:'Strong',  cls:'r-strong' },
+      { label:'Filing age gap',        val:'3 years', cls:'r-medium' },
+    ],
+    sysConf: { val:'Low', pct:44, color:'var(--red)', note:'Shared agent only — likely coincidence' },
+    timeline: [
+      { year:'2018', event:'Entity formed', detail:'Scope Content, Inc. · California · Media company', type:'formation' },
+      { year:'2021', event:'DE filing detected', detail:'Scope Content LLC · Dover, DE · Possible shell', type:'amendment', badge:'Review needed' },
+    ],
+    audit: [
+      { time:'2026-04-20 11:05', reviewer:'system', action:'Flagged · shared registered agent · low confidence', badge:'auto', badgeCls:'conf-low' },
+    ],
+  },
+  {
+    id: 4,
+    filingName: 'PM Construction Services',
+    entityName: 'PM Construction Group',
+    conf: 67, confLabel: 'medium',
+    filingCount: 2,
+    tags: ['name-variant', 'needs-decision'],
+    status: 'needs-decision',
+    filing: {
+      name: 'PM Construction Services',
+      address: 'Farmingdale, NY 11735',
+      phone: '(631) 420-0400',
+      website: '—',
+      agent: 'Northwest Registered Agent',
+      date: '2020-06-14',
+    },
+    entity: {
+      name: 'PM Construction Group',
+      address: '100 Motor Pkwy, Hauppauge, NY 11788',
+      phone: '(631) 420-0400',
+      website: 'pmconstruction.com',
+      agent: 'Northwest Registered Agent',
+      filings: '2 filings · 2 markets',
+    },
+    reasoning: [
+      { label:'Name similarity',       val:'Strong',  cls:'r-strong' },
+      { label:'Domain match',          val:'Partial', cls:'r-medium' },
+      { label:'Phone match',           val:'Yes',     cls:'r-yes' },
+      { label:'Address proximity',     val:'Medium',  cls:'r-medium' },
+      { label:'Reg. agent signal',     val:'Strong',  cls:'r-strong' },
+      { label:'Filing age gap',        val:'2 years', cls:'r-medium' },
+    ],
+    sysConf: { val:'Medium', pct:67, color:'var(--amber)', note:'Name variant — "Services" vs "Group"' },
+    timeline: [
+      { year:'2018', event:'Formation', detail:'PM Construction Group · NY · General contractor', type:'formation' },
+      { year:'2020', event:'DE filing', detail:'PM Construction Services — possible DBA or subsidiary', type:'amendment' },
+      { year:'2025', event:'Address update', detail:'Farmingdale office verified via Google Places', type:'address' },
+    ],
+    audit: [
+      { time:'2026-04-19 16:40', reviewer:'system', action:'Auto-flagged · name variant + shared phone', badge:'auto', badgeCls:'conf-medium' },
+    ],
+  },
+  {
+    id: 5,
+    filingName: 'Sidley Austin LLP',
+    entityName: 'Sidley Austin LLP',
+    conf: 98, confLabel: 'high',
+    filingCount: 1,
+    tags: ['shared-website'],
+    status: 'confirmed',
+    filing: {
+      name: 'Sidley Austin LLP',
+      address: 'New York, NY 10019',
+      phone: '(212) 839-5300',
+      website: 'sidley.com',
+      agent: 'CT Corporation System',
+      date: '1995-01-01',
+    },
+    entity: {
+      name: 'Sidley Austin LLP',
+      address: '787 Seventh Ave, New York, NY 10019',
+      phone: '(212) 839-5300',
+      website: 'sidley.com',
+      agent: 'CT Corporation System',
+      filings: '12 filings · 8 markets',
+    },
+    reasoning: [
+      { label:'Name similarity',       val:'Strong',  cls:'r-strong' },
+      { label:'Domain match',          val:'Exact',   cls:'r-strong' },
+      { label:'Phone match',           val:'Yes',     cls:'r-yes' },
+      { label:'Address proximity',     val:'High',    cls:'r-strong' },
+      { label:'Reg. agent signal',     val:'Strong',  cls:'r-strong' },
+      { label:'Filing age gap',        val:'None',    cls:'r-strong' },
+    ],
+    sysConf: { val:'High', pct:98, color:'var(--green)', note:'All signals agree — EDGAR confirmed' },
+    timeline: [
+      { year:'1995', event:'Formation', detail:'Sidley Austin LLP · National law firm', type:'formation' },
+      { year:'2010', event:'SEC EDGAR match', detail:'Public filing confirmed entity identity at 99%', type:'address' },
+      { year:'2026', event:'DE registry filing', detail:'Routine state registration · same entity', type:'formation' },
+    ],
+    audit: [
+      { time:'2026-04-18 10:22', reviewer:'system', action:'EDGAR match · auto-flagged as confirmed', badge:'auto', badgeCls:'conf-high' },
+      { time:'2026-04-18 14:05', reviewer:'reviewer_01', action:'Linked to existing entity · Sidley Austin LLP', badge:'linked', badgeCls:'conf-high' },
+    ],
+  },
+];
+
+let currentFilter = 'pending';
+let selectedId    = null;
+const decisions   = {};
+
+function buildCards() {
+  const list = document.getElementById('candidates-list');
+  list.innerHTML = '';
+  const q = document.getElementById('search-input').value.toLowerCase();
+  CANDIDATES
+    .filter(c => {
+      if (currentFilter === 'pending' && c.status === 'confirmed') return false;
+      if (q && !c.filingName.toLowerCase().includes(q) && !c.entityName.toLowerCase().includes(q)) return false;
+      return true;
+    })
+    .forEach(c => {
+      const div = document.createElement('div');
+      const confCls = c.confLabel === 'high' ? 'conf-high' : c.confLabel === 'medium' ? 'conf-medium' : 'conf-low';
+      const tagMap  = { 'name-variant':'Name variant','shared-website':'Shared website','addr-overlap':'Address overlap','needs-decision':'Needs decision' };
+      const tagCls  = { 'name-variant':'name-variant','shared-website':'shared-website','addr-overlap':'addr-overlap','needs-decision':'needs-decision' };
+      div.className = `candidate-card ${c.status}${selectedId===c.id?' selected':''}`;
+      div.innerHTML = `
+        <div class="card-row">
+          <div>
+            <div class="card-name">${c.filingName}</div>
+            <div class="card-entity">→ ${c.entityName}</div>
+          </div>
+          <span class="conf-badge ${confCls}">${c.conf}%</span>
+        </div>
+        <div class="card-tags">
+          ${c.tags.map(t=>`<span class="tag ${tagCls[t]||''}">${tagMap[t]||t}</span>`).join('')}
+        </div>
+        <div class="card-filings">${c.filingCount} filing${c.filingCount>1?'s':''} · ${c.status.replace('-',' ')}</div>
+      `;
+      div.onclick = () => loadCandidate(c.id);
+      list.appendChild(div);
+    });
+}
+
+function loadCandidate(id) {
+  selectedId = id;
+  buildCards();
+  const c = CANDIDATES.find(x => x.id === id);
+  if (!c) return;
+
+  document.getElementById('empty-state').style.display = 'none';
+  const shell = document.getElementById('workspace-shell');
+  shell.style.display = 'flex';
+  shell.classList.remove('fade-in');
+  void shell.offsetWidth;
+  shell.classList.add('fade-in');
+
+  const confCls = c.confLabel === 'high' ? 'conf-high' : c.confLabel === 'medium' ? 'conf-medium' : 'conf-low';
+  document.getElementById('ws-name').textContent         = c.filingName;
+  document.getElementById('ws-entity').textContent       = `→ Suggested entity: ${c.entityName}`;
+  const badge = document.getElementById('ws-conf-badge');
+  badge.textContent = `${c.conf}% ${c.confLabel}`;
+  badge.className   = `conf-large ${confCls}`;
+
+  // Comparison fields
+  const setField = (id, val, matchCls) => {
+    const el = document.getElementById(id);
+    el.textContent = val || '—';
+    el.className   = `field-val ${!val ? 'empty' : matchCls || ''}`;
+  };
+  setField('c-name-l',  c.filing.name);
+  setField('c-addr-l',  c.filing.address);
+  setField('c-phone-l', c.filing.phone, c.filing.phone===c.entity.phone?'match':'');
+  setField('c-web-l',   c.filing.website, c.filing.website===c.entity.website?'match':'');
+  setField('c-agent-l', c.filing.agent, c.filing.agent===c.entity.agent?'match':'');
+  setField('c-date-l',  c.filing.date);
+  setField('c-name-r',  c.entity.name);
+  setField('c-addr-r',  c.entity.address);
+  setField('c-phone-r', c.entity.phone, c.entity.phone===c.filing.phone?'match':'');
+  setField('c-web-r',   c.entity.website, c.entity.website===c.filing.website?'match':'');
+  setField('c-agent-r', c.entity.agent, c.entity.agent===c.filing.agent?'match':'');
+  setField('c-filings-r', c.entity.filings);
+
+  // Reasoning grid
+  const rg = document.getElementById('reasoning-grid');
+  rg.innerHTML = c.reasoning.map(r => `
+    <div class="reasoning-item">
+      <div class="reasoning-label">${r.label}</div>
+      <div class="reasoning-val ${r.cls}">${r.val}</div>
+    </div>
+  `).join('');
+
+  // System confidence
+  document.getElementById('sys-conf-val').textContent    = c.sysConf.val;
+  document.getElementById('sys-conf-val').className      = `sys-conf-val ${c.confLabel==='high'?'r-strong':c.confLabel==='medium'?'r-medium':'r-weak'}`;
+  document.getElementById('sys-conf-note').textContent   = c.sysConf.note;
+  const fill = document.getElementById('sys-conf-fill');
+  fill.style.width      = '0%';
+  fill.style.background = c.sysConf.color;
+  setTimeout(() => { fill.style.width = c.sysConf.pct + '%'; }, 80);
+
+  // Timeline
+  const tl = document.getElementById('timeline');
+  tl.innerHTML = c.timeline.map(t => `
+    <div class="timeline-item">
+      <div class="timeline-dot ${t.type}"></div>
+      <div class="timeline-year">${t.year}</div>
+      <div class="timeline-event">
+        ${t.event}
+        ${t.badge ? `<span class="timeline-badge conf-medium">${t.badge}</span>` : ''}
+      </div>
+      <div class="timeline-detail">${t.detail}</div>
+    </div>
+  `).join('');
+
+  // Audit log
+  const dec  = decisions[id] || [];
+  const all  = [...c.audit, ...dec];
+  const log  = document.getElementById('audit-log');
+  log.innerHTML = all.map(a => `
+    <div class="audit-row">
+      <span class="audit-time">${a.time}</span>
+      <span class="audit-reviewer">${a.reviewer}</span>
+      <span class="audit-action">${a.action}</span>
+      <span class="audit-badge ${a.badgeCls}">${a.badge}</span>
+    </div>
+  `).join('');
+
+  // Restore notes
+  document.getElementById('reviewer-notes').value = c._notes || '';
+}
+
+function logDecision(action) {
+  if (!selectedId) return;
+  const c   = CANDIDATES.find(x => x.id === selectedId);
+  if (!c) return;
+  const now = new Date().toISOString().slice(0,16).replace('T',' ');
+  const msgMap = {
+    linked:    `Linked to existing entity · ${c.entityName}`,
+    created:   'Created as new business entity',
+    rejected:  'Match rejected — treated as separate entity',
+    split:     'Cluster split — sent for re-clustering',
+    escalated: 'Escalated for senior review',
+  };
+  const clsMap = {
+    linked: 'conf-high', created: 'conf-medium',
+    rejected: 'conf-low', split: 'conf-medium', escalated: 'conf-medium',
+  };
+  if (!decisions[selectedId]) decisions[selectedId] = [];
+  decisions[selectedId].push({
+    time: now, reviewer: 'reviewer_01',
+    action: msgMap[action], badge: action, badgeCls: clsMap[action],
+  });
+  c.status = action === 'linked' ? 'confirmed' : action === 'rejected' ? 'conflict' : 'needs-decision';
+  c._notes = document.getElementById('reviewer-notes').value;
+  loadCandidate(selectedId);
+  buildCards();
+}
+
+function toggleNotes() {
+  const body = document.getElementById('notes-body');
+  const icon = document.getElementById('notes-icon');
+  body.classList.toggle('visible');
+  icon.classList.toggle('open');
+}
+
+function setFilter(f) {
+  currentFilter = f;
+  document.getElementById('filter-pending').classList.toggle('active', f === 'pending');
+  document.getElementById('filter-all').classList.toggle('active', f === 'all');
+  buildCards();
+}
+
+function filterCards() { buildCards(); }
+
+// Init
+buildCards();
+</script>
+</body>
+</html>
