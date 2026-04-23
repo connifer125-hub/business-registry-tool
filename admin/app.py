@@ -67,7 +67,7 @@ def queue():
     with get_conn() as conn:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             cur.execute("SELECT DISTINCT source_market FROM businesses ORDER BY source_market")
-            markets = [r[0] for r in cur.fetchall()]
+            markets = [r["source_market"] for r in cur.fetchall()]
             cur.execute("""
                 SELECT
                   COUNT(*) FILTER (WHERE entity_segment = 'small_business') AS small_count,
