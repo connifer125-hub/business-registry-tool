@@ -47,30 +47,47 @@ def queue():
     market   = request.args.get("market", "")
     status   = request.args.get("status", "pending")
     search   = request.args.get("search", "").strip()
+    track    = request.args.get("track", "")
     offset   = (page - 1) * per_page
+
+    # Map track name to entity_segment value
+    segment_map = {"small": "small_business", "mid": "mid_market", "ent": "enterprise"}
+    segment = segment_map.get(track, None)
 
     records, total = _fetch_records(
         limit=per_page, offset=offset,
         source_market=market or None,
         qa_status=status or None,
-        search=search or None
+        search=search or None,
+        entity_segment=segment
     )
     total_pages = (total + per_page - 1) // per_page
 
+    # Track counts for pills
     with get_conn() as conn:
-        with conn.cursor() as cur:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             cur.execute("SELECT DISTINCT source_market FROM businesses ORDER BY source_market")
             markets = [r[0] for r in cur.fetchall()]
+            cur.execute("""
+                SELECT
+                  COUNT(*) FILTER (WHERE entity_segment = 'small_business') AS small_count,
+                  COUNT(*) FILTER (WHERE entity_segment = 'mid_market')     AS mid_count,
+                  COUNT(*) FILTER (WHERE entity_segment = 'enterprise')     AS ent_count,
+                  COUNT(*) FILTER (WHERE entity_segment IS NULL)            AS unsegmented
+                FROM businesses
+            """)
+            track_counts = dict(cur.fetchone())
 
     return render_template("queue.html",
         records=records, page=page, per_page=per_page,
         total=total, total_pages=total_pages,
         markets=markets, selected_market=market,
-        selected_status=status, search=search
+        selected_status=status, search=search,
+        selected_track=track, track_counts=track_counts
     )
 
 
-def _fetch_records(limit, offset, source_market=None, qa_status="pending", search=None):
+def _fetch_records(limit, offset, source_market=None, qa_status="pending", search=None, entity_segment=None):
     conditions = []
     params = []
 
@@ -83,6 +100,9 @@ def _fetch_records(limit, offset, source_market=None, qa_status="pending", searc
     if search:
         conditions.append("business_name ILIKE %s")
         params.append(f"%{search}%")
+    if entity_segment:
+        conditions.append("entity_segment = %s")
+        params.append(entity_segment)
 
     where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
 
@@ -103,7 +123,8 @@ def _fetch_records(limit, offset, source_market=None, qa_status="pending", searc
                        google_place_id, google_address, google_phone,
                        website_url, google_maps_url,
                        address_match_score, address_match,
-                       pre_qa_status, pre_qa_note
+                       pre_qa_status, pre_qa_note,
+                       entity_segment
                 FROM businesses {where}
                 ORDER BY scraped_at DESC
                 LIMIT %s OFFSET %s
