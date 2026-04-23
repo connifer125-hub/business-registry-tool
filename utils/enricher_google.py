@@ -85,7 +85,88 @@ def search_places_new(business_name: str, city: str, state: str) -> dict | None:
         return None
 
 
-def determine_qa_routing(match_score: float, found: bool) -> tuple:
+import re
+
+def extract_domain(url: str) -> str:
+    """Pull bare domain from a URL for comparison."""
+    if not url:
+        return ""
+    url = url.lower().strip()
+    for prefix in ["https://", "http://", "www."]:
+        if url.startswith(prefix):
+            url = url[len(prefix):]
+    return url.split("/")[0].split("?")[0]
+
+
+def extract_dotcom_from_name(business_name: str) -> str | None:
+    """
+    If the business name itself contains a .com domain, return it.
+    'HELOC.com' → 'heloc.com'
+    'Carrie's Auto' → None
+    """
+    match = re.search(r'[\w\-]+\.com', business_name, re.IGNORECASE)
+    return match.group(0).lower() if match else None
+
+
+def validate_website_url(raw_url: str, business_name: str, city: str, state: str) -> str | None:
+    """
+    Decide whether to accept the URL Google returned.
+
+    Case 1 — business name contains .com (e.g. 'HELOC.com'):
+      Only accept if the returned domain exactly matches the .com in the name.
+      'heloc.com' for 'HELOC.com' → accept.
+      'quickenloans.com' for 'HELOC.com' → reject.
+
+    Case 2 — business name does NOT contain .com (e.g. "Carrie's Auto"):
+      Accept whatever Google returns — the location-based search already
+      did the filtering. 'autobycarrie.com' is fine for "Carrie's Auto Boca Raton".
+      Only reject if the domain is completely generic (google.com, facebook.com,
+      yelp.com etc.) which would mean Google didn't find a real website.
+    """
+    if not raw_url:
+        return None
+
+    domain = extract_domain(raw_url)
+
+    # Always reject generic platforms — these are not the business's own site
+    GENERIC_DOMAINS = {
+        "google.com", "maps.google.com", "facebook.com", "yelp.com",
+        "yellowpages.com", "bbb.org", "linkedin.com", "instagram.com",
+        "twitter.com", "x.com", "tripadvisor.com", "foursquare.com",
+        "mapquest.com", "apple.com", "bing.com"
+    }
+    if any(domain == g or domain.endswith("."+g) for g in GENERIC_DOMAINS):
+        return None
+
+    # Case 1: business name has .com in it — strict domain match required
+    expected_domain = extract_dotcom_from_name(business_name)
+    if expected_domain:
+        if domain == expected_domain or domain == "www." + expected_domain:
+            return raw_url
+        else:
+            return None  # Google returned wrong site for a .com-named business
+
+    # Case 2: normal business name — accept what Google returned
+    # The location search context already did the filtering
+    return raw_url
+
+
+def result_name_matches_query(result_name: str, business_name: str) -> bool:
+    """
+    Check that the Google Places result name is plausibly the business
+    we searched for. Loose match — location context handled precision.
+    """
+    if not result_name or not business_name:
+        return False
+    score = fuzz.token_sort_ratio(
+        business_name.lower().strip(),
+        result_name.lower().strip()
+    )
+    # If the business name contains .com, be stricter — 70% threshold
+    # For normal names, 50% is fine — location search is doing the work
+    expected_domain = extract_dotcom_from_name(business_name)
+    threshold = 70 if expected_domain else 50
+    return score >= threshold
     if not found:
         return "flag", "Business not found on Google Places — cannot corroborate"
     if match_score >= 0.90:
@@ -118,16 +199,28 @@ def enrich_with_google(business_id: int, business_name: str, city: str,
         result["pre_qa_note"] = "Business not found on Google Places"
         return result
 
+    # Verify the result name actually matches what we searched for
+    result_name = place.get("displayName", {}).get("text", "") if isinstance(place.get("displayName"), dict) else place.get("displayName", "")
+    if not result_name_matches_query(result_name, business_name):
+        result["pre_qa_note"] = f"Google result '{result_name}' does not match '{business_name}' — rejected to avoid false enrichment"
+        return result
+
     google_address = place.get("formattedAddress", "")
     match_score    = address_match_score(registry_address, google_address)
     routing_status, routing_note = determine_qa_routing(match_score, True)
+
+    # Validate and accept or reject the website URL
+    raw_url     = place.get("websiteUri")
+    website_url = validate_website_url(raw_url, business_name, city or "", state or "")
+    if raw_url and not website_url:
+        routing_note += f" | Website '{extract_domain(raw_url)}' rejected — not the business's own site"
 
     result.update({
         "google_found":        True,
         "google_place_id":     place.get("id"),
         "google_address":      google_address,
         "google_phone":        place.get("nationalPhoneNumber"),
-        "website_url":         place.get("websiteUri"),
+        "website_url":         website_url,
         "google_maps_url":     place.get("googleMapsUri"),
         "address_match_score": round(match_score, 3),
         "address_match":       match_score >= 0.70,
@@ -154,7 +247,7 @@ def enrich_with_google(business_id: int, business_name: str, city: str,
                 """, (
                     place.get("id"), google_address,
                     place.get("nationalPhoneNumber"),
-                    place.get("websiteUri"),
+                    website_url,
                     place.get("googleMapsUri"),
                     round(match_score, 3),
                     match_score >= 0.70,
