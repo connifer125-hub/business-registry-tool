@@ -358,7 +358,9 @@ body,input,select,button,textarea { font-family: 'DM Sans', sans-serif; }
               <span class="unsaved-dot" id="dot-name-{{ r.business_id }}"></span>
             </div>
             <div class="name-sub">#{{ r.filing_id or r.business_id }}</div>
-            {% if r.is_duplicate_of %}<span class="dupe-badge">{{ r.business_name|lower }} 2 filings</span>{% endif %}
+            {% if r.is_duplicate_of %}
+              <span class="dupe-badge" title="Duplicate of filing #{{ r.is_duplicate_of }}">⚑ duplicate filing</span>
+            {% endif %}
           </td>
 
           <td class="w-dba col-detail"><span style="font-size:11px;color:#7a7870;">{{ r.trade_name or '—' }}</span></td>
