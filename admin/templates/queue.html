@@ -240,6 +240,7 @@ body,input,select,button,textarea { font-family: 'DM Sans', sans-serif; }
     <div class="top-meta">{{ total }} records &middot; page {{ page }} of {{ total_pages }}</div>
     <div style="margin-left:auto;display:flex;gap:8px;align-items:center;">
       <form method="GET" style="display:flex;gap:8px;align-items:center;">
+        <input type="hidden" name="track" value="{{ selected_track or 'small' }}">
         <select name="market" class="filter-input" style="width:120px;">
           <option value="">All markets</option>
           {% for m in markets %}
@@ -263,18 +264,28 @@ body,input,select,button,textarea { font-family: 'DM Sans', sans-serif; }
   <!-- Track tabs -->
   <form method="POST" action="{{ url_for('bulk_action') }}" id="bulk-form">
   <div class="track-tabs">
-    <button type="button" class="track-tab active-small" id="tab-small" onclick="setTrack('small')">
+    <button type="button" class="track-tab {% if selected_track == 'small' or not selected_track %}active-small{% endif %}"
+      id="tab-small" onclick="setTrack('small')">
       Track 1 — Small business
-      <span class="track-pill" style="background:#edf7f1;color:#0f4a33;" id="pill-small">—</span>
+      <span class="track-pill" style="background:#edf7f1;color:#0f4a33;">{{ track_counts.small_count or 0 }}</span>
     </button>
-    <button type="button" class="track-tab" id="tab-mid" onclick="setTrack('mid')">
+    <button type="button" class="track-tab {% if selected_track == 'mid' %}active-mid{% endif %}"
+      id="tab-mid" onclick="setTrack('mid')">
       Track 2 — Mid-market
-      <span class="track-pill" style="background:#f5f0fc;color:#3d1a6e;" id="pill-mid">—</span>
+      <span class="track-pill" style="background:#f5f0fc;color:#3d1a6e;">{{ track_counts.mid_count or 0 }}</span>
     </button>
-    <button type="button" class="track-tab" id="tab-ent" onclick="setTrack('ent')">
+    <button type="button" class="track-tab {% if selected_track == 'ent' %}active-ent{% endif %}"
+      id="tab-ent" onclick="setTrack('ent')">
       Track 3 — Enterprise
-      <span class="track-pill" style="background:#eef3fb;color:#0c2d6b;" id="pill-ent">—</span>
+      <span class="track-pill" style="background:#eef3fb;color:#0c2d6b;">{{ track_counts.ent_count or 0 }}</span>
     </button>
+    {% if track_counts.unsegmented %}
+    <button type="button" class="track-tab {% if selected_track == 'all' %}active-small{% endif %}"
+      id="tab-all" onclick="setTrack('all')">
+      All records
+      <span class="track-pill" style="background:#f1efe8;color:#7a7870;">{{ track_counts.unsegmented }} unassigned</span>
+    </button>
+    {% endif %}
     <div class="bulk-actions">
       <input type="checkbox" id="sel-all" onchange="toggleAll(this)" style="margin-right:4px;">
       <label for="sel-all" style="font-size:13px;color:#7a7870;margin-right:8px;">Select all</label>
@@ -536,11 +547,11 @@ body,input,select,button,textarea { font-family: 'DM Sans', sans-serif; }
   <!-- Pagination -->
   <div class="pagination">
     {% if page > 1 %}
-      <a href="{{ url_for('queue', page=page-1, market=selected_market, status=selected_status, search=search) }}" class="page-btn">← Prev</a>
+      <a href="{{ url_for('queue', page=page-1, market=selected_market, status=selected_status, search=search, track=selected_track) }}" class="page-btn">← Prev</a>
     {% endif %}
     <span>Page {{ page }} of {{ total_pages }}</span>
     {% if page < total_pages %}
-      <a href="{{ url_for('queue', page=page+1, market=selected_market, status=selected_status, search=search) }}" class="page-btn">Next →</a>
+      <a href="{{ url_for('queue', page=page+1, market=selected_market, status=selected_status, search=search, track=selected_track) }}" class="page-btn">Next →</a>
     {% endif %}
     <span style="margin-left:auto;font-size:11px;color:#b4b2a9;">{{ total }} total records</span>
   </div>
@@ -602,13 +613,11 @@ const TRACKS = {
 };
 
 function setTrack(track) {
-  ['small','mid','ent'].forEach(t => {
-    document.getElementById('tab-'+t).className = 'track-tab';
-  });
-  document.getElementById('tab-'+track).className = 'track-tab active-'+track;
-  const cfg = TRACKS[track];
-  document.getElementById('banner-label').textContent = cfg.label;
-  document.getElementById('banner-chips').innerHTML = cfg.sources.map(s => chip(s.label,s.cls,s.icon)).join('');
+  // Navigate to filtered URL — this is what actually filters the records
+  const url = new URL(window.location.href);
+  url.searchParams.set('track', track);
+  url.searchParams.set('page', '1'); // reset to page 1 on tab switch
+  window.location.href = url.toString();
 }
 
 function setView(view) {
@@ -833,7 +842,11 @@ function openResearch(name, city, state, entityType, industry) {
 document.addEventListener('DOMContentLoaded', () => {
   renderAreaCodes();
   highlightDuplicateNames();
-  setTrack('small');
+  // Set banner based on which track Flask is currently showing
+  const activeTrack = '{{ selected_track or "small" }}';
+  const cfg = TRACKS[activeTrack] || TRACKS['small'];
+  document.getElementById('banner-label').textContent = cfg.label;
+  document.getElementById('banner-chips').innerHTML = cfg.sources.map(s => chip(s.label, s.cls, s.icon)).join('');
 });
 </script>
 </body>
