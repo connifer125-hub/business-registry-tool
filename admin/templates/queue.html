@@ -232,6 +232,14 @@ body,input,select,button,textarea { font-family: 'DM Sans', sans-serif; }
     {% endfor %}
   {% endwith %}
 
+  {% if dupe_filter %}
+  <div style="padding:10px 28px;background:#fffbf0;border-bottom:0.5px solid #fcd34d;display:flex;align-items:center;gap:10px;font-size:13px;flex-shrink:0;">
+    <span style="font-weight:500;color:#c47b1a;">⚑ Showing duplicate filings only</span>
+    <span style="color:#7a7870;">Records sorted alphabetically so pairs appear together. Review each pair and reject or merge the duplicate.</span>
+    <a href="{{ url_for('queue') }}?status=pending" style="margin-left:auto;font-size:12px;color:#7a7870;text-decoration:none;border:0.5px solid #e8e6e1;padding:4px 12px;border-radius:6px;background:#fff;">✕ Clear filter</a>
+  </div>
+  {% endif %}
+
   <!-- Top bar -->
   <div class="top-bar">
     <div>
