@@ -358,6 +358,14 @@ def export():
 
 
 # ─────────────────────────────────────────────
+# Identity Review
+# ─────────────────────────────────────────────
+@app.route("/identity-review")
+def identity_review():
+    return render_template("identity_review.html")
+
+
+# ─────────────────────────────────────────────
 # Markets
 # ─────────────────────────────────────────────
 @app.route("/markets")
