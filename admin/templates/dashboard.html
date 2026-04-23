@@ -31,7 +31,10 @@ body { font-family: 'DM Sans', sans-serif; }
 .stat-card {
   background: #fff; border: 0.5px solid #e8e6e1; border-radius: 12px;
   padding: 18px 20px; position: relative; overflow: hidden;
+  text-decoration: none; display: block;
+  transition: transform .15s, box-shadow .15s, border-color .15s; cursor: pointer;
 }
+.stat-card:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(0,0,0,.08); border-color: #c4c2bc; }
 .stat-card::before {
   content:''; position:absolute; top:0; left:0; right:0; height:3px;
   background: var(--cc, #e8e6e1);
@@ -117,33 +120,33 @@ body { font-family: 'DM Sans', sans-serif; }
 
   <!-- Stat cards -->
   <div class="stat-grid">
-    <div class="stat-card" style="--cc:#1a6b4a">
+    <a class="stat-card" href="{{ url_for('queue') }}?status=" style="--cc:#1a6b4a">
       <div class="stat-label">Total records</div>
       <div class="stat-num">{{ stats.total }}</div>
       <div class="stat-sub">All markets combined</div>
-    </div>
-    <div class="stat-card" style="--cc:#c47b1a">
+    </a>
+    <a class="stat-card" href="{{ url_for('queue') }}?search=&status=&dupe=1" style="--cc:#c47b1a">
       <div class="stat-label">Duplicate filings</div>
       <div class="stat-num">{{ stats.name_duplicates or 0 }}</div>
       <div class="stat-sub">Same name, multiple filings</div>
       <span class="stat-badge" style="background:#fef3c7;color:#92400e;">flagged for review</span>
-    </div>
-    <div class="stat-card" style="--cc:#1a6b4a">
+    </a>
+    <a class="stat-card" href="{{ url_for('queue') }}?status=" style="--cc:#1a6b4a">
       <div class="stat-label">Unique businesses</div>
       <div class="stat-num">{{ stats.unique }}</div>
       <div class="stat-sub">After deduplication</div>
-    </div>
-    <div class="stat-card" style="--cc:#1a4a8a">
+    </a>
+    <a class="stat-card" href="{{ url_for('queue') }}?status=approved" style="--cc:#1a4a8a">
       <div class="stat-label">Auto-approved</div>
       <div class="stat-num">{{ stats.approved }}</div>
       <div class="stat-sub">90%+ confidence · no review needed</div>
       <span class="stat-badge" style="background:#ecfdf5;color:#065f46;">exported</span>
-    </div>
-    <div class="stat-card" style="--cc:#b83232">
+    </a>
+    <a class="stat-card" href="{{ url_for('queue') }}?status=pending" style="--cc:#b83232">
       <div class="stat-label">Pending review</div>
       <div class="stat-num">{{ stats.pending }}</div>
       <div class="stat-sub">In QA queue across 3 tracks</div>
-    </div>
+    </a>
   </div>
 
   <!-- Duplicates callout -->
@@ -154,7 +157,7 @@ body { font-family: 'DM Sans', sans-serif; }
       <div style="font-size:13px;font-weight:600;color:#1c1b18;margin-bottom:3px;">Duplicate filings detected</div>
       <div style="font-size:12px;color:#7a7870;line-height:1.5;">Same business name filed more than once in the registry. These are flagged automatically at ingest. Review pairs together — one should be rejected or merged.</div>
     </div>
-    <a href="{{ url_for('queue') }}?status=flagged" style="margin-left:auto;padding:8px 16px;border-radius:8px;border:0.5px solid #fcd34d;background:#fff;font-size:13px;color:#c47b1a;text-decoration:none;white-space:nowrap;font-family:'DM Sans',sans-serif;">Review duplicates →</a>
+    <a href="{{ url_for('queue') }}?status=&dupe=1" style="margin-left:auto;padding:8px 16px;border-radius:8px;border:0.5px solid #fcd34d;background:#fff;font-size:13px;color:#c47b1a;text-decoration:none;white-space:nowrap;font-family:'DM Sans',sans-serif;">Review duplicates →</a>
   </div>
   {% endif %}
 
