@@ -48,9 +48,9 @@ def queue():
     status   = request.args.get("status", "pending")
     search   = request.args.get("search", "").strip()
     track    = request.args.get("track", "")
+    dupe     = request.args.get("dupe", "")
     offset   = (page - 1) * per_page
 
-    # Map track name to entity_segment value
     segment_map = {"small": "small_business", "mid": "mid_market", "ent": "enterprise"}
     segment = segment_map.get(track, None)
 
@@ -59,11 +59,11 @@ def queue():
         source_market=market or None,
         qa_status=status or None,
         search=search or None,
-        entity_segment=segment
+        entity_segment=segment,
+        dupes_only=bool(dupe)
     )
     total_pages = (total + per_page - 1) // per_page
 
-    # Track counts for pills
     with get_conn() as conn:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             cur.execute("SELECT DISTINCT source_market FROM businesses ORDER BY source_market")
@@ -83,11 +83,13 @@ def queue():
         total=total, total_pages=total_pages,
         markets=markets, selected_market=market,
         selected_status=status, search=search,
-        selected_track=track, track_counts=track_counts
+        selected_track=track, track_counts=track_counts,
+        dupe_filter=dupe
     )
 
 
-def _fetch_records(limit, offset, source_market=None, qa_status="pending", search=None, entity_segment=None):
+def _fetch_records(limit, offset, source_market=None, qa_status="pending",
+                   search=None, entity_segment=None, dupes_only=False):
     conditions = []
     params = []
 
@@ -103,6 +105,16 @@ def _fetch_records(limit, offset, source_market=None, qa_status="pending", searc
     if entity_segment:
         conditions.append("entity_segment = %s")
         params.append(entity_segment)
+    if dupes_only:
+        # Only return records where the same business_name appears more than once
+        conditions.append("""
+            LOWER(TRIM(business_name)) IN (
+                SELECT LOWER(TRIM(business_name))
+                FROM businesses
+                GROUP BY LOWER(TRIM(business_name))
+                HAVING COUNT(*) > 1
+            )
+        """)
 
     where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
 
@@ -126,7 +138,7 @@ def _fetch_records(limit, offset, source_market=None, qa_status="pending", searc
                        pre_qa_status, pre_qa_note,
                        entity_segment
                 FROM businesses {where}
-                ORDER BY scraped_at DESC
+                ORDER BY LOWER(TRIM(business_name)) ASC, scraped_at DESC
                 LIMIT %s OFFSET %s
             """, params + [limit, offset])
             return cur.fetchall(), total
