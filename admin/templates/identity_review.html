@@ -22,10 +22,10 @@
   --border3: rgba(255,255,255,.2);
 
   --t0: #ffffff;
-  --t1: rgba(255,255,255,.85);
-  --t2: rgba(255,255,255,.55);
-  --t3: rgba(255,255,255,.3);
-  --t4: rgba(255,255,255,.18);
+  --t1: rgba(255,255,255,.92);
+  --t2: rgba(255,255,255,.65);
+  --t3: rgba(255,255,255,.45);
+  --t4: rgba(255,255,255,.38);
 
   --green:  #22c55e;
   --green-dim: rgba(34,197,94,.12);
@@ -498,6 +498,7 @@ body {
 /* Scrollbar utility */
 * { scrollbar-width: thin; scrollbar-color: var(--border2) transparent; }
 
+@keyframes spin { to { transform: rotate(360deg); } }
 @keyframes slideUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
 @keyframes fadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
 .fade-in { animation: fadeIn .25s ease forwards; }
@@ -551,6 +552,8 @@ body {
         <button class="filter-btn" id="filter-all" onclick="setFilter('all')">All</button>
       </div>
       <div class="candidates-list" id="candidates-list">
+        <!-- Duplicate count injected by JS -->
+        <div id="dupe-count-banner" style="display:none;padding:8px 10px;margin-bottom:4px;border-radius:8px;background:var(--amber-dim);border:0.5px solid var(--amber-border);"></div>
         <!-- Cards injected by JS -->
       </div>
     </div>
@@ -698,6 +701,58 @@ body {
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+
+          <!-- AI Summary section -->
+          <div class="section" id="ai-summary-section">
+            <div class="section-label">AI business intelligence
+              <span style="margin-left:8px;font-size:10px;color:var(--amber);font-style:italic;text-transform:none;letter-spacing:0;">⚠ For review assistance only — verify against primary sources before approving</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+
+              <!-- Summary 1: Structured data -->
+              <div style="border:0.5px solid var(--border1);border-radius:10px;overflow:hidden;background:var(--bg1);">
+                <div style="padding:10px 14px;border-bottom:0.5px solid var(--border1);background:var(--bg2);display:flex;align-items:center;justify-content:space-between;">
+                  <div style="display:flex;align-items:center;gap:7px;">
+                    <img src="https://www.google.com/s2/favicons?domain=anthropic.com&sz=14" style="opacity:.7;">
+                    <span style="font-size:11px;font-weight:500;color:var(--t1);">Claude — structured data</span>
+                  </div>
+                  <button id="gen-structured-btn" onclick="generateSummary('structured')"
+                    style="font-size:11px;padding:4px 10px;border-radius:6px;border:0.5px solid var(--teal-border);background:var(--teal-dim);color:var(--teal);cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .12s;"
+                    onmouseover="this.style.background='rgba(45,212,191,.18)'" onmouseout="this.style.background='var(--teal-dim)'">
+                    Generate
+                  </button>
+                </div>
+                <div id="summary-structured" style="padding:12px 14px;font-size:12px;color:var(--t3);line-height:1.7;min-height:80px;">
+                  <span style="color:var(--t4);font-style:italic;">Click Generate to summarize using registry data, Google Places, phone signals, and SIC classification.</span>
+                </div>
+                <div style="padding:6px 14px;border-top:0.5px solid var(--border0);font-size:10px;color:var(--t4);">
+                  ∗ Based on pipeline-collected data only · not a live web search
+                </div>
+              </div>
+
+              <!-- Summary 2: Web search -->
+              <div style="border:0.5px solid var(--border1);border-radius:10px;overflow:hidden;background:var(--bg1);">
+                <div style="padding:10px 14px;border-bottom:0.5px solid var(--border1);background:var(--bg2);display:flex;align-items:center;justify-content:space-between;">
+                  <div style="display:flex;align-items:center;gap:7px;">
+                    <img src="https://www.google.com/s2/favicons?domain=anthropic.com&sz=14" style="opacity:.7;">
+                    <span style="font-size:11px;font-weight:500;color:var(--t1);">Claude — web search</span>
+                  </div>
+                  <button id="gen-websearch-btn" onclick="generateSummary('websearch')"
+                    style="font-size:11px;padding:4px 10px;border-radius:6px;border:0.5px solid var(--blue);background:rgba(96,165,250,.1);color:var(--blue);cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .12s;"
+                    onmouseover="this.style.background='rgba(96,165,250,.2)'" onmouseout="this.style.background='rgba(96,165,250,.1)'">
+                    Generate
+                  </button>
+                </div>
+                <div id="summary-websearch" style="padding:12px 14px;font-size:12px;color:var(--t3);line-height:1.7;min-height:80px;">
+                  <span style="color:var(--t4);font-style:italic;">Click Generate to search the web for current information — news, reviews, LinkedIn presence, red flags.</span>
+                </div>
+                <div style="padding:6px 14px;border-top:0.5px solid var(--border0);font-size:10px;color:var(--t4);">
+                  ∗ Live web search · results may not reflect current business status · verify independently
+                </div>
+              </div>
+
             </div>
           </div>
 
@@ -1325,15 +1380,35 @@ const CANDIDATES = [
 function buildCards() {
   const list = document.getElementById('candidates-list');
   list.innerHTML = '';
-  const q = document.getElementById('search-input').value.toLowerCase();
 
-  CANDIDATES
-    .filter(c => {
-      if (currentFilter === 'pending' && (c.status === 'confirmed' || c.status === 'conflict')) return false;
-      if (q && !c.filingName.toLowerCase().includes(q) && !c.entityName.toLowerCase().includes(q)) return false;
-      return true;
-    })
-    .forEach(c => {
+  // Restore the banner element
+  const banner = document.createElement('div');
+  banner.id = 'dupe-count-banner';
+  list.appendChild(banner);
+
+  const q = document.getElementById('search-input').value.toLowerCase();
+  const filtered = CANDIDATES.filter(c => {
+    if (currentFilter === 'pending' && (c.status === 'confirmed' || c.status === 'conflict')) return false;
+    if (q && !c.filingName.toLowerCase().includes(q) && !c.entityName.toLowerCase().includes(q)) return false;
+    return true;
+  });
+
+  // Count duplicate candidates (filingCount > 1)
+  const dupeCount  = CANDIDATES.filter(c => c.filingCount > 1).length;
+  const dupeFiles  = CANDIDATES.filter(c => c.filingCount > 1).reduce((sum, c) => sum + c.filingCount, 0);
+  if (dupeCount > 0) {
+    banner.style.cssText = 'padding:8px 10px;margin-bottom:6px;border-radius:8px;background:var(--amber-dim);border:0.5px solid var(--amber-border);';
+    banner.innerHTML = `
+      <div style="font-size:11px;font-weight:500;color:var(--amber);margin-bottom:2px;">
+        ⚑ Duplicate registries found
+      </div>
+      <div style="font-size:10px;color:var(--t2);line-height:1.5;">
+        ${dupeFiles} filings across ${dupeCount} candidate${dupeCount>1?'s':''} — review pairs below
+      </div>
+    `;
+  }
+
+  filtered.forEach(c => {
       const div = document.createElement('div');
       const confCls = c.confLabel === 'high' ? 'conf-high' : c.confLabel === 'medium' ? 'conf-medium' : 'conf-low';
       const tagMap  = { 'name-variant':'Name variant','shared-website':'Shared website','addr-overlap':'Address overlap','needs-decision':'Needs decision' };
@@ -1706,6 +1781,125 @@ function logDecision(action) {
   // Refresh cards and badge
   buildCards();
   updatePendingBadge();
+}
+
+async function generateSummary(type) {
+  if (!currentCandidate) {
+    showToast('Select a filing first', 'warn');
+    return;
+  }
+  const c = currentCandidate;
+
+  const btnId     = type === 'structured' ? 'gen-structured-btn' : 'gen-websearch-btn';
+  const outputId  = type === 'structured' ? 'summary-structured'  : 'summary-websearch';
+  const btn       = document.getElementById(btnId);
+  const output    = document.getElementById(outputId);
+
+  // Loading state
+  btn.textContent  = 'Generating…';
+  btn.disabled     = true;
+  btn.style.opacity = '.6';
+  output.innerHTML = `<div style="display:flex;align-items:center;gap:8px;color:var(--t4);font-size:12px;">
+    <div style="width:10px;height:10px;border:1.5px solid var(--border2);border-top-color:var(--teal);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0;"></div>
+    Generating${type === 'websearch' ? ' with live web search' : ''}…
+  </div>`;
+
+  // Build prompt from all available record data
+  const recordContext = `
+Business filing: ${c.filingName}
+Suggested entity match: ${c.entityName}
+Identity confidence: ${c.conf}% (${c.confLabel})
+Entity track: ${c.track === 'small' ? 'Small business' : c.track === 'mid' ? 'Mid-market' : 'Enterprise'}
+
+FILING DATA (from registry):
+- Address: ${c.filing.address || 'not available'}
+- Phone: ${c.filing.phone || 'not available'}
+- Website: ${c.filing.website || 'not available'}
+- Registered agent: ${c.filing.agent || 'not available'}
+- Filing date: ${c.filing.date || 'not available'}
+
+SUGGESTED ENTITY DATA:
+- Entity name: ${c.entity.name}
+- Address: ${c.entity.address || 'not available'}
+- Phone: ${c.entity.phone || 'not available'}
+- Website: ${c.entity.website || 'not available'}
+- Registered agent: ${c.entity.agent || 'not available'}
+- Linked filings: ${c.entity.filings || 'not available'}
+
+MATCH SIGNALS:
+${c.reasoning.map(r => `- ${r.label}: ${r.val}`).join('\n')}
+
+SYSTEM CONFIDENCE: ${c.sysConf.val} (${c.conf}%) — ${c.sysConf.note}
+`.trim();
+
+  const structuredPrompt = `You are a business intelligence analyst reviewing registry data for a data quality platform. 
+  
+Based on the following structured data about a business filing, write a concise 3-4 sentence analytical summary that:
+1. Describes what this business likely does based on its name, SIC signals, and location
+2. Assesses whether the two filings (Filing data vs Suggested entity) appear to be the same underlying business
+3. Flags any concerns or signals that warrant closer review
+
+Be analytical and direct. Do not pad with filler. End with a one-sentence recommendation.
+
+RECORD DATA:
+${recordContext}`;
+
+  const webSearchPrompt = `You are a business intelligence analyst. Search the web for current information about the following business and write a concise 3-4 sentence summary covering:
+1. What this business does and any public presence (website, reviews, news)
+2. Any red flags, name changes, legal issues, or notable findings
+3. Whether the web presence is consistent with the registry filing data
+
+Be factual and concise. Flag anything that contradicts the registry data. If you find nothing notable, say so clearly.
+
+Business to research: ${c.filingName}
+Location: ${c.filing.address || c.entity.address || 'unknown'}
+Website: ${c.filing.website !== '—' ? c.filing.website : c.entity.website || 'unknown'}`;
+
+  try {
+    const body = {
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 1000,
+      messages: [{ role: 'user', content: type === 'structured' ? structuredPrompt : webSearchPrompt }],
+    };
+
+    // Add web search tool for the websearch type
+    if (type === 'websearch') {
+      body.tools = [{ type: 'web_search_20250305', name: 'web_search' }];
+    }
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+
+    const data = await response.json();
+
+    // Extract text from response — handle both direct text and tool use responses
+    let summaryText = '';
+    if (data.content) {
+      data.content.forEach(block => {
+        if (block.type === 'text') summaryText += block.text;
+      });
+    }
+
+    if (!summaryText) {
+      summaryText = 'No summary generated — the AI did not return a response. Please try again.';
+    }
+
+    // Render the summary
+    output.innerHTML = `
+      <div style="color:var(--t1);line-height:1.75;font-size:12px;">${summaryText.replace(/\n/g, '<br>')}</div>
+    `;
+
+  } catch (err) {
+    output.innerHTML = `<div style="color:var(--red);font-size:12px;">Error generating summary: ${err.message}. Check that the Anthropic API key is configured.</div>`;
+  }
+
+  // Reset button
+  btn.textContent  = 'Regenerate';
+  btn.disabled     = false;
+  btn.style.opacity = '1';
 }
 
 function submitAndApprove() {
