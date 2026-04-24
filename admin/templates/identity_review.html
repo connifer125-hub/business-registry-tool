@@ -587,8 +587,8 @@ body {
           <div id="preqa-bar" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 14px;border-radius:10px;border:0.5px solid var(--border1);background:var(--bg1);margin-bottom:16px;">
             <span style="font-size:10px;font-weight:500;color:var(--t4);text-transform:uppercase;letter-spacing:.08em;margin-right:4px;">Pre-QA auto-checks</span>
             <div id="preqa-chips" style="display:flex;flex-wrap:wrap;gap:5px;flex:1;"></div>
-            <button onclick="openResearchModal()" style="margin-left:auto;display:flex;align-items:center;gap:5px;padding:5px 12px;border-radius:7px;border:0.5px solid var(--amber-border);background:var(--amber-dim);color:var(--amber);font-size:12px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .12s;" onmouseover="this.style.background='rgba(245,158,11,.18)'" onmouseout="this.style.background='var(--amber-dim)'">
-              R &nbsp;Spot-check sources
+            <button onclick="openResearchModal()" style="margin-left:auto;display:flex;align-items:center;gap:6px;padding:6px 14px;border-radius:7px;border:0.5px solid var(--amber-border);background:var(--amber-dim);color:var(--amber);font-size:12px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .12s;" onmouseover="this.style.background='rgba(245,158,11,.18)'" onmouseout="this.style.background='var(--amber-dim)'">
+              ↗ Spot-check sources
             </button>
           </div>
 
@@ -680,12 +680,22 @@ body {
                   <div id="source-links" style="display:flex;flex-wrap:wrap;gap:5px;"></div>
                 </div>
 
-                <!-- Save all edits button -->
-                <div style="padding:10px 14px;border-top:0.5px solid var(--border1);">
-                  <button id="save-all-btn" onclick="saveAllEdits()" style="width:100%;padding:8px;border-radius:8px;border:0.5px solid var(--green-border);background:var(--green-dim);color:var(--green);font-size:12px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .12s;display:none;" onmouseover="this.style.background='rgba(34,197,94,.2)'" onmouseout="this.style.background='var(--green-dim)'">
-                    ✓ Save all field edits
+                <!-- Save edits + final approve -->
+                <div style="padding:10px 14px;border-top:0.5px solid var(--border1);display:flex;flex-direction:column;gap:6px;">
+                  <button id="save-all-btn" onclick="saveAllEdits()"
+                    style="width:100%;padding:7px;border-radius:7px;border:0.5px solid var(--border2);background:var(--bg3);color:var(--t2);font-size:12px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .12s;display:none;"
+                    onmouseover="this.style.background='var(--bg4)'" onmouseout="this.style.background='var(--bg3)'">
+                    ↳ Save field edits
                   </button>
-                  <div id="save-confirm" style="display:none;text-align:center;font-size:11px;color:var(--green);padding:6px;">All changes saved ✓</div>
+                  <div id="save-confirm" style="display:none;text-align:center;font-size:11px;color:var(--green);padding:4px;">Fields saved ✓</div>
+                  <button id="submit-approve-btn" onclick="submitAndApprove()"
+                    style="width:100%;padding:9px;border-radius:8px;border:0.5px solid var(--green-border);background:var(--green-dim);color:var(--green);font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .12s;letter-spacing:-.01em;"
+                    onmouseover="this.style.background='rgba(34,197,94,.2)'" onmouseout="this.style.background='var(--green-dim)'">
+                    ✓ Submit &amp; approve for export
+                  </button>
+                  <div style="font-size:10px;color:var(--t4);text-align:center;line-height:1.5;">
+                    Saves all edits and marks this record DUNS-ready. Use the action buttons above to link, reject, or escalate instead.
+                  </div>
                 </div>
               </div>
             </div>
@@ -1319,7 +1329,7 @@ function buildCards() {
 
   CANDIDATES
     .filter(c => {
-      if (currentFilter === 'pending' && (c.status === 'confirmed' || c.status === 'new_entity' || c.status === 'conflict')) return false;
+      if (currentFilter === 'pending' && (c.status === 'confirmed' || c.status === 'conflict')) return false;
       if (q && !c.filingName.toLowerCase().includes(q) && !c.entityName.toLowerCase().includes(q)) return false;
       return true;
     })
@@ -1395,7 +1405,23 @@ function buildCards() {
           ${matchSummary}
         </div>
 
-        <div class="card-filings" style="margin-top:6px;">${c.filingCount} filing${c.filingCount>1?'s':''} · ${c.status.replace('-',' ')} · click to review</div>
+        <div class="card-filings" style="margin-top:6px;">
+          ${c.filingCount} filing${c.filingCount>1?'s':''} ·
+          <span style="color:${
+            c.status==='confirmed'  ? 'var(--green)' :
+            c.status==='new_entity' ? 'var(--blue)'  :
+            c.status==='conflict'   ? 'var(--red)'   :
+            c.status==='needs-decision' ? 'var(--amber)' : 'var(--t4)'
+          };">
+            ${
+              c.status==='confirmed'      ? '✓ linked to entity' :
+              c.status==='new_entity'     ? '+ new entity — approve to export' :
+              c.status==='conflict'       ? '✗ match rejected' :
+              c.status==='needs-decision' ? 'needs decision' : c.status
+            }
+          </span>
+          ${c.status === 'needs-decision' ? ' · click to review' : ''}
+        </div>
       `;
       div.onclick = () => loadCandidate(c.id);
       list.appendChild(div);
@@ -1428,6 +1454,15 @@ function loadCandidate(id) {
   document.getElementById('save-all-btn').style.display = 'none';
   document.getElementById('save-confirm').style.display = 'none';
   document.getElementById('e-web-link').innerHTML = '';
+
+  // Reset submit button
+  const submitBtn = document.getElementById('submit-approve-btn');
+  if (submitBtn) {
+    submitBtn.textContent = '✓ Submit & approve for export';
+    submitBtn.disabled = false;
+    submitBtn.style.opacity = '1';
+    submitBtn.style.cursor = 'pointer';
+  }
 
   const confCls = c.confLabel === 'high' ? 'conf-high' : c.confLabel === 'medium' ? 'conf-medium' : 'conf-low';
   document.getElementById('ws-name').textContent         = c.filingName;
@@ -1669,6 +1704,60 @@ function logDecision(action) {
   }
 
   // Refresh cards and badge
+  buildCards();
+  updatePendingBadge();
+}
+
+function submitAndApprove() {
+  if (!selectedId || !currentCandidate) {
+    showToast('Select a filing from the left panel first', 'warn');
+    return;
+  }
+  const c = currentCandidate;
+
+  // Save any unsaved field edits first
+  saveAllEdits();
+
+  // Log the approval
+  const now = new Date().toISOString().slice(0,16).replace('T',' ');
+  if (!decisions[selectedId]) decisions[selectedId] = [];
+  decisions[selectedId].push({
+    time: now, reviewer: 'reviewer_01',
+    action: `Approved for export · entity record verified and DUNS-ready`,
+    badge: 'approved', badgeCls: 'conf-high',
+  });
+
+  // Mark as approved
+  c.status = 'confirmed';
+
+  // Update audit log
+  const log = document.getElementById('audit-log');
+  if (log) {
+    const row = document.createElement('div');
+    row.className = 'audit-row';
+    row.innerHTML = `
+      <span class="audit-time">${now}</span>
+      <span class="audit-reviewer">reviewer_01</span>
+      <span class="audit-action">Approved for export · entity record verified and DUNS-ready</span>
+      <span class="audit-badge conf-high">approved</span>
+    `;
+    log.prepend(row);
+    const notesBody = document.getElementById('notes-body');
+    if (notesBody && !notesBody.classList.contains('visible')) toggleNotes();
+  }
+
+  // Update submit button to show approved state
+  const btn = document.getElementById('submit-approve-btn');
+  if (btn) {
+    btn.textContent = '✓ Approved — DUNS-ready';
+    btn.style.background = 'var(--green-dim)';
+    btn.style.borderColor = 'var(--green-border)';
+    btn.disabled = true;
+    btn.style.opacity = '.6';
+    btn.style.cursor = 'default';
+  }
+
+  showToast('✓ Approved and ready for export', 'success');
   buildCards();
   updatePendingBadge();
 }
