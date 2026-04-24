@@ -536,7 +536,7 @@ body,input,select,button,textarea { font-family: 'DM Sans', sans-serif; }
                 {% endif %}
               </form>
               <button type="button" class="act-btn research" title="Research this business"
-                onclick="openResearch('{{ r.business_name|replace("'","") }}','{{ r.city or "" }}','{{ r.state_province or "" }}','{{ r.entity_type or "" }}','{{ r.industry_desc or "" }}')">R</button>
+                onclick="openResearch('{{ r.business_name|replace("'","") }}','{{ r.city or "" }}','{{ r.state_province or "" }}','{{ r.entity_type or "" }}','{{ r.industry_desc or "" }}')">↗ Sources</button>
               <a href="{{ url_for('record_detail', business_id=r.business_id) }}" class="act-btn detail" title="Full detail">↗</a>
               <form method="POST" action="{{ url_for('delete_record', business_id=r.business_id) }}" style="display:contents;"
                 onsubmit="return confirm('Delete #{{ r.business_id }} — {{ r.business_name }}?\n\nThis cannot be undone.')">
