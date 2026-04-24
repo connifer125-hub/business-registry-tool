@@ -901,6 +901,7 @@ function openResearchModal() {
   const city  = (c.entity.address || '').split(',')[1]?.trim() || '';
   const state = (c.entity.address || '').split(',')[2]?.trim()?.split(' ')[0] || '';
   const track = c.track || 'small';
+  const trackLabel = track === 'small' ? 'Small business' : track === 'mid' ? 'Mid-market' : 'Enterprise';
 
   const stripSfx = n => n.replace(/\b(LLC|Inc\.?|Corp\.?|LLP|Ltd\.?|L\.L\.C\.?|Co\.?|PLC|PLLC|P\.C\.)\b\.?/gi,'').replace(/\s+/g,' ').trim();
   const cleanName  = stripSfx(name);
