@@ -385,7 +385,33 @@ body {
   font-family: 'DM Mono', monospace;
 }
 
-/* Source links */
+/* Inline editing */
+.inline-edit {
+  flex: 1; padding: 4px 7px; border-radius: 5px;
+  border: 0.5px solid transparent; background: transparent;
+  font-size: 12px; color: var(--t1); font-family: 'DM Sans', sans-serif;
+  outline: none; min-width: 0;
+}
+.inline-edit:hover { background: var(--bg3); border-color: var(--border2); }
+.inline-edit:focus { background: var(--bg3); border-color: var(--teal); box-shadow: 0 0 0 2px rgba(45,212,191,.1); }
+.inline-edit.dirty { background: rgba(245,158,11,.08); border-color: var(--amber-border); }
+.inline-edit::placeholder { color: var(--t4); font-style: italic; }
+.unsaved-dot { width:6px;height:6px;border-radius:50%;background:var(--amber);flex-shrink:0;display:none; }
+.unsaved-dot.on { display:inline-block; }
+.saved-check { color:var(--green);font-size:12px;flex-shrink:0;display:none; }
+.saved-check.on { display:inline; }
+
+/* Pre-QA chips */
+.preqa-chip {
+  display:inline-flex;align-items:center;gap:4px;
+  padding:3px 9px;border-radius:6px;font-size:11px;font-weight:500;
+  border:0.5px solid;font-family:'DM Sans',sans-serif;
+}
+.preqa-chip img { width:12px;height:12px;border-radius:2px; }
+.chip-auto   { background:rgba(45,212,191,.08);color:var(--teal);border-color:var(--teal-border); }
+.chip-warn   { background:var(--amber-dim);color:var(--amber);border-color:var(--amber-border); }
+.chip-ok     { background:var(--green-dim);color:var(--green);border-color:var(--green-border); }
+.chip-none   { background:var(--bg3);color:var(--t3);border-color:var(--border1); }
 .src-link {
   display: inline-flex; align-items: center; gap: 5px;
   padding: 4px 9px; border-radius: 6px; font-size: 11px; font-weight: 500;
@@ -429,15 +455,15 @@ body {
     <div class="sub">Business Registry Intelligence</div>
   </div>
   <div class="sidebar-section">Overview</div>
-  <a class="nav-item" href="#"><span class="nav-dot"></span>Dashboard</a>
+  <a class="nav-item" href="/">                  <span class="nav-dot"></span>Dashboard</a>
   <div class="sidebar-section">Data</div>
-  <a class="nav-item" href="#"><span class="nav-dot"></span>Filing Review</a>
-  <a class="nav-item active" href="#"><span class="nav-dot"></span>Identity Review <span class="nav-badge">24</span></a>
-  <a class="nav-item" href="#"><span class="nav-dot"></span>Change Log</a>
-  <a class="nav-item" href="#"><span class="nav-dot"></span>Markets</a>
+  <a class="nav-item" href="/queue">             <span class="nav-dot"></span>Filing Review</a>
+  <a class="nav-item active" href="/identity-review"><span class="nav-dot"></span>Identity Review <span class="nav-badge" id="pending-badge">—</span></a>
+  <a class="nav-item" href="/changes">           <span class="nav-dot"></span>Change Log</a>
+  <a class="nav-item" href="/markets">           <span class="nav-dot"></span>Markets</a>
   <div class="sidebar-section">Tools</div>
-  <a class="nav-item" href="#"><span class="nav-dot"></span>Export</a>
-  <a class="nav-item" href="#"><span class="nav-dot"></span>Scrapers</a>
+  <a class="nav-item" href="/export">            <span class="nav-dot"></span>Export</a>
+  <a class="nav-item" href="/scrapers">          <span class="nav-dot"></span>Scrapers</a>
   <div class="sidebar-footer">Delaware prototype · v1.0</div>
 </aside>
 
@@ -452,8 +478,8 @@ body {
     </div>
     <span class="topbar-badge">24 needs decision</span>
     <div class="topbar-actions">
-      <button class="topbar-btn">Export decisions</button>
-      <button class="topbar-btn">Settings</button>
+      <button class="topbar-btn" onclick="exportDecisions()">Export decisions</button>
+      <button class="topbar-btn" onclick="alert('Settings coming soon — reviewer ID, lock duration, and notification preferences will live here.')">Settings</button>
     </div>
   </div>
 
@@ -499,14 +525,28 @@ body {
 
         <!-- Scrollable workspace -->
         <div class="workspace" id="workspace-body">
-          <!-- Section 2: Comparison -->
+
+          <!-- Pre-QA status bar -->
+          <div id="preqa-bar" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 14px;border-radius:10px;border:0.5px solid var(--border1);background:var(--bg1);margin-bottom:16px;">
+            <span style="font-size:10px;font-weight:500;color:var(--t4);text-transform:uppercase;letter-spacing:.08em;margin-right:4px;">Pre-QA auto-checks</span>
+            <div id="preqa-chips" style="display:flex;flex-wrap:wrap;gap:5px;flex:1;"></div>
+            <button onclick="openResearchModal()" style="margin-left:auto;display:flex;align-items:center;gap:5px;padding:5px 12px;border-radius:7px;border:0.5px solid var(--amber-border);background:var(--amber-dim);color:var(--amber);font-size:12px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .12s;" onmouseover="this.style.background='rgba(245,158,11,.18)'" onmouseout="this.style.background='var(--amber-dim)'">
+              R &nbsp;Spot-check sources
+            </button>
+          </div>
+
+          <!-- Section 2: Comparison with inline editing -->
           <div class="section">
-            <div class="section-label">Side-by-side comparison</div>
+            <div class="section-label">Side-by-side comparison
+              <span style="margin-left:8px;font-size:10px;color:var(--t4);font-style:italic;text-transform:none;letter-spacing:0;">All fields editable — amber dot = unsaved · green ✓ = saved</span>
+            </div>
             <div class="compare-grid">
+
+              <!-- Filing data — read-only display -->
               <div class="compare-card">
                 <div class="compare-card-header filing-header">
                   <div class="header-dot" style="background:var(--teal);box-shadow:0 0 5px rgba(45,212,191,.4);"></div>
-                  Filing data
+                  Filing data <span style="font-size:9px;opacity:.5;margin-left:4px;">registry source</span>
                 </div>
                 <div class="compare-field"><div class="field-label">Business name</div><div class="field-val" id="c-name-l">—</div></div>
                 <div class="compare-field"><div class="field-label">Address</div><div class="field-val" id="c-addr-l">—</div></div>
@@ -515,20 +555,72 @@ body {
                 <div class="compare-field"><div class="field-label">Registered agent</div><div class="field-val" id="c-agent-l">—</div></div>
                 <div class="compare-field"><div class="field-label">Filing date</div><div class="field-val" id="c-date-l">—</div></div>
               </div>
+
+              <!-- Suggested entity — fully editable -->
               <div class="compare-card">
                 <div class="compare-card-header entity-header">
                   <div class="header-dot" style="background:var(--blue);box-shadow:0 0 5px rgba(96,165,250,.4);"></div>
-                  Suggested entity
+                  Suggested entity <span style="font-size:9px;opacity:.5;margin-left:4px;">click any field to edit</span>
                 </div>
-                <div class="compare-field"><div class="field-label">Entity name</div><div class="field-val" id="c-name-r">—</div></div>
-                <div class="compare-field"><div class="field-label">Address</div><div class="field-val" id="c-addr-r">—</div></div>
-                <div class="compare-field"><div class="field-label">Phone</div><div class="field-val" id="c-phone-r">—</div></div>
-                <div class="compare-field"><div class="field-label">Website</div><div class="field-val" id="c-web-r">—</div></div>
-                <div class="compare-field"><div class="field-label">Registered agent</div><div class="field-val" id="c-agent-r">—</div></div>
-                <div class="compare-field"><div class="field-label">Linked filings</div><div class="field-val" id="c-filings-r">—</div></div>
-                <div class="compare-field" style="border-top:0.5px solid var(--border1);padding-top:10px;">
-                  <div class="field-label" style="margin-bottom:7px;">Cross-check sources</div>
+
+                <div class="compare-field">
+                  <div class="field-label">Entity name</div>
+                  <div style="display:flex;align-items:center;gap:5px;">
+                    <input class="inline-edit" id="e-name" placeholder="Entity name…" oninput="markDirty('e-name')">
+                    <span class="unsaved-dot" id="dot-e-name"></span>
+                    <span class="saved-check" id="chk-e-name">✓</span>
+                  </div>
+                </div>
+                <div class="compare-field">
+                  <div class="field-label">Address</div>
+                  <div style="display:flex;align-items:center;gap:5px;">
+                    <input class="inline-edit" id="e-addr" placeholder="Operating address…" oninput="markDirty('e-addr')">
+                    <span class="unsaved-dot" id="dot-e-addr"></span>
+                    <span class="saved-check" id="chk-e-addr">✓</span>
+                  </div>
+                </div>
+                <div class="compare-field">
+                  <div class="field-label">Phone</div>
+                  <div style="display:flex;align-items:center;gap:5px;">
+                    <input class="inline-edit" id="e-phone" placeholder="Phone…" oninput="markDirty('e-phone')">
+                    <span class="unsaved-dot" id="dot-e-phone"></span>
+                    <span class="saved-check" id="chk-e-phone">✓</span>
+                  </div>
+                </div>
+                <div class="compare-field">
+                  <div class="field-label">Website</div>
+                  <div style="display:flex;align-items:center;gap:5px;">
+                    <input class="inline-edit" id="e-web" placeholder="Website URL…" oninput="markDirty('e-web')">
+                    <span class="unsaved-dot" id="dot-e-web"></span>
+                    <span class="saved-check" id="chk-e-web">✓</span>
+                    <span id="e-web-link"></span>
+                  </div>
+                </div>
+                <div class="compare-field">
+                  <div class="field-label">Registered agent</div>
+                  <div style="display:flex;align-items:center;gap:5px;">
+                    <input class="inline-edit" id="e-agent" placeholder="Registered agent…" oninput="markDirty('e-agent')">
+                    <span class="unsaved-dot" id="dot-e-agent"></span>
+                    <span class="saved-check" id="chk-e-agent">✓</span>
+                  </div>
+                </div>
+                <div class="compare-field">
+                  <div class="field-label">Linked filings</div>
+                  <div class="field-val" id="c-filings-r">—</div>
+                </div>
+
+                <!-- Cross-check sources -->
+                <div class="compare-field" style="border-top:0.5px solid var(--border1);padding-top:10px;flex-direction:column;gap:7px;">
+                  <div class="field-label" style="margin-bottom:4px;">Cross-check sources</div>
                   <div id="source-links" style="display:flex;flex-wrap:wrap;gap:5px;"></div>
+                </div>
+
+                <!-- Save all edits button -->
+                <div style="padding:10px 14px;border-top:0.5px solid var(--border1);">
+                  <button id="save-all-btn" onclick="saveAllEdits()" style="width:100%;padding:8px;border-radius:8px;border:0.5px solid var(--green-border);background:var(--green-dim);color:var(--green);font-size:12px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .12s;display:none;" onmouseover="this.style.background='rgba(34,197,94,.2)'" onmouseout="this.style.background='var(--green-dim)'">
+                    ✓ Save all field edits
+                  </button>
+                  <div id="save-confirm" style="display:none;text-align:center;font-size:11px;color:var(--green);padding:6px;">All changes saved ✓</div>
                 </div>
               </div>
             </div>
@@ -584,7 +676,195 @@ body {
 </div><!-- /app-shell -->
 
 <script>
-const CANDIDATES = [
+const FAV = d => `https://www.google.com/s2/favicons?domain=${d}&sz=16`;
+
+let currentCandidate = null;
+const editState = {};
+
+function markDirty(fieldId) {
+  const input = document.getElementById(fieldId);
+  const dot   = document.getElementById('dot-' + fieldId);
+  const chk   = document.getElementById('chk-' + fieldId);
+  if (input) input.classList.add('dirty');
+  if (dot)   dot.classList.add('on');
+  if (chk)   chk.classList.remove('on');
+  editState[fieldId] = input?.value;
+  document.getElementById('save-all-btn').style.display = 'block';
+  document.getElementById('save-confirm').style.display = 'none';
+
+  // Live website link preview
+  if (fieldId === 'e-web') {
+    const val = input.value.trim();
+    const linkEl = document.getElementById('e-web-link');
+    if (val) {
+      const href = val.startsWith('http') ? val : 'https://' + val;
+      linkEl.innerHTML = `<a href="${href}" target="_blank" class="web-link" style="font-size:11px;">↗</a>`;
+    } else {
+      linkEl.innerHTML = '';
+    }
+  }
+}
+
+function saveAllEdits() {
+  const fields = ['e-name','e-addr','e-phone','e-web','e-agent'];
+  fields.forEach(f => {
+    const input = document.getElementById(f);
+    const dot   = document.getElementById('dot-' + f);
+    const chk   = document.getElementById('chk-' + f);
+    if (input && input.classList.contains('dirty')) {
+      input.classList.remove('dirty');
+      if (dot) dot.classList.remove('on');
+      if (chk) { chk.classList.add('on'); setTimeout(() => chk.classList.remove('on'), 3000); }
+      // In production: POST to /update-identity-field
+      if (currentCandidate) {
+        const keyMap = {'e-name':'name','e-addr':'address','e-phone':'phone','e-web':'website','e-agent':'agent'};
+        currentCandidate.entity[keyMap[f]] = input.value;
+      }
+    }
+  });
+  document.getElementById('save-all-btn').style.display = 'none';
+  document.getElementById('save-confirm').style.display = 'block';
+  setTimeout(() => { document.getElementById('save-confirm').style.display = 'none'; }, 3000);
+
+  // Log to audit
+  if (currentCandidate) {
+    const now = new Date().toISOString().slice(0,16).replace('T',' ');
+    if (!decisions[currentCandidate.id]) decisions[currentCandidate.id] = [];
+    decisions[currentCandidate.id].push({
+      time: now, reviewer: 'reviewer_01',
+      action: 'Field edits saved to entity record',
+      badge: 'edited', badgeCls: 'conf-medium',
+    });
+    const log = document.getElementById('audit-log');
+    const row = document.createElement('div');
+    row.className = 'audit-row';
+    row.innerHTML = `<span class="audit-time">${now}</span><span class="audit-reviewer">reviewer_01</span><span class="audit-action">Field edits saved to entity record</span><span class="audit-badge conf-medium">edited</span>`;
+    log.prepend(row);
+  }
+}
+
+function renderPreQAChips(c) {
+  const chips = [];
+  const googleMatch = c.reasoning.find(r => r.label === 'Domain match');
+  const phoneMatch  = c.reasoning.find(r => r.label === 'Phone match');
+  const addrMatch   = c.reasoning.find(r => r.label === 'Address proximity');
+  const agentMatch  = c.reasoning.find(r => r.label === 'Reg. agent signal');
+
+  // Google Places
+  const gCls = googleMatch?.val === 'Exact' ? 'chip-ok' : googleMatch?.val === 'Partial' ? 'chip-warn' : 'chip-none';
+  chips.push(`<span class="preqa-chip ${gCls}"><img src="${FAV('google.com')}">Google Places · ${googleMatch?.val || 'not checked'}</span>`);
+
+  // Phone area code
+  const pCls = phoneMatch?.val === 'Yes' ? 'chip-ok' : 'chip-warn';
+  chips.push(`<span class="preqa-chip ${pCls}">📞 Phone · ${phoneMatch?.val || '—'}</span>`);
+
+  // Address
+  const aCls = addrMatch?.val === 'High' ? 'chip-ok' : addrMatch?.val === 'Medium' ? 'chip-warn' : 'chip-none';
+  chips.push(`<span class="preqa-chip ${aCls}">📍 Address · ${addrMatch?.val || '—'}</span>`);
+
+  // Registered agent
+  const rCls = agentMatch?.val === 'Strong' ? 'chip-ok' : agentMatch?.val === 'Weak' ? 'chip-warn' : 'chip-none';
+  chips.push(`<span class="preqa-chip ${rCls}"><img src="${FAV('opencorporates.com')}">Agent · ${agentMatch?.val || '—'}</span>`);
+
+  // SIC if available
+  chips.push(`<span class="preqa-chip chip-auto"><img src="${FAV('anthropic.com')}">SIC · auto-classified</span>`);
+
+  document.getElementById('preqa-chips').innerHTML = chips.join('');
+}
+
+function openResearchModal() {
+  if (!currentCandidate) return;
+  const c    = currentCandidate;
+  const name = c.filingName;
+  const city = (c.entity.address || '').split(',')[1]?.trim() || '';
+  const state= (c.entity.address || '').split(',')[2]?.trim()?.split(' ')[0] || '';
+  const isEnt = c.conf >= 80 || (c.filing.agent || '').toLowerCase().includes('corporation');
+  const isSmall = !isEnt;
+
+  const q  = encodeURIComponent(name + ' ' + city + ' ' + state);
+  const qN = encodeURIComponent(name);
+
+  const sections = [
+    {
+      heading: 'Auto-checked (pre-QA)',
+      note: 'These ran automatically before you saw this record',
+      links: [
+        { label:'Google Places', url:`https://www.google.com/search?q=${q}`, icon:'google.com', auto:true },
+        { label:'OpenCorporates', url:`https://opencorporates.com/companies?q=${qN}&jurisdiction_code=us_de`, icon:'opencorporates.com', auto:true },
+      ]
+    },
+    {
+      heading: 'Spot-check manually',
+      note: 'Open to visually verify — never scraped automatically',
+      links: [
+        ...(isSmall ? [
+          { label:'BBB',      url:`https://www.bbb.org/search?find_text=${qN}&find_loc=${encodeURIComponent(city+' '+state)}`, icon:'bbb.org' },
+          { label:'Facebook', url:`https://www.facebook.com/search/pages/?q=${qN}`, icon:'facebook.com' },
+          { label:'Yelp',     url:`https://www.yelp.com/search?find_desc=${qN}&find_loc=${encodeURIComponent(city+' '+state)}`, icon:'yelp.com' },
+        ] : []),
+        { label:'LinkedIn',   url:`https://www.linkedin.com/search/results/companies/?keywords=${qN}`, icon:'linkedin.com' },
+        { label:'Crunchbase', url:`https://www.crunchbase.com/textsearch?q=${qN}`, icon:'crunchbase.com' },
+        ...(!isSmall ? [
+          { label:'SEC EDGAR', url:`https://www.sec.gov/cgi-bin/browse-edgar?company=${qN}&CIK=&type=10-K&dateb=&owner=include&count=10&search_text=&action=getcompany`, icon:'sec.gov' },
+          { label:'SAM.gov',   url:`https://sam.gov/search/?keywords=${qN}`, icon:'sam.gov' },
+        ] : []),
+      ]
+    }
+  ];
+
+  document.querySelectorAll('#id-research-modal,#id-research-overlay').forEach(el => el.remove());
+
+  const overlay = document.createElement('div');
+  overlay.id = 'id-research-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9998;backdrop-filter:blur(2px);';
+
+  const modal = document.createElement('div');
+  modal.id = 'id-research-modal';
+  modal.style.cssText = `
+    position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+    background:var(--bg2);border:0.5px solid var(--border2);border-radius:14px;
+    padding:0;z-index:9999;width:400px;
+    box-shadow:0 20px 60px rgba(0,0,0,.6);
+    font-family:'DM Sans',sans-serif;overflow:hidden;
+  `;
+
+  modal.innerHTML = `
+    <div style="padding:16px 18px;border-bottom:0.5px solid var(--border1);display:flex;align-items:flex-start;justify-content:space-between;">
+      <div>
+        <div style="font-size:14px;font-weight:600;color:var(--t0);">${name}</div>
+        <div style="font-size:11px;color:var(--t3);margin-top:2px;">${city}${state?', '+state:''} · ${isSmall?'Small business':'Enterprise'} track</div>
+      </div>
+      <button onclick="document.querySelectorAll('#id-research-modal,#id-research-overlay').forEach(el=>el.remove())"
+        style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--t3);line-height:1;padding:2px;">×</button>
+    </div>
+    ${sections.map(sec => `
+      <div style="padding:12px 18px;border-bottom:0.5px solid var(--border0);">
+        <div style="font-size:10px;font-weight:500;color:var(--t4);text-transform:uppercase;letter-spacing:.08em;margin-bottom:3px;">${sec.heading}</div>
+        <div style="font-size:10px;color:var(--t4);margin-bottom:8px;">${sec.note}</div>
+        <div style="display:flex;flex-direction:column;gap:5px;">
+          ${sec.links.map(l => `
+            <a href="${l.url}" target="_blank" rel="noopener"
+              style="display:flex;align-items:center;gap:8px;padding:8px 11px;border:0.5px solid var(--border${l.auto?'1':'2'});border-radius:8px;text-decoration:none;color:var(--t1);font-size:12px;font-weight:500;background:var(--bg${l.auto?'1':'3'});transition:all .1s;"
+              onmouseover="this.style.background='var(--bg4)';this.style.borderColor='var(--border3)'"
+              onmouseout="this.style.background='var(--bg${l.auto?'1':'3'})';this.style.borderColor='var(--border${l.auto?'1':'2'})'">
+              <img src="${FAV(l.icon)}" style="width:14px;height:14px;border-radius:2px;">
+              <span>${l.label}</span>
+              ${l.auto ? '<span style="font-size:9px;padding:1px 5px;border-radius:4px;background:var(--teal-dim);color:var(--teal);border:0.5px solid var(--teal-border);margin-left:auto;">auto</span>' : '<span style="font-size:11px;color:var(--t4);margin-left:auto;">↗ open</span>'}
+            </a>
+          `).join('')}
+        </div>
+      </div>
+    `).join('')}
+    <div style="padding:10px 18px;font-size:10px;color:var(--t4);line-height:1.6;">
+      LinkedIn and Facebook are never scraped automatically — open manually to visually verify.<br>
+      After checking a source, update the field on the left and click <strong style="color:var(--green);">Save all field edits</strong>.
+    </div>
+  `;
+
+  overlay.onclick = () => document.querySelectorAll('#id-research-modal,#id-research-overlay').forEach(el => el.remove());
+  document.body.appendChild(overlay);
+  document.body.appendChild(modal);
+}
   {
     id: 1,
     filingName: 'HELOC.com LLC',
@@ -839,6 +1119,7 @@ function loadCandidate(id) {
   buildCards();
   const c = CANDIDATES.find(x => x.id === id);
   if (!c) return;
+  currentCandidate = c;
 
   document.getElementById('empty-state').style.display = 'none';
   const shell = document.getElementById('workspace-shell');
@@ -847,6 +1128,19 @@ function loadCandidate(id) {
   void shell.offsetWidth;
   shell.classList.add('fade-in');
 
+  // Reset edit state
+  ['e-name','e-addr','e-phone','e-web','e-agent'].forEach(f => {
+    const input = document.getElementById(f);
+    const dot   = document.getElementById('dot-' + f);
+    const chk   = document.getElementById('chk-' + f);
+    if (input) { input.classList.remove('dirty'); }
+    if (dot)   dot.classList.remove('on');
+    if (chk)   chk.classList.remove('on');
+  });
+  document.getElementById('save-all-btn').style.display = 'none';
+  document.getElementById('save-confirm').style.display = 'none';
+  document.getElementById('e-web-link').innerHTML = '';
+
   const confCls = c.confLabel === 'high' ? 'conf-high' : c.confLabel === 'medium' ? 'conf-medium' : 'conf-low';
   document.getElementById('ws-name').textContent         = c.filingName;
   document.getElementById('ws-entity').textContent       = `→ Suggested entity: ${c.entityName}`;
@@ -854,7 +1148,10 @@ function loadCandidate(id) {
   badge.textContent = `${c.conf}% ${c.confLabel}`;
   badge.className   = `conf-large ${confCls}`;
 
-  // Comparison fields — websites rendered as clickable links
+  // Pre-QA chips
+  renderPreQAChips(c);
+
+  // Filing side — read only, with match highlighting
   const setField = (id, val, matchCls) => {
     const el = document.getElementById(id);
     el.textContent = val || '—';
@@ -863,40 +1160,62 @@ function loadCandidate(id) {
   const setWebField = (id, val, matchCls) => {
     const el = document.getElementById(id);
     if (!val || val === '—') {
-      el.innerHTML   = '<span style="color:var(--t4);font-style:italic;">—</span>';
-      el.className   = 'field-val empty';
+      el.innerHTML = '<span style="color:var(--t4);font-style:italic;">—</span>';
+      el.className = 'field-val empty';
     } else {
       const href = val.startsWith('http') ? val : 'https://' + val;
-      el.innerHTML   = `<a href="${href}" target="_blank" rel="noopener" class="web-link">${val}<span class="web-link-arrow">↗</span></a>`;
-      el.className   = `field-val ${matchCls || ''}`;
+      el.innerHTML = `<a href="${href}" target="_blank" rel="noopener" class="web-link">${val}<span class="web-link-arrow">↗</span></a>`;
+      el.className = `field-val ${matchCls || ''}`;
     }
   };
 
   setField('c-name-l',  c.filing.name);
   setField('c-addr-l',  c.filing.address);
-  setField('c-phone-l', c.filing.phone,  c.filing.phone  === c.entity.phone  ? 'match' : '');
+  setField('c-phone-l', c.filing.phone,   c.filing.phone   === c.entity.phone   ? 'match' : '');
   setWebField('c-web-l', c.filing.website, c.filing.website === c.entity.website ? 'match' : '');
-  setField('c-agent-l', c.filing.agent,  c.filing.agent  === c.entity.agent  ? 'match' : '');
+  setField('c-agent-l', c.filing.agent,   c.filing.agent   === c.entity.agent   ? 'match' : '');
   setField('c-date-l',  c.filing.date);
-  setField('c-name-r',  c.entity.name);
-  setField('c-addr-r',  c.entity.address);
-  setField('c-phone-r', c.entity.phone,  c.entity.phone  === c.filing.phone  ? 'match' : '');
-  setWebField('c-web-r', c.entity.website, c.entity.website === c.filing.website ? 'match' : '');
-  setField('c-agent-r', c.entity.agent,  c.entity.agent  === c.filing.agent  ? 'match' : '');
+
+  // Entity side — populate editable inputs
+  const setEdit = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.value = val || '';
+  };
+  setEdit('e-name',  c.entity.name);
+  setEdit('e-addr',  c.entity.address);
+  setEdit('e-phone', c.entity.phone);
+  setEdit('e-web',   c.entity.website !== '—' ? c.entity.website : '');
+  setEdit('e-agent', c.entity.agent);
   setField('c-filings-r', c.entity.filings);
 
-  // Source links — track-appropriate, route by entity type
+  // Live website link for entity
+  const webVal = c.entity.website;
+  if (webVal && webVal !== '—') {
+    const href = webVal.startsWith('http') ? webVal : 'https://' + webVal;
+    document.getElementById('e-web-link').innerHTML = `<a href="${href}" target="_blank" class="web-link" style="font-size:11px;">↗</a>`;
+  }
+
+  // Source links
   const name  = encodeURIComponent(c.filingName);
   const nameR = encodeURIComponent(c.entityName);
   const loc   = encodeURIComponent((c.entity.address || '').split(',').slice(-2).join(',').trim());
   const isEnt = c.conf >= 80 || (c.filing.agent || '').toLowerCase().includes('corporation');
-  const FAV   = d => `https://www.google.com/s2/favicons?domain=${d}&sz=16`;
 
-  const autoLinks = [
-    { label:'Google',         url:`https://www.google.com/search?q=${name}+${loc}`,         icon:'google.com' },
-    { label:'OpenCorporates', url:`https://opencorporates.com/companies?q=${name}&jurisdiction_code=us_de`, icon:'opencorporates.com' },
+  const chip = (label, cls, icon, manual) =>
+    `<a href="${label.url||'#'}" target="_blank" class="src-link${manual?' manual':''}" rel="noopener">
+      <img src="${FAV(icon)}">${label.label||label}
+    </a>`;
+
+  const webLinks = webVal && webVal !== '—' ? [{
+    label: webVal, url: webVal.startsWith('http') ? webVal : 'https://'+webVal,
+    icon: webVal.replace(/https?:\/\/(www\.)?/,'').split('/')[0]
+  }] : [];
+
+  const autoSrcs = [
+    { label:'Google',         url:`https://www.google.com/search?q=${name}+${loc}`,                                 icon:'google.com' },
+    { label:'OpenCorporates', url:`https://opencorporates.com/companies?q=${name}&jurisdiction_code=us_de`,         icon:'opencorporates.com' },
   ];
-  const manualLinks = isEnt ? [
+  const manualSrcs = isEnt ? [
     { label:'LinkedIn',   url:`https://www.linkedin.com/search/results/companies/?keywords=${nameR}`, icon:'linkedin.com',   manual:true },
     { label:'Crunchbase', url:`https://www.crunchbase.com/textsearch?q=${nameR}`,                     icon:'crunchbase.com', manual:true },
     { label:'SEC EDGAR',  url:`https://www.sec.gov/cgi-bin/browse-edgar?company=${nameR}&CIK=&type=10-K&dateb=&owner=include&count=10&search_text=&action=getcompany`, icon:'sec.gov', manual:true },
@@ -907,19 +1226,11 @@ function loadCandidate(id) {
     { label:'LinkedIn', url:`https://www.linkedin.com/search/results/companies/?keywords=${nameR}`,            icon:'linkedin.com', manual:true },
   ];
 
-  // Add website link if present
-  const webLinks = [];
-  if (c.entity.website && c.entity.website !== '—') {
-    const href = c.entity.website.startsWith('http') ? c.entity.website : 'https://' + c.entity.website;
-    webLinks.push({ label: c.entity.website, url: href, icon: c.entity.website.replace(/https?:\/\/(www\.)?/,'').split('/')[0] });
-  }
-
-  const allLinks = [...webLinks, ...autoLinks, ...manualLinks];
-  document.getElementById('source-links').innerHTML = allLinks.map(l =>
-    `<a href="${l.url}" target="_blank" rel="noopener" class="src-link${l.manual?' manual':''}">
-      <img src="${FAV(l.icon)}">${l.label}
-    </a>`
-  ).join('');
+  document.getElementById('source-links').innerHTML = [
+    ...webLinks.map(l => `<a href="${l.url}" target="_blank" class="src-link" rel="noopener"><img src="${FAV(l.icon)}">${l.label}</a>`),
+    ...autoSrcs.map(l => `<a href="${l.url}" target="_blank" class="src-link" rel="noopener"><img src="${FAV(l.icon)}">${l.label}</a>`),
+    ...manualSrcs.map(l => `<a href="${l.url}" target="_blank" class="src-link manual" rel="noopener"><img src="${FAV(l.icon)}">${l.label}</a>`),
+  ].join('');
 
   // Reasoning grid
   const rg = document.getElementById('reasoning-grid');
@@ -995,6 +1306,7 @@ function logDecision(action) {
   c._notes = document.getElementById('reviewer-notes').value;
   loadCandidate(selectedId);
   buildCards();
+  updatePendingBadge();
 }
 
 function toggleNotes() {
@@ -1013,8 +1325,42 @@ function setFilter(f) {
 
 function filterCards() { buildCards(); }
 
+function exportDecisions() {
+  const rows = [['filing_name','entity_name','confidence','decision','reviewer','timestamp','notes']];
+  CANDIDATES.forEach(c => {
+    const dec = (decisions[c.id] || []).filter(d =>
+      ['linked','created','rejected','split','escalated'].includes(d.badge)
+    );
+    if (dec.length > 0) {
+      dec.forEach(d => {
+        rows.push([c.filingName, c.entityName, c.conf+'%', d.badge, d.reviewer, d.time,
+          document.getElementById('reviewer-notes')?.value || '']);
+      });
+    } else {
+      rows.push([c.filingName, c.entityName, c.conf+'%', 'pending', '', '', '']);
+    }
+  });
+  const csv  = rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type:'text/csv' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `identity_review_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function updatePendingBadge() {
+  const n     = CANDIDATES.filter(c => c.status === 'needs-decision').length;
+  const badge = document.getElementById('pending-badge');
+  if (badge) badge.textContent = n;
+  const meta = document.querySelector('.topbar-meta');
+  if (meta) meta.textContent = `Pre-DUNS entity resolution · US-DE · ${n} candidates pending`;
+}
+
 // Init
 buildCards();
+updatePendingBadge();
 </script>
 </body>
 </html>
