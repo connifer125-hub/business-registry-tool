@@ -676,10 +676,13 @@ body {
 </div><!-- /app-shell -->
 
 <script>
-const FAV = d => `https://www.google.com/s2/favicons?domain=${d}&sz=16`;
-
-let currentCandidate = null;
-const editState = {};
+// ── All state variables declared first ──
+const FAV           = d => `https://www.google.com/s2/favicons?domain=${d}&sz=16`;
+let   currentCandidate = null;
+let   selectedId       = null;
+let   currentFilter    = 'pending';
+const editState        = {};
+const decisions        = {};
 
 function markDirty(fieldId) {
   const input = document.getElementById(fieldId);
@@ -1076,10 +1079,6 @@ function openResearchModal() {
   },
 ];
 
-let currentFilter = 'pending';
-let selectedId    = null;
-const decisions   = {};
-
 function buildCards() {
   const list = document.getElementById('candidates-list');
   list.innerHTML = '';
@@ -1358,9 +1357,11 @@ function updatePendingBadge() {
   if (meta) meta.textContent = `Pre-DUNS entity resolution · US-DE · ${n} candidates pending`;
 }
 
-// Init
-buildCards();
-updatePendingBadge();
+// ── Init ──
+document.addEventListener('DOMContentLoaded', () => {
+  buildCards();
+  updatePendingBadge();
+});
 </script>
 </body>
 </html>
