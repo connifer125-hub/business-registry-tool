@@ -552,8 +552,7 @@ body {
         <button class="filter-btn" id="filter-all" onclick="setFilter('all')">All</button>
       </div>
       <div class="candidates-list" id="candidates-list">
-        <!-- Duplicate count injected by JS -->
-        <div id="dupe-count-banner" style="display:none;padding:8px 10px;margin-bottom:4px;border-radius:8px;background:var(--amber-dim);border:0.5px solid var(--amber-border);"></div>
+      </div>
         <!-- Cards injected by JS -->
       </div>
     </div>
@@ -813,696 +812,253 @@ body {
 </div><!-- /app-shell -->
 
 <script>
-// ── All state variables declared first ──
-const FAV           = d => `https://www.google.com/s2/favicons?domain=${d}&sz=16`;
-let   currentCandidate = null;
-let   selectedId       = null;
-let   currentFilter    = 'pending';
-const editState        = {};
-const decisions        = {};
+// ── State ──
+const FAV = d => `https://www.google.com/s2/favicons?domain=${d}&sz=16`;
+let currentCandidate = null;
+let selectedId       = null;
+let currentFilter    = 'all';
+const editState      = {};
+const decisions      = {};
 
-function markDirty(fieldId) {
-  const input = document.getElementById(fieldId);
-  const dot   = document.getElementById('dot-' + fieldId);
-  const chk   = document.getElementById('chk-' + fieldId);
-  if (input) input.classList.add('dirty');
-  if (dot)   dot.classList.add('on');
-  if (chk)   chk.classList.remove('on');
-  editState[fieldId] = input?.value;
-  document.getElementById('save-all-btn').style.display = 'block';
-  document.getElementById('save-confirm').style.display = 'none';
-
-  // Live website link preview
-  if (fieldId === 'e-web') {
-    const val = input.value.trim();
-    const linkEl = document.getElementById('e-web-link');
-    if (val) {
-      const href = val.startsWith('http') ? val : 'https://' + val;
-      linkEl.innerHTML = `<a href="${href}" target="_blank" class="web-link" style="font-size:11px;">↗</a>`;
-    } else {
-      linkEl.innerHTML = '';
-    }
-  }
-}
-
-function saveAllEdits() {
-  const fields = ['e-name','e-addr','e-phone','e-web','e-agent'];
-  fields.forEach(f => {
-    const input = document.getElementById(f);
-    const dot   = document.getElementById('dot-' + f);
-    const chk   = document.getElementById('chk-' + f);
-    if (input && input.classList.contains('dirty')) {
-      input.classList.remove('dirty');
-      if (dot) dot.classList.remove('on');
-      if (chk) { chk.classList.add('on'); setTimeout(() => chk.classList.remove('on'), 3000); }
-      // In production: POST to /update-identity-field
-      if (currentCandidate) {
-        const keyMap = {'e-name':'name','e-addr':'address','e-phone':'phone','e-web':'website','e-agent':'agent'};
-        currentCandidate.entity[keyMap[f]] = input.value;
-      }
-    }
-  });
-  document.getElementById('save-all-btn').style.display = 'none';
-  document.getElementById('save-confirm').style.display = 'block';
-  setTimeout(() => { document.getElementById('save-confirm').style.display = 'none'; }, 3000);
-
-  // Log to audit
-  if (currentCandidate) {
-    const now = new Date().toISOString().slice(0,16).replace('T',' ');
-    if (!decisions[currentCandidate.id]) decisions[currentCandidate.id] = [];
-    decisions[currentCandidate.id].push({
-      time: now, reviewer: 'reviewer_01',
-      action: 'Field edits saved to entity record',
-      badge: 'edited', badgeCls: 'conf-medium',
-    });
-    const log = document.getElementById('audit-log');
-    const row = document.createElement('div');
-    row.className = 'audit-row';
-    row.innerHTML = `<span class="audit-time">${now}</span><span class="audit-reviewer">reviewer_01</span><span class="audit-action">Field edits saved to entity record</span><span class="audit-badge conf-medium">edited</span>`;
-    log.prepend(row);
-  }
-}
-
-function renderDupeDiff(c) {
-  const section = document.getElementById('dupe-diff-section');
-  const panel   = document.getElementById('dupe-diff-panel');
-  if (!section || !panel) return;
-
-  // Only show if there are multiple filings
-  if (c.filingCount < 2) {
-    section.style.display = 'none';
-    return;
-  }
-  section.style.display = 'block';
-
-  const fields = [
-    { label: 'Name',       a: c.filing.name,    b: c.entity.name    },
-    { label: 'Address',    a: c.filing.address, b: c.entity.address },
-    { label: 'Phone',      a: c.filing.phone,   b: c.entity.phone   },
-    { label: 'Website',    a: c.filing.website, b: c.entity.website },
-    { label: 'Agent',      a: c.filing.agent,   b: c.entity.agent   },
-    { label: 'Filed',      a: c.filing.date,    b: '—'              },
-  ];
-
-  const valClass = (a, b) => {
-    if (!a && !b) return 'empty';
-    if (!a || a === '—') return 'added';
-    if (!b || b === '—') return 'same';
-    return a === b ? 'same' : 'changed';
-  };
-
-  // Count differences
-  const diffCount = fields.filter(f => f.a && f.b && f.a !== '—' && f.b !== '—' && f.a !== f.b).length;
-  const sameCount = fields.filter(f => f.a && f.b && f.a !== '—' && f.b !== '—' && f.a === f.b).length;
-
-  panel.innerHTML = `
-    <div class="diff-header">
-      <span class="diff-header-label" style="color:var(--t4);">Field</span>
-      <span class="diff-header-label" style="color:var(--teal);">Filing 1 &nbsp;·&nbsp; registry</span>
-      <span class="diff-header-label" style="color:var(--blue);">Filing 2 &nbsp;·&nbsp; suggested entity</span>
-    </div>
-    ${fields.map(f => {
-      const cls = valClass(f.a, f.b);
-      const isDiff = cls === 'changed';
-      return `
-        <div class="diff-row" style="${isDiff ? 'background:rgba(245,158,11,.03);' : ''}">
-          <div class="diff-field-label" style="${isDiff ? 'color:var(--amber);' : ''}">${f.label}${isDiff ? ' ⚑' : ''}</div>
-          <div class="diff-val ${isDiff ? 'changed' : 'same'}">${f.a || '—'}</div>
-          <div class="diff-val ${isDiff ? 'changed' : (f.a === f.b ? 'same' : 'added')}">${f.b || '—'}</div>
-        </div>
-      `;
-    }).join('')}
-    <div style="padding:8px 14px;border-top:0.5px solid var(--border1);background:var(--bg2);display:flex;gap:16px;align-items:center;">
-      <span style="font-size:11px;color:var(--amber);font-weight:500;">⚑ ${diffCount} field${diffCount!==1?'s':''} differ</span>
-      <span style="font-size:11px;color:var(--green);">✓ ${sameCount} field${sameCount!==1?'s':''} match</span>
-      <span style="font-size:10px;color:var(--t4);margin-left:auto;">
-        ${diffCount === 0 ? 'All fields match — likely same entity, different entity type' :
-          diffCount === 1 ? 'Minor difference — possible address update or amendment' :
-          diffCount <= 2 ? 'Some differences — review carefully' :
-          'Significant differences — may be separate entities'}
-      </span>
-    </div>
-  `;
-}
-
-function renderAddrSelector(c) {
-  const sources = [
-    {
-      key:    'registry',
-      label:  'Registry filing',
-      addr:   c.filing.address,
-      note:   'Source of record — legal address on file',
-      match:  'source',
-      cls:    'rgba(45,212,191,.15)',
-      color:  'var(--teal)',
-    },
-    {
-      key:    'google',
-      label:  'Google Places',
-      addr:   c.entity.address,
-      note:   c.entity.address !== c.filing.address ? 'Differs from registry' : 'Matches registry',
-      match:  c.entity.address === c.filing.address ? 'match' : 'partial',
-      cls:    c.entity.address === c.filing.address ? 'rgba(34,197,94,.1)' : 'rgba(245,158,11,.08)',
-      color:  c.entity.address === c.filing.address ? 'var(--green)' : 'var(--amber)',
-    },
-  ];
-
-  // Add website source if entity has a website
-  if (c.entity.website && c.entity.website !== '—') {
-    sources.push({
-      key:   'website',
-      label: 'Website contact page',
-      addr:  c.entity.address, // in real app this would be scraped separately
-      note:  'Auto-scraped from ' + c.entity.website,
-      match: 'scraped',
-      cls:   'rgba(96,165,250,.08)',
-      color: 'var(--blue)',
-    });
-  }
-
-  let selectedKey = 'registry';
-
-  const container = document.getElementById('addr-selector');
-  const render = () => {
-    container.innerHTML = sources.map((s, idx) => `
-      <div class="addr-option ${s.key === selectedKey ? 'selected' : ''}"
-        data-key="${s.key}" data-idx="${idx}">
-        <div class="addr-select-dot"></div>
-        <div class="addr-source-label">${s.label}</div>
-        <div class="addr-val-text">${s.addr || '<span style="color:var(--t4);font-style:italic;">not available</span>'}</div>
-        <span class="addr-match-badge" style="background:${s.cls};color:${s.color};border:0.5px solid ${s.color}33;">${s.note}</span>
-      </div>
-    `).join('');
-    // Attach click handlers after rendering
-    container.querySelectorAll('.addr-option').forEach(el => {
-      el.addEventListener('click', () => {
-        const idx = parseInt(el.dataset.idx);
-        const src = sources[idx];
-        if (src) selectAddress(src.key, src.addr || '');
-      });
-    });
-  };
-
-  // Store sources on window for selectAddress to access
-  window._addrSources  = sources;
-  window._selectedAddr = selectedKey;
-  render();
-}
-
-function selectAddress(key, addrVal) {
-  window._selectedAddr = key;
-  // Update the entity address input
-  const input = document.getElementById('e-addr');
-  if (input) {
-    input.value = addrVal;
-    markDirty('e-addr');
-  }
-  // Re-render selector with new selection
-  const sources = window._addrSources || [];
-  const container = document.getElementById('addr-selector');
-  if (container) {
-    container.querySelectorAll('.addr-option').forEach((el, i) => {
-      el.classList.toggle('selected', sources[i]?.key === key);
-    });
-  }
-}
-
-function renderPreQAChips(c) {
-  const chips = [];
-  const googleMatch = c.reasoning.find(r => r.label === 'Domain match');
-  const phoneMatch  = c.reasoning.find(r => r.label === 'Phone match');
-  const addrMatch   = c.reasoning.find(r => r.label === 'Address proximity');
-  const agentMatch  = c.reasoning.find(r => r.label === 'Reg. agent signal');
-
-  // Google Places
-  const gCls = googleMatch?.val === 'Exact' ? 'chip-ok' : googleMatch?.val === 'Partial' ? 'chip-warn' : 'chip-none';
-  chips.push(`<span class="preqa-chip ${gCls}"><img src="${FAV('google.com')}">Google Places · ${googleMatch?.val || 'not checked'}</span>`);
-
-  // Phone area code
-  const pCls = phoneMatch?.val === 'Yes' ? 'chip-ok' : 'chip-warn';
-  chips.push(`<span class="preqa-chip ${pCls}">📞 Phone · ${phoneMatch?.val || '—'}</span>`);
-
-  // Address
-  const aCls = addrMatch?.val === 'High' ? 'chip-ok' : addrMatch?.val === 'Medium' ? 'chip-warn' : 'chip-none';
-  chips.push(`<span class="preqa-chip ${aCls}">📍 Address · ${addrMatch?.val || '—'}</span>`);
-
-  // Registered agent
-  const rCls = agentMatch?.val === 'Strong' ? 'chip-ok' : agentMatch?.val === 'Weak' ? 'chip-warn' : 'chip-none';
-  chips.push(`<span class="preqa-chip ${rCls}"><img src="${FAV('opencorporates.com')}">Agent · ${agentMatch?.val || '—'}</span>`);
-
-  // SIC if available
-  chips.push(`<span class="preqa-chip chip-auto"><img src="${FAV('anthropic.com')}">SIC · auto-classified</span>`);
-
-  document.getElementById('preqa-chips').innerHTML = chips.join('');
-}
-
-function openResearchModal() {
-  if (!currentCandidate) return;
-  const c     = currentCandidate;
-  const name  = c.filingName;
-  const city  = (c.entity.address || '').split(',')[1]?.trim() || '';
-  const state = (c.entity.address || '').split(',')[2]?.trim()?.split(' ')[0] || '';
-  const track = c.track || 'small';
-  const trackLabel = track === 'small' ? 'Small business' : track === 'mid' ? 'Mid-market' : 'Enterprise';
-
-  const stripSfx = n => n.replace(/\b(LLC|Inc\.?|Corp\.?|LLP|Ltd\.?|L\.L\.C\.?|Co\.?|PLC|PLLC|P\.C\.)\b\.?/gi,'').replace(/\s+/g,' ').trim();
-  const cleanName  = stripSfx(name);
-  const q   = encodeURIComponent(cleanName + ' ' + city + ' ' + state);
-  const qN  = encodeURIComponent(cleanName);
-  const qNR = encodeURIComponent(stripSfx(c.entityName));
-  const loc  = encodeURIComponent(city + ' ' + state);
-
-  const autoLinks = [
-    { label:'Google Places', url:`https://www.google.com/search?q=${q}`, icon:'google.com', auto:true },
-    ...(track !== 'small' ? [
-      { label:'OpenCorporates', url:`https://opencorporates.com/companies?q=${encodeURIComponent(name)}&jurisdiction_code=us_de`, icon:'opencorporates.com', auto:true },
-    ] : []),
-    ...(track === 'ent' ? [
-      { label:'SEC EDGAR', url:`https://www.sec.gov/cgi-bin/browse-edgar?company=${encodeURIComponent(name)}&CIK=&type=10-K&dateb=&owner=include&count=10&search_text=&action=getcompany`, icon:'sec.gov', auto:true },
-      { label:'SAM.gov',   url:`https://sam.gov/search/?keywords=${encodeURIComponent(name)}`, icon:'sam.gov', auto:true },
-    ] : []),
-  ];
-
-  const manualLinks = [
-    ...(track === 'small' ? [
-      { label:'BBB',      url:`https://www.bbb.org/search?find_text=${qN}&find_loc=${loc}`, icon:'bbb.org' },
-      { label:'Facebook', url:`https://www.facebook.com/search/pages/?q=${qN}`,             icon:'facebook.com' },
-      { label:'Yelp',     url:`https://www.yelp.com/search?find_desc=${qN}&find_loc=${loc}`,icon:'yelp.com' },
-    ] : []),
-    ...(track === 'mid' ? [
-      { label:'LinkedIn',   url:`https://www.linkedin.com/search/results/companies/?keywords=${qNR}`, icon:'linkedin.com' },
-      { label:'Crunchbase', url:`https://www.crunchbase.com/textsearch?q=${qNR}`,                    icon:'crunchbase.com' },
-      { label:'BBB',        url:`https://www.bbb.org/search?find_text=${qN}&find_loc=${loc}`,        icon:'bbb.org' },
-    ] : []),
-    ...(track === 'ent' ? [
-      { label:'LinkedIn',   url:`https://www.linkedin.com/search/results/companies/?keywords=${qNR}`, icon:'linkedin.com' },
-      { label:'Crunchbase', url:`https://www.crunchbase.com/textsearch?q=${qNR}`,                    icon:'crunchbase.com' },
-    ] : []),
-  ];
-
-  const sections = [
-    { heading:'Auto-checked (pre-QA)', note:'These ran automatically before you saw this record', links: autoLinks },
-    { heading:'Spot-check manually',   note:'Open to visually verify — never scraped automatically', links: manualLinks },
-  ];
-
-  document.querySelectorAll('#id-research-modal,#id-research-overlay').forEach(el => el.remove());
-
-  const overlay = document.createElement('div');
-  overlay.id = 'id-research-overlay';
-  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9998;backdrop-filter:blur(2px);';
-
-  const modal = document.createElement('div');
-  modal.id = 'id-research-modal';
-  modal.style.cssText = `
-    position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
-    background:var(--bg2);border:0.5px solid var(--border2);border-radius:14px;
-    padding:0;z-index:9999;width:400px;
-    box-shadow:0 20px 60px rgba(0,0,0,.6);
-    font-family:'DM Sans',sans-serif;overflow:hidden;
-  `;
-
-  modal.innerHTML = `
-    <div style="padding:16px 18px;border-bottom:0.5px solid var(--border1);display:flex;align-items:flex-start;justify-content:space-between;">
-      <div>
-        <div style="font-size:14px;font-weight:600;color:var(--t0);">${name}</div>
-        <div style="font-size:11px;color:var(--t3);margin-top:2px;">${city}${state?', '+state:''} · ${trackLabel} track</div>
-      </div>
-      <button onclick="document.querySelectorAll('#id-research-modal,#id-research-overlay').forEach(el=>el.remove())"
-        style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--t3);line-height:1;padding:2px;">×</button>
-    </div>
-    ${sections.map(sec => `
-      <div style="padding:12px 18px;border-bottom:0.5px solid var(--border0);">
-        <div style="font-size:10px;font-weight:500;color:var(--t4);text-transform:uppercase;letter-spacing:.08em;margin-bottom:3px;">${sec.heading}</div>
-        <div style="font-size:10px;color:var(--t4);margin-bottom:8px;">${sec.note}</div>
-        <div style="display:flex;flex-direction:column;gap:5px;">
-          ${sec.links.map(l => `
-            <a href="${l.url}" target="_blank" rel="noopener"
-              style="display:flex;align-items:center;gap:8px;padding:8px 11px;border:0.5px solid var(--border${l.auto?'1':'2'});border-radius:8px;text-decoration:none;color:var(--t1);font-size:12px;font-weight:500;background:var(--bg${l.auto?'1':'3'});transition:all .1s;"
-              onmouseover="this.style.background='var(--bg4)';this.style.borderColor='var(--border3)'"
-              onmouseout="this.style.background='var(--bg${l.auto?'1':'3'})';this.style.borderColor='var(--border${l.auto?'1':'2'})'">
-              <img src="${FAV(l.icon)}" style="width:14px;height:14px;border-radius:2px;">
-              <span>${l.label}</span>
-              ${l.auto ? '<span style="font-size:9px;padding:1px 5px;border-radius:4px;background:var(--teal-dim);color:var(--teal);border:0.5px solid var(--teal-border);margin-left:auto;">auto</span>' : '<span style="font-size:11px;color:var(--t4);margin-left:auto;">↗ open</span>'}
-            </a>
-          `).join('')}
-        </div>
-      </div>
-    `).join('')}
-    <div style="padding:10px 18px;font-size:10px;color:var(--t4);line-height:1.6;">
-      LinkedIn and Facebook are never scraped automatically — open manually to visually verify.<br>
-      After checking a source, update the field on the left and click <strong style="color:var(--green);">Save all field edits</strong>.
-    </div>
-  `;
-
-  overlay.onclick = () => document.querySelectorAll('#id-research-modal,#id-research-overlay').forEach(el => el.remove());
-  document.body.appendChild(overlay);
-  document.body.appendChild(modal);
-}
+// ── Tag maps ──
+const TAG_LABEL = {
+  'name-variant':   'Name variant',
+  'shared-website': 'Shared website',
+  'shared-phone':   'Shared phone',
+  'addr-overlap':   'Partial address match',
+  'addr-match':     'Exact address match',
+  'addr-conflict':  'Address conflict',
+  'same-agent':     'Same registered agent',
+  'needs-decision': 'Needs decision',
+};
+const TAG_CLS = {
+  'name-variant':   'name-variant',
+  'shared-website': 'shared-website',
+  'shared-phone':   'shared-website',
+  'addr-overlap':   'addr-overlap',
+  'addr-match':     'name-variant',
+  'addr-conflict':  'needs-decision',
+  'same-agent':     'addr-overlap',
+  'needs-decision': 'needs-decision',
+};
 
 // ── Candidate data ──
 const CANDIDATES = [
   {
-    id: 1,
-    filingName: 'HELOC.com LLC',
-    entityName: 'HELOC.com',
-    conf: 91, confLabel: 'high',
-    filingCount: 2,
-    track: 'small',
-    tags: ['name-variant', 'shared-website'],
-    status: 'needs-decision',
-    filing: {
-      name: 'HELOC.com LLC',
-      address: '33431 Boca Raton, FL',
-      phone: '(800) 220-3333',
-      website: 'heloc.com',
-      agent: 'Self-registered',
-      date: '2023-04-12',
-    },
-    entity: {
-      name: 'HELOC.com',
-      address: '1800 NW Corporate Blvd, Boca Raton, FL 33431',
-      phone: '(800) 220-3333',
-      website: 'heloc.com',
-      agent: 'Self-registered',
-      filings: '2 filings · 1 market',
-    },
-    reasoning: [
-      { label:'Name similarity',       val:'Strong',  cls:'r-strong' },
-      { label:'Domain match',          val:'Exact',   cls:'r-strong' },
-      { label:'Phone match',           val:'Yes',     cls:'r-yes' },
-      { label:'Address proximity',     val:'High',    cls:'r-strong' },
-      { label:'Reg. agent signal',     val:'Weak',    cls:'r-weak' },
-      { label:'Filing age gap',        val:'<1 year', cls:'r-medium' },
+    id:1, filingName:'HELOC.com LLC', entityName:'HELOC.com',
+    conf:91, confLabel:'high', filingCount:2, track:'small',
+    tags:['name-variant','shared-website','shared-phone'], status:'needs-decision',
+    filing:{ name:'HELOC.com LLC', address:'33431 Boca Raton, FL', phone:'(800) 220-3333', website:'heloc.com', agent:'Self-registered', date:'2023-04-12' },
+    entity:{ name:'HELOC.com', address:'1800 NW Corporate Blvd, Boca Raton, FL 33431', phone:'(800) 220-3333', website:'heloc.com', agent:'Self-registered', filings:'2 filings · 1 market' },
+    reasoning:[
+      {label:'Name similarity',   val:'Strong', cls:'r-strong'},
+      {label:'Domain match',      val:'Exact',  cls:'r-strong'},
+      {label:'Phone match',       val:'Yes',    cls:'r-yes'},
+      {label:'Address proximity', val:'High',   cls:'r-strong'},
+      {label:'Reg. agent signal', val:'Weak',   cls:'r-weak'},
+      {label:'Filing age gap',    val:'<1 year',cls:'r-medium'},
     ],
-    sysConf: { val:'High', pct:91, color:'var(--green)', note:'4 of 5 signals agree' },
-    timeline: [
-      { year:'2022', event:'First filing', detail:'HELOC.com — Boca Raton, FL · Trade name', type:'formation' },
-      { year:'2023', event:'Second filing', detail:'HELOC.com LLC — same address, different entity type', type:'amendment', badge:'Duplicate candidate' },
-      { year:'2024', event:'Address verified', detail:'Google Places confirmed 1800 NW Corporate Blvd', type:'address' },
+    sysConf:{val:'High', pct:91, color:'var(--green)', note:'4 of 5 signals agree'},
+    timeline:[
+      {year:'2022', event:'First filing',     detail:'HELOC.com — Boca Raton, FL · Trade name',                          type:'formation'},
+      {year:'2023', event:'Second filing',    detail:'HELOC.com LLC — same address, different entity type',               type:'amendment', badge:'Duplicate candidate'},
+      {year:'2024', event:'Address verified', detail:'Google Places confirmed 1800 NW Corporate Blvd',                    type:'address'},
     ],
-    audit: [
-      { time:'2026-04-22 09:14', reviewer:'system', action:'Auto-flagged as identity candidate · conf 91%', badge:'auto', badgeCls:'conf-high' },
-    ],
+    audit:[{time:'2026-04-22 09:14', reviewer:'system', action:'Auto-flagged as identity candidate · conf 91%', badge:'auto', badgeCls:'conf-high'}],
   },
   {
-    id: 2,
-    filingName: 'JCM Electrical Services',
-    entityName: 'JCM Electrical',
-    conf: 78, confLabel: 'medium',
-    filingCount: 1,
-    track: 'small',
-    tags: ['name-variant', 'addr-overlap'],
-    status: 'needs-decision',
-    filing: {
-      name: 'JCM Electrical Services',
-      address: '317 Hackberry Dr, New Castle, DE 19720',
-      phone: '(302) 419-3232',
-      website: 'jcmelec.com',
-      agent: 'Self-registered',
-      date: '2019-03-15',
-    },
-    entity: {
-      name: 'JCM Electrical',
-      address: '317 Hackberry Dr Ste B110, New Castle, DE 19720',
-      phone: '(302) 419-3232',
-      website: 'jcmelec.com',
-      agent: 'Self-registered',
-      filings: '1 filing · 1 market',
-    },
-    reasoning: [
-      { label:'Name similarity',       val:'Strong',  cls:'r-strong' },
-      { label:'Domain match',          val:'Exact',   cls:'r-strong' },
-      { label:'Phone match',           val:'Yes',     cls:'r-yes' },
-      { label:'Address proximity',     val:'Medium',  cls:'r-medium' },
-      { label:'Reg. agent signal',     val:'None',    cls:'r-none' },
-      { label:'Filing age gap',        val:'5 years', cls:'r-medium' },
+    id:2, filingName:'JCM Electrical Services', entityName:'JCM Electrical',
+    conf:78, confLabel:'medium', filingCount:1, track:'small',
+    tags:['name-variant','addr-overlap'], status:'needs-decision',
+    filing:{ name:'JCM Electrical Services', address:'317 Hackberry Dr, New Castle, DE 19720', phone:'(302) 419-3232', website:'jcmelec.com', agent:'Self-registered', date:'2019-03-15' },
+    entity:{ name:'JCM Electrical', address:'317 Hackberry Dr Ste B110, New Castle, DE 19720', phone:'(302) 419-3232', website:'jcmelec.com', agent:'Self-registered', filings:'1 filing · 1 market' },
+    reasoning:[
+      {label:'Name similarity',   val:'Strong', cls:'r-strong'},
+      {label:'Domain match',      val:'Exact',  cls:'r-strong'},
+      {label:'Phone match',       val:'Yes',    cls:'r-yes'},
+      {label:'Address proximity', val:'Medium', cls:'r-medium'},
+      {label:'Reg. agent signal', val:'None',   cls:'r-none'},
+      {label:'Filing age gap',    val:'5 years',cls:'r-medium'},
     ],
-    sysConf: { val:'Medium', pct:78, color:'var(--amber)', note:'Suite number differs' },
-    timeline: [
-      { year:'2019', event:'Formation', detail:'JCM Electrical Services · Trade name · New Castle, DE', type:'formation' },
-      { year:'2024', event:'Google verified', detail:'Operating address confirmed — suite number differs from registry', type:'address' },
+    sysConf:{val:'Medium', pct:78, color:'var(--amber)', note:'Suite number differs'},
+    timeline:[
+      {year:'2019', event:'Formation',       detail:'JCM Electrical Services · Trade name · New Castle, DE', type:'formation'},
+      {year:'2024', event:'Google verified', detail:'Operating address confirmed — suite number differs',     type:'address'},
     ],
-    audit: [
-      { time:'2026-04-21 14:22', reviewer:'system', action:'Auto-flagged · name variant + shared domain', badge:'auto', badgeCls:'conf-medium' },
-    ],
+    audit:[{time:'2026-04-21 14:22', reviewer:'system', action:'Auto-flagged · name variant + shared domain', badge:'auto', badgeCls:'conf-medium'}],
   },
   {
-    id: 3,
-    filingName: 'Scope Content LLC',
-    entityName: 'Scope Content, Inc.',
-    conf: 44, confLabel: 'low',
-    filingCount: 2,
-    track: 'mid',
-    tags: ['needs-decision', 'addr-overlap'],
-    status: 'needs-decision',
-    filing: {
-      name: 'Scope Content LLC',
-      address: 'Dover, DE 19901',
-      phone: '(302) 248-1896',
-      website: '—',
-      agent: 'CT Corporation System',
-      date: '2021-08-30',
-    },
-    entity: {
-      name: 'Scope Content, Inc.',
-      address: '560 Mission St, San Francisco, CA 94105',
-      phone: '(415) 555-0108',
-      website: 'scopecontent.com',
-      agent: 'CT Corporation System',
-      filings: '2 filings · 3 markets',
-    },
-    reasoning: [
-      { label:'Name similarity',       val:'Medium',  cls:'r-medium' },
-      { label:'Domain match',          val:'None',    cls:'r-none' },
-      { label:'Phone match',           val:'No',      cls:'r-no' },
-      { label:'Address proximity',     val:'Low',     cls:'r-weak' },
-      { label:'Reg. agent signal',     val:'Strong',  cls:'r-strong' },
-      { label:'Filing age gap',        val:'3 years', cls:'r-medium' },
+    id:3, filingName:'Scope Content LLC', entityName:'Scope Content, Inc.',
+    conf:44, confLabel:'low', filingCount:2, track:'mid',
+    tags:['needs-decision','addr-conflict','same-agent'], status:'needs-decision',
+    filing:{ name:'Scope Content LLC', address:'Dover, DE 19901', phone:'(302) 248-1896', website:'—', agent:'CT Corporation System', date:'2021-08-30' },
+    entity:{ name:'Scope Content, Inc.', address:'560 Mission St, San Francisco, CA 94105', phone:'(415) 555-0108', website:'scopecontent.com', agent:'CT Corporation System', filings:'2 filings · 3 markets' },
+    reasoning:[
+      {label:'Name similarity',   val:'Medium', cls:'r-medium'},
+      {label:'Domain match',      val:'None',   cls:'r-none'},
+      {label:'Phone match',       val:'No',     cls:'r-no'},
+      {label:'Address proximity', val:'Low',    cls:'r-weak'},
+      {label:'Reg. agent signal', val:'Strong', cls:'r-strong'},
+      {label:'Filing age gap',    val:'3 years',cls:'r-medium'},
     ],
-    sysConf: { val:'Low', pct:44, color:'var(--red)', note:'Shared agent only — likely coincidence' },
-    timeline: [
-      { year:'2018', event:'Entity formed', detail:'Scope Content, Inc. · California · Media company', type:'formation' },
-      { year:'2021', event:'DE filing detected', detail:'Scope Content LLC · Dover, DE · Possible shell', type:'amendment', badge:'Review needed' },
+    sysConf:{val:'Low', pct:44, color:'var(--red)', note:'Shared agent only — likely coincidence'},
+    timeline:[
+      {year:'2018', event:'Entity formed',       detail:'Scope Content, Inc. · California · Media company',     type:'formation'},
+      {year:'2021', event:'DE filing detected',  detail:'Scope Content LLC · Dover, DE · Possible shell',       type:'amendment', badge:'Review needed'},
     ],
-    audit: [
-      { time:'2026-04-20 11:05', reviewer:'system', action:'Flagged · shared registered agent · low confidence', badge:'auto', badgeCls:'conf-low' },
-    ],
+    audit:[{time:'2026-04-20 11:05', reviewer:'system', action:'Flagged · shared registered agent · low confidence', badge:'auto', badgeCls:'conf-low'}],
   },
   {
-    id: 4,
-    filingName: 'PM Construction Services',
-    entityName: 'PM Construction Group',
-    conf: 67, confLabel: 'medium',
-    filingCount: 2,
-    track: 'mid',
-    tags: ['name-variant', 'needs-decision'],
-    status: 'needs-decision',
-    filing: {
-      name: 'PM Construction Services',
-      address: 'Farmingdale, NY 11735',
-      phone: '(631) 420-0400',
-      website: '—',
-      agent: 'Northwest Registered Agent',
-      date: '2020-06-14',
-    },
-    entity: {
-      name: 'PM Construction Group',
-      address: '100 Motor Pkwy, Hauppauge, NY 11788',
-      phone: '(631) 420-0400',
-      website: 'pmconstruction.com',
-      agent: 'Northwest Registered Agent',
-      filings: '2 filings · 2 markets',
-    },
-    reasoning: [
-      { label:'Name similarity',       val:'Strong',  cls:'r-strong' },
-      { label:'Domain match',          val:'Partial', cls:'r-medium' },
-      { label:'Phone match',           val:'Yes',     cls:'r-yes' },
-      { label:'Address proximity',     val:'Medium',  cls:'r-medium' },
-      { label:'Reg. agent signal',     val:'Strong',  cls:'r-strong' },
-      { label:'Filing age gap',        val:'2 years', cls:'r-medium' },
+    id:4, filingName:'PM Construction Services', entityName:'PM Construction Group',
+    conf:67, confLabel:'medium', filingCount:2, track:'mid',
+    tags:['name-variant','shared-phone','same-agent'], status:'needs-decision',
+    filing:{ name:'PM Construction Services', address:'Farmingdale, NY 11735', phone:'(631) 420-0400', website:'—', agent:'Northwest Registered Agent', date:'2020-06-14' },
+    entity:{ name:'PM Construction Group', address:'100 Motor Pkwy, Hauppauge, NY 11788', phone:'(631) 420-0400', website:'pmconstruction.com', agent:'Northwest Registered Agent', filings:'2 filings · 2 markets' },
+    reasoning:[
+      {label:'Name similarity',   val:'Strong', cls:'r-strong'},
+      {label:'Domain match',      val:'Partial',cls:'r-medium'},
+      {label:'Phone match',       val:'Yes',    cls:'r-yes'},
+      {label:'Address proximity', val:'Medium', cls:'r-medium'},
+      {label:'Reg. agent signal', val:'Strong', cls:'r-strong'},
+      {label:'Filing age gap',    val:'2 years',cls:'r-medium'},
     ],
-    sysConf: { val:'Medium', pct:67, color:'var(--amber)', note:'Name variant — "Services" vs "Group"' },
-    timeline: [
-      { year:'2018', event:'Formation', detail:'PM Construction Group · NY · General contractor', type:'formation' },
-      { year:'2020', event:'DE filing', detail:'PM Construction Services — possible DBA or subsidiary', type:'amendment' },
-      { year:'2025', event:'Address update', detail:'Farmingdale office verified via Google Places', type:'address' },
+    sysConf:{val:'Medium', pct:67, color:'var(--amber)', note:'Name variant — "Services" vs "Group"'},
+    timeline:[
+      {year:'2018', event:'Formation',    detail:'PM Construction Group · NY · General contractor',               type:'formation'},
+      {year:'2020', event:'DE filing',    detail:'PM Construction Services — possible DBA or subsidiary',          type:'amendment'},
+      {year:'2025', event:'Addr update',  detail:'Farmingdale office verified via Google Places',                  type:'address'},
     ],
-    audit: [
-      { time:'2026-04-19 16:40', reviewer:'system', action:'Auto-flagged · name variant + shared phone', badge:'auto', badgeCls:'conf-medium' },
-    ],
+    audit:[{time:'2026-04-19 16:40', reviewer:'system', action:'Auto-flagged · name variant + shared phone', badge:'auto', badgeCls:'conf-medium'}],
   },
   {
-    id: 5,
-    filingName: 'Sidley Austin LLP',
-    entityName: 'Sidley Austin LLP',
-    conf: 98, confLabel: 'high',
-    filingCount: 1,
-    track: 'ent',
-    tags: ['shared-website'],
-    status: 'confirmed',
-    filing: {
-      name: 'Sidley Austin LLP',
-      address: 'New York, NY 10019',
-      phone: '(212) 839-5300',
-      website: 'sidley.com',
-      agent: 'CT Corporation System',
-      date: '1995-01-01',
-    },
-    entity: {
-      name: 'Sidley Austin LLP',
-      address: '787 Seventh Ave, New York, NY 10019',
-      phone: '(212) 839-5300',
-      website: 'sidley.com',
-      agent: 'CT Corporation System',
-      filings: '12 filings · 8 markets',
-    },
-    reasoning: [
-      { label:'Name similarity',       val:'Strong',  cls:'r-strong' },
-      { label:'Domain match',          val:'Exact',   cls:'r-strong' },
-      { label:'Phone match',           val:'Yes',     cls:'r-yes' },
-      { label:'Address proximity',     val:'High',    cls:'r-strong' },
-      { label:'Reg. agent signal',     val:'Strong',  cls:'r-strong' },
-      { label:'Filing age gap',        val:'None',    cls:'r-strong' },
+    id:5, filingName:'Sidley Austin LLP', entityName:'Sidley Austin LLP',
+    conf:98, confLabel:'high', filingCount:1, track:'ent',
+    tags:['shared-website'], status:'confirmed',
+    filing:{ name:'Sidley Austin LLP', address:'New York, NY 10019', phone:'(212) 839-5300', website:'sidley.com', agent:'CT Corporation System', date:'1995-01-01' },
+    entity:{ name:'Sidley Austin LLP', address:'787 Seventh Ave, New York, NY 10019', phone:'(212) 839-5300', website:'sidley.com', agent:'CT Corporation System', filings:'12 filings · 8 markets' },
+    reasoning:[
+      {label:'Name similarity',   val:'Strong', cls:'r-strong'},
+      {label:'Domain match',      val:'Exact',  cls:'r-strong'},
+      {label:'Phone match',       val:'Yes',    cls:'r-yes'},
+      {label:'Address proximity', val:'High',   cls:'r-strong'},
+      {label:'Reg. agent signal', val:'Strong', cls:'r-strong'},
+      {label:'Filing age gap',    val:'None',   cls:'r-strong'},
     ],
-    sysConf: { val:'High', pct:98, color:'var(--green)', note:'All signals agree — EDGAR confirmed' },
-    timeline: [
-      { year:'1995', event:'Formation', detail:'Sidley Austin LLP · National law firm', type:'formation' },
-      { year:'2010', event:'SEC EDGAR match', detail:'Public filing confirmed entity identity at 99%', type:'address' },
-      { year:'2026', event:'DE registry filing', detail:'Routine state registration · same entity', type:'formation' },
+    sysConf:{val:'High', pct:98, color:'var(--green)', note:'All signals agree — EDGAR confirmed'},
+    timeline:[
+      {year:'1995', event:'Formation',       detail:'Sidley Austin LLP · National law firm',                     type:'formation'},
+      {year:'2010', event:'EDGAR match',     detail:'Public filing confirmed entity identity at 99%',            type:'address'},
+      {year:'2026', event:'DE registration', detail:'Routine state registration · same entity',                  type:'formation'},
     ],
-    audit: [
-      { time:'2026-04-18 10:22', reviewer:'system', action:'EDGAR match · auto-flagged as confirmed', badge:'auto', badgeCls:'conf-high' },
-      { time:'2026-04-18 14:05', reviewer:'reviewer_01', action:'Linked to existing entity · Sidley Austin LLP', badge:'linked', badgeCls:'conf-high' },
+    audit:[
+      {time:'2026-04-18 10:22', reviewer:'system',      action:'EDGAR match · auto-flagged as confirmed', badge:'auto',   badgeCls:'conf-high'},
+      {time:'2026-04-18 14:05', reviewer:'reviewer_01', action:'Linked to existing entity',               badge:'linked', badgeCls:'conf-high'},
     ],
   },
 ];
 
+// ── Strip legal suffixes ──
+function stripSfx(name) {
+  return (name || '').replace(/\b(LLC|Inc\.?|Corp\.?|LLP|Ltd\.?|L\.L\.C\.?|Co\.?|PLC|PLLC|P\.C\.)\b\.?/gi, '').replace(/\s+/g,' ').trim();
+}
+
+// ── Build candidate cards ──
 function buildCards() {
   const list = document.getElementById('candidates-list');
+  if (!list) return;
   list.innerHTML = '';
 
-  // Restore the banner element
-  const banner = document.createElement('div');
-  banner.id = 'dupe-count-banner';
-  list.appendChild(banner);
-
-  const q = document.getElementById('search-input').value.toLowerCase();
-  const filtered = CANDIDATES.filter(c => {
-    if (currentFilter === 'pending' && (c.status === 'confirmed' || c.status === 'conflict')) return false;
-    if (q && !c.filingName.toLowerCase().includes(q) && !c.entityName.toLowerCase().includes(q)) return false;
-    return true;
-  });
-
-  // Count duplicate candidates (filingCount > 1)
-  const dupeCount  = CANDIDATES.filter(c => c.filingCount > 1).length;
-  const dupeFiles  = CANDIDATES.filter(c => c.filingCount > 1).reduce((sum, c) => sum + c.filingCount, 0);
+  // Duplicate banner
+  const dupeCount = CANDIDATES.filter(c => c.filingCount > 1).length;
+  const dupeFiles = CANDIDATES.filter(c => c.filingCount > 1).reduce((sum,c) => sum + c.filingCount, 0);
   if (dupeCount > 0) {
+    const banner = document.createElement('div');
     banner.style.cssText = 'padding:8px 10px;margin-bottom:6px;border-radius:8px;background:var(--amber-dim);border:0.5px solid var(--amber-border);';
-    banner.innerHTML = `
-      <div style="font-size:11px;font-weight:500;color:var(--amber);margin-bottom:2px;">
-        ⚑ Duplicate registries found
-      </div>
-      <div style="font-size:10px;color:var(--t2);line-height:1.5;">
-        ${dupeFiles} filings across ${dupeCount} candidate${dupeCount>1?'s':''} — review pairs below
-      </div>
-    `;
+    banner.innerHTML = '<div style="font-size:11px;font-weight:500;color:var(--amber);margin-bottom:2px;">&#x26A1; Duplicate registries found</div>'
+      + '<div style="font-size:10px;color:rgba(255,255,255,.55);line-height:1.5;">'
+      + dupeFiles + ' filings across ' + dupeCount + ' candidate' + (dupeCount>1?'s':'') + ' — review pairs below</div>';
+    list.appendChild(banner);
   }
 
-  filtered.forEach(c => {
+  const q = (document.getElementById('search-input') || {value:''}).value.toLowerCase();
+
+  CANDIDATES
+    .filter(c => {
+      if (currentFilter === 'pending' && (c.status === 'confirmed' || c.status === 'conflict')) return false;
+      if (q && !c.filingName.toLowerCase().includes(q) && !c.entityName.toLowerCase().includes(q)) return false;
+      return true;
+    })
+    .forEach(c => {
       const div = document.createElement('div');
       const confCls = c.confLabel === 'high' ? 'conf-high' : c.confLabel === 'medium' ? 'conf-medium' : 'conf-low';
-      const tagMap  = { 'name-variant':'Name variant','shared-website':'Shared website','addr-overlap':'Address overlap','needs-decision':'Needs decision' };
-      const tagCls  = { 'name-variant':'name-variant','shared-website':'shared-website','addr-overlap':'addr-overlap','needs-decision':'needs-decision' };
-      const trackColor = c.track==='ent'?'#60a5fa':c.track==='mid'?'#c084fc':'#34d399';
-      const trackBg    = c.track==='ent'?'rgba(96,165,250,.07)':c.track==='mid'?'rgba(192,132,252,.07)':'rgba(52,211,153,.07)';
-      const trackBorder= c.track==='ent'?'rgba(96,165,250,.2)':c.track==='mid'?'rgba(192,132,252,.2)':'rgba(52,211,153,.2)';
-      const trackLabel = c.track==='ent'?'Enterprise':c.track==='mid'?'Mid-market':'Small biz';
+      const trackColor  = c.track==='ent' ? '#60a5fa' : c.track==='mid' ? '#c084fc' : '#34d399';
+      const trackBg     = c.track==='ent' ? 'rgba(96,165,250,.07)' : c.track==='mid' ? 'rgba(192,132,252,.07)' : 'rgba(52,211,153,.07)';
+      const trackBorder = c.track==='ent' ? 'rgba(96,165,250,.2)'  : c.track==='mid' ? 'rgba(192,132,252,.2)'  : 'rgba(52,211,153,.2)';
+      const trackLabel  = c.track==='ent' ? 'Enterprise' : c.track==='mid' ? 'Mid-market' : 'Small biz';
 
-      // Build inline diff — compare filing vs entity fields
+      // Diff fields
       const fields = [
-        { label:'Name',    a: c.filing.name,    b: c.entity.name    },
-        { label:'Address', a: c.filing.address, b: c.entity.address },
-        { label:'Phone',   a: c.filing.phone,   b: c.entity.phone   },
-        { label:'Website', a: c.filing.website, b: c.entity.website },
-        { label:'Agent',   a: c.filing.agent,   b: c.entity.agent   },
+        {label:'Name',    a:c.filing.name,    b:c.entity.name},
+        {label:'Address', a:c.filing.address, b:c.entity.address},
+        {label:'Phone',   a:c.filing.phone,   b:c.entity.phone},
+        {label:'Website', a:c.filing.website, b:c.entity.website},
+        {label:'Agent',   a:c.filing.agent,   b:c.entity.agent},
       ];
-
-      // Only show fields that differ OR are both populated
-      const diffFields = fields.filter(f => f.a && f.b && f.a !== f.b);
+      const diffFields  = fields.filter(f => f.a && f.b && f.a !== f.b);
       const matchFields = fields.filter(f => f.a && f.b && f.a === f.b);
 
-      const diffRows = diffFields.map(f => `
-        <div style="display:grid;grid-template-columns:52px 1fr 1fr;gap:4px;margin-bottom:4px;align-items:start;">
-          <span style="font-size:9px;color:var(--t4);text-transform:uppercase;letter-spacing:.06em;padding-top:2px;">${f.label}</span>
-          <span style="font-size:10px;padding:2px 6px;border-radius:4px;background:rgba(245,158,11,.1);color:var(--amber);border:0.5px solid rgba(245,158,11,.25);line-height:1.4;word-break:break-word;white-space:normal;">${f.a}</span>
-          <span style="font-size:10px;padding:2px 6px;border-radius:4px;background:rgba(96,165,250,.08);color:var(--blue);border:0.5px solid rgba(96,165,250,.2);line-height:1.4;word-break:break-word;white-space:normal;">${f.b}</span>
-        </div>
-      `).join('');
+      const diffRows = diffFields.map(f =>
+        '<div style="display:grid;grid-template-columns:52px 1fr 1fr;gap:4px;margin-bottom:4px;align-items:start;">'
+        + '<span style="font-size:9px;color:rgba(255,255,255,.38);text-transform:uppercase;letter-spacing:.06em;padding-top:2px;">' + f.label + '</span>'
+        + '<span style="font-size:10px;padding:2px 6px;border-radius:4px;background:rgba(245,158,11,.1);color:var(--amber);border:0.5px solid rgba(245,158,11,.25);line-height:1.4;word-break:break-word;white-space:normal;">' + f.a + '</span>'
+        + '<span style="font-size:10px;padding:2px 6px;border-radius:4px;background:rgba(96,165,250,.08);color:var(--blue);border:0.5px solid rgba(96,165,250,.2);line-height:1.4;word-break:break-word;white-space:normal;">' + f.b + '</span>'
+        + '</div>'
+      ).join('');
 
       const matchSummary = matchFields.length > 0
-        ? `<div style="font-size:10px;color:var(--green);margin-top:4px;display:flex;align-items:center;gap:4px;">
-            <span style="width:5px;height:5px;border-radius:50%;background:var(--green);display:inline-block;"></span>
-            ${matchFields.map(f=>f.label).join(' · ')} match
-           </div>`
-        : '';
+        ? '<div style="font-size:10px;color:var(--green);margin-top:4px;display:flex;align-items:center;gap:4px;"><span style="width:5px;height:5px;border-radius:50%;background:var(--green);display:inline-block;"></span>'
+          + matchFields.map(f=>f.label).join(' · ') + ' match</div>' : '';
 
-      const noDiff = diffFields.length === 0
-        ? `<div style="font-size:10px;color:var(--green);padding:4px 0;">All compared fields match — likely same entity</div>`
-        : '';
+      const statusColor = c.status==='confirmed' ? 'var(--green)' : c.status==='new_entity' ? 'var(--blue)' : c.status==='conflict' ? 'var(--red)' : 'var(--amber)';
+      const statusText  = c.status==='confirmed' ? '&#10003; linked' : c.status==='new_entity' ? '+ new entity' : c.status==='conflict' ? '&#10007; rejected' : 'needs decision';
 
-      div.className = `candidate-card ${c.status}${selectedId===c.id?' selected':''}`;
-      div.innerHTML = `
-        <div class="card-row">
-          <div style="flex:1;min-width:0;">
-            <div class="card-name">${c.filingName}</div>
-            <div class="card-entity" style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
-              <span>→ ${c.entityName}</span>
-              <span style="font-size:9px;padding:1px 6px;border-radius:4px;color:${trackColor};border:0.5px solid ${trackBorder};background:${trackBg};">${trackLabel}</span>
-            </div>
-          </div>
-          <span class="conf-badge ${confCls}" style="flex-shrink:0;">${c.conf}%</span>
-        </div>
+      div.className = 'candidate-card ' + c.status + (selectedId===c.id ? ' selected' : '');
+      div.innerHTML =
+        '<div class="card-row">'
+          + '<div style="flex:1;min-width:0;">'
+            + '<div class="card-name">' + c.filingName + '</div>'
+            + '<div class="card-entity" style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">'
+              + '<span>&rarr; ' + c.entityName + '</span>'
+              + '<span style="font-size:9px;padding:1px 6px;border-radius:4px;color:' + trackColor + ';border:0.5px solid ' + trackBorder + ';background:' + trackBg + ';">' + trackLabel + '</span>'
+            + '</div>'
+          + '</div>'
+          + '<span class="conf-badge ' + confCls + '" style="flex-shrink:0;">' + c.conf + '%</span>'
+        + '</div>'
+        + '<div class="card-tags" style="margin:6px 0 8px;">'
+          + c.tags.map(t => '<span class="tag ' + (TAG_CLS[t]||'') + '">' + (TAG_LABEL[t]||t) + '</span>').join('')
+        + '</div>'
+        + '<div style="background:var(--bg3);border-radius:7px;padding:8px 10px;border:0.5px solid var(--border1);">'
+          + (diffFields.length > 0
+            ? '<div style="display:grid;grid-template-columns:52px 1fr 1fr;gap:4px;margin-bottom:6px;">'
+                + '<span></span>'
+                + '<span style="font-size:9px;color:var(--teal);text-transform:uppercase;letter-spacing:.06em;">Filing</span>'
+                + '<span style="font-size:9px;color:var(--blue);text-transform:uppercase;letter-spacing:.06em;">Entity</span>'
+              + '</div>' + diffRows
+            : '<div style="font-size:10px;color:var(--green);padding:4px 0;">All compared fields match</div>')
+          + matchSummary
+        + '</div>'
+        + '<div style="margin-top:6px;font-size:10px;color:rgba(255,255,255,.38);font-family:\'DM Mono\',monospace;">'
+          + c.filingCount + ' filing' + (c.filingCount>1?'s':'') + ' &nbsp;&#183;&nbsp; '
+          + '<span style="color:' + statusColor + ';">' + statusText + '</span>'
+          + (c.status==='needs-decision' ? ' &nbsp;&#183;&nbsp; click to review' : '')
+        + '</div>';
 
-        <div class="card-tags" style="margin:6px 0 8px;">
-          ${c.tags.map(t=>`<span class="tag ${tagCls[t]||''}">${tagMap[t]||t}</span>`).join('')}
-        </div>
-
-        <!-- Inline diff -->
-        <div style="background:var(--bg3);border-radius:7px;padding:8px 10px;border:0.5px solid var(--border1);">
-          ${diffFields.length > 0 ? `
-            <div style="display:grid;grid-template-columns:52px 1fr 1fr;gap:4px;margin-bottom:6px;">
-              <span></span>
-              <span style="font-size:9px;color:var(--teal);text-transform:uppercase;letter-spacing:.06em;">Filing</span>
-              <span style="font-size:9px;color:var(--blue);text-transform:uppercase;letter-spacing:.06em;">Entity</span>
-            </div>
-            ${diffRows}
-          ` : noDiff}
-          ${matchSummary}
-        </div>
-
-        <div class="card-filings" style="margin-top:6px;">
-          ${c.filingCount} filing${c.filingCount>1?'s':''} ·
-          <span style="color:${
-            c.status==='confirmed'  ? 'var(--green)' :
-            c.status==='new_entity' ? 'var(--blue)'  :
-            c.status==='conflict'   ? 'var(--red)'   :
-            c.status==='needs-decision' ? 'var(--amber)' : 'var(--t4)'
-          };">
-            ${
-              c.status==='confirmed'      ? '✓ linked to entity' :
-              c.status==='new_entity'     ? '+ new entity — approve to export' :
-              c.status==='conflict'       ? '✗ match rejected' :
-              c.status==='needs-decision' ? 'needs decision' : c.status
-            }
-          </span>
-          ${c.status === 'needs-decision' ? ' · click to review' : ''}
-        </div>
-      `;
-      div.onclick = () => loadCandidate(c.id);
+      div.addEventListener('click', () => loadCandidate(c.id));
       list.appendChild(div);
     });
 }
 
+// ── Load candidate into right pane ──
 function loadCandidate(id) {
   selectedId = id;
   buildCards();
@@ -1513,78 +1069,63 @@ function loadCandidate(id) {
   document.getElementById('empty-state').style.display = 'none';
   const shell = document.getElementById('workspace-shell');
   shell.style.display = 'flex';
-  shell.classList.remove('fade-in');
-  void shell.offsetWidth;
-  shell.classList.add('fade-in');
 
-  // Reset edit state
+  // Reset edits
   ['e-name','e-addr','e-phone','e-web','e-agent'].forEach(f => {
-    const input = document.getElementById(f);
-    const dot   = document.getElementById('dot-' + f);
-    const chk   = document.getElementById('chk-' + f);
-    if (input) { input.classList.remove('dirty'); }
-    if (dot)   dot.classList.remove('on');
-    if (chk)   chk.classList.remove('on');
+    const el = document.getElementById(f);
+    const dot = document.getElementById('dot-'+f);
+    const chk = document.getElementById('chk-'+f);
+    if (el)  { el.classList.remove('dirty'); }
+    if (dot) dot.classList.remove('on');
+    if (chk) chk.classList.remove('on');
   });
-  document.getElementById('save-all-btn').style.display = 'none';
-  document.getElementById('save-confirm').style.display = 'none';
-  document.getElementById('e-web-link').innerHTML = '';
+  var saveBtn = document.getElementById('save-all-btn');
+  var saveConf = document.getElementById('save-confirm');
+  var submitBtn = document.getElementById('submit-approve-btn');
+  if (saveBtn)   saveBtn.style.display = 'none';
+  if (saveConf)  saveConf.style.display = 'none';
+  if (submitBtn) { submitBtn.textContent = '✓ Submit & approve for export'; submitBtn.disabled = false; submitBtn.style.opacity = '1'; }
+  var webLink = document.getElementById('e-web-link');
+  if (webLink) webLink.innerHTML = '';
 
-  // Reset submit button
-  const submitBtn = document.getElementById('submit-approve-btn');
-  if (submitBtn) {
-    submitBtn.textContent = '✓ Submit & approve for export';
-    submitBtn.disabled = false;
-    submitBtn.style.opacity = '1';
-    submitBtn.style.cursor = 'pointer';
-  }
-
+  // Header
   const confCls = c.confLabel === 'high' ? 'conf-high' : c.confLabel === 'medium' ? 'conf-medium' : 'conf-low';
-  document.getElementById('ws-name').textContent         = c.filingName;
-  document.getElementById('ws-entity').textContent       = `→ Suggested entity: ${c.entityName}`;
-  const badge = document.getElementById('ws-conf-badge');
-  badge.textContent = `${c.conf}% ${c.confLabel}`;
-  badge.className   = `conf-large ${confCls}`;
+  document.getElementById('ws-name').textContent   = c.filingName;
+  document.getElementById('ws-entity').textContent = '→ Suggested entity: ' + c.entityName;
+  var badge = document.getElementById('ws-conf-badge');
+  badge.textContent = c.conf + '% ' + c.confLabel;
+  badge.className   = 'conf-large ' + confCls;
 
   // Pre-QA chips
   renderPreQAChips(c);
 
-  // Duplicate filings diff
+  // Dupe diff
   renderDupeDiff(c);
 
-  // Address corroboration selector
-  renderAddrSelector(c);
-
-  // Filing side — read only, with match highlighting
-  const setField = (id, val, matchCls) => {
-    const el = document.getElementById(id);
+  // Filing side (read-only)
+  function setField(id, val, matchCls) {
+    var el = document.getElementById(id);
+    if (!el) return;
     el.textContent = val || '—';
-    el.className   = `field-val ${!val ? 'empty' : matchCls || ''}`;
-  };
-  const setWebField = (id, val, matchCls) => {
-    const el = document.getElementById(id);
-    if (!val || val === '—') {
-      el.innerHTML = '<span style="color:var(--t4);font-style:italic;">—</span>';
-      el.className = 'field-val empty';
-    } else {
-      const href = val.startsWith('http') ? val : 'https://' + val;
-      el.innerHTML = `<a href="${href}" target="_blank" rel="noopener" class="web-link">${val}<span class="web-link-arrow">↗</span></a>`;
-      el.className = `field-val ${matchCls || ''}`;
-    }
-  };
+    el.className   = 'field-val ' + (!val ? 'empty' : (matchCls||''));
+  }
+  function setWebField(id, val, matchCls) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    if (!val || val === '—') { el.innerHTML = '<span style="color:var(--t4);font-style:italic;">—</span>'; el.className='field-val empty'; return; }
+    var href = val.startsWith('http') ? val : 'https://' + val;
+    el.innerHTML = '<a href="' + href + '" target="_blank" rel="noopener" class="web-link">' + val + '<span class="web-link-arrow">&#x2197;</span></a>';
+    el.className  = 'field-val ' + (matchCls||'');
+  }
+  setField('c-name-l',    c.filing.name);
+  setField('c-addr-l',    c.filing.address);
+  setField('c-phone-l',   c.filing.phone,   c.filing.phone   === c.entity.phone   ? 'match' : '');
+  setWebField('c-web-l',  c.filing.website, c.filing.website === c.entity.website ? 'match' : '');
+  setField('c-agent-l',   c.filing.agent,   c.filing.agent   === c.entity.agent   ? 'match' : '');
+  setField('c-date-l',    c.filing.date);
 
-  setField('c-name-l',  c.filing.name);
-  setField('c-addr-l',  c.filing.address);
-  setField('c-phone-l', c.filing.phone,   c.filing.phone   === c.entity.phone   ? 'match' : '');
-  setWebField('c-web-l', c.filing.website, c.filing.website === c.entity.website ? 'match' : '');
-  setField('c-agent-l', c.filing.agent,   c.filing.agent   === c.entity.agent   ? 'match' : '');
-  setField('c-date-l',  c.filing.date);
-
-  // Entity side — populate editable inputs
-  const setEdit = (id, val) => {
-    const el = document.getElementById(id);
-    if (el) el.value = val || '';
-  };
+  // Entity side (editable)
+  function setEdit(id, val) { var el = document.getElementById(id); if (el) el.value = val||''; }
   setEdit('e-name',  c.entity.name);
   setEdit('e-addr',  c.entity.address);
   setEdit('e-phone', c.entity.phone);
@@ -1592,447 +1133,483 @@ function loadCandidate(id) {
   setEdit('e-agent', c.entity.agent);
   setField('c-filings-r', c.entity.filings);
 
-  // Live website link for entity
-  const webVal = c.entity.website;
-  if (webVal && webVal !== '—') {
-    const href = webVal.startsWith('http') ? webVal : 'https://' + webVal;
-    document.getElementById('e-web-link').innerHTML = `<a href="${href}" target="_blank" class="web-link" style="font-size:11px;">↗</a>`;
+  // Website link
+  if (c.entity.website && c.entity.website !== '—') {
+    var href = c.entity.website.startsWith('http') ? c.entity.website : 'https://' + c.entity.website;
+    var wl = document.getElementById('e-web-link');
+    if (wl) wl.innerHTML = '<a href="' + href + '" target="_blank" class="web-link" style="font-size:11px;">&#x2197;</a>';
   }
 
-  // Source links — routed by entity track, not confidence score
-  // Strip legal suffixes for cleaner searches
-  const stripSuffixes = name => name
-    .replace(/\b(LLC|Inc\.?|Corp\.?|LLP|Ltd\.?|L\.L\.C\.?|Co\.?|PLC|PLLC|P\.C\.)\b\.?/gi, '')
-    .replace(/\s+/g, ' ').trim();
+  // Source links
+  var name  = encodeURIComponent(c.filingName);
+  var nameC = encodeURIComponent(stripSfx(c.filingName));
+  var nameR = encodeURIComponent(stripSfx(c.entityName));
+  var loc   = encodeURIComponent((c.entity.address||'').split(',').slice(-2).join(',').trim());
+  var track = c.track || 'small';
 
-  const cleanFiling = stripSuffixes(c.filingName);
-  const cleanEntity = stripSuffixes(c.entityName);
-  const name  = encodeURIComponent(c.filingName);       // full name for registry searches
-  const nameC = encodeURIComponent(cleanFiling);        // clean name for social/directory searches
-  const nameR = encodeURIComponent(cleanEntity);        // clean entity name
-  const loc   = encodeURIComponent((c.entity.address || '').split(',').slice(-2).join(',').trim());
-  const track = c.track || 'small';
-
-  const webLinks = webVal && webVal !== '—' ? [{
-    label: webVal, url: webVal.startsWith('http') ? webVal : 'https://'+webVal,
-    icon: webVal.replace(/https?:\/\/(www\.)?/,'').split('/')[0]
-  }] : [];
-
-  const autoSrcs = [
-    { label:'Google', url:`https://www.google.com/search?q=${nameC}+${loc}`, icon:'google.com' },
-    ...(track !== 'small' ? [
-      { label:'OpenCorporates', url:`https://opencorporates.com/companies?q=${name}&jurisdiction_code=us_de`, icon:'opencorporates.com' },
-    ] : []),
-    ...(track === 'ent' ? [
-      { label:'SEC EDGAR', url:`https://www.sec.gov/cgi-bin/browse-edgar?company=${name}&CIK=&type=10-K&dateb=&owner=include&count=10&search_text=&action=getcompany`, icon:'sec.gov' },
-      { label:'SAM.gov',   url:`https://sam.gov/search/?keywords=${name}`, icon:'sam.gov' },
-    ] : []),
+  var webVal = c.entity.website && c.entity.website !== '—' ? c.entity.website : '';
+  var webLinks = webVal ? [{label:webVal, url:webVal.startsWith('http')?webVal:'https://'+webVal, icon:webVal.replace(/https?:\/\/(www\.)?/,'').split('/')[0]}] : [];
+  var autoSrcs = [
+    {label:'Google', url:'https://www.google.com/search?q='+nameC+'+'+loc, icon:'google.com'},
+  ].concat(track!=='small' ? [{label:'OpenCorporates', url:'https://opencorporates.com/companies?q='+name+'&jurisdiction_code=us_de', icon:'opencorporates.com'}] : [])
+   .concat(track==='ent'   ? [{label:'SEC EDGAR', url:'https://www.sec.gov/cgi-bin/browse-edgar?company='+name+'&CIK=&type=10-K&dateb=&owner=include&count=10&search_text=&action=getcompany', icon:'sec.gov'}] : []);
+  var manualSrcs = track==='small' ? [
+    {label:'BBB',      url:'https://www.bbb.org/search?find_text='+nameC+'&find_loc='+loc, icon:'bbb.org',      manual:true},
+    {label:'Facebook', url:'https://www.facebook.com/search/pages/?q='+nameC,             icon:'facebook.com', manual:true},
+    {label:'Yelp',     url:'https://www.yelp.com/search?find_desc='+nameC+'&find_loc='+loc,icon:'yelp.com',    manual:true},
+  ] : track==='mid' ? [
+    {label:'LinkedIn',   url:'https://www.linkedin.com/search/results/companies/?keywords='+nameR, icon:'linkedin.com',   manual:true},
+    {label:'Crunchbase', url:'https://www.crunchbase.com/textsearch?q='+nameR,                     icon:'crunchbase.com', manual:true},
+    {label:'BBB',        url:'https://www.bbb.org/search?find_text='+nameC+'&find_loc='+loc,       icon:'bbb.org',        manual:true},
+  ] : [
+    {label:'LinkedIn',   url:'https://www.linkedin.com/search/results/companies/?keywords='+nameR, icon:'linkedin.com',   manual:true},
+    {label:'Crunchbase', url:'https://www.crunchbase.com/textsearch?q='+nameR,                     icon:'crunchbase.com', manual:true},
   ];
 
-  const manualSrcs = [
-    ...(track === 'small' ? [
-      { label:'BBB',      url:`https://www.bbb.org/search?find_text=${nameC}&find_loc=${loc}`, icon:'bbb.org',      manual:true },
-      { label:'Facebook', url:`https://www.facebook.com/search/pages/?q=${nameC}`,             icon:'facebook.com', manual:true },
-      { label:'Yelp',     url:`https://www.yelp.com/search?find_desc=${nameC}&find_loc=${loc}`,icon:'yelp.com',     manual:true },
-    ] : []),
-    ...(track === 'mid' ? [
-      { label:'LinkedIn',   url:`https://www.linkedin.com/search/results/companies/?keywords=${nameR}`, icon:'linkedin.com',   manual:true },
-      { label:'Crunchbase', url:`https://www.crunchbase.com/textsearch?q=${nameR}`,                    icon:'crunchbase.com', manual:true },
-      { label:'BBB',        url:`https://www.bbb.org/search?find_text=${nameC}&find_loc=${loc}`,       icon:'bbb.org',        manual:true },
-    ] : []),
-    ...(track === 'ent' ? [
-      { label:'LinkedIn',   url:`https://www.linkedin.com/search/results/companies/?keywords=${nameR}`, icon:'linkedin.com',   manual:true },
-      { label:'Crunchbase', url:`https://www.crunchbase.com/textsearch?q=${nameR}`,                    icon:'crunchbase.com', manual:true },
-    ] : []),
-  ];
+  var sl = document.getElementById('source-links');
+  if (sl) sl.innerHTML = webLinks.concat(autoSrcs, manualSrcs).map(l =>
+    '<a href="' + l.url + '" target="_blank" rel="noopener" class="src-link' + (l.manual?' manual':'') + '">'
+    + '<img src="' + FAV(l.icon) + '">' + l.label + '</a>'
+  ).join('');
 
-  document.getElementById('source-links').innerHTML = [
-    ...webLinks.map(l => `<a href="${l.url}" target="_blank" class="src-link" rel="noopener"><img src="${FAV(l.icon)}">${l.label}</a>`),
-    ...autoSrcs.map(l => `<a href="${l.url}" target="_blank" class="src-link" rel="noopener"><img src="${FAV(l.icon)}">${l.label}</a>`),
-    ...manualSrcs.map(l => `<a href="${l.url}" target="_blank" class="src-link manual" rel="noopener"><img src="${FAV(l.icon)}">${l.label}</a>`),
-  ].join('');
+  // Addr selector
+  renderAddrSelector(c);
 
-  // Reasoning grid
-  const rg = document.getElementById('reasoning-grid');
-  rg.innerHTML = c.reasoning.map(r => `
-    <div class="reasoning-item">
-      <div class="reasoning-label">${r.label}</div>
-      <div class="reasoning-val ${r.cls}">${r.val}</div>
-    </div>
-  `).join('');
+  // Reasoning
+  var rg = document.getElementById('reasoning-grid');
+  if (rg) rg.innerHTML = c.reasoning.map(r =>
+    '<div class="reasoning-item"><div class="reasoning-label">' + r.label + '</div><div class="reasoning-val ' + r.cls + '">' + r.val + '</div></div>'
+  ).join('');
 
-  // System confidence
-  document.getElementById('sys-conf-val').textContent    = c.sysConf.val;
-  document.getElementById('sys-conf-val').className      = `sys-conf-val ${c.confLabel==='high'?'r-strong':c.confLabel==='medium'?'r-medium':'r-weak'}`;
-  document.getElementById('sys-conf-note').textContent   = c.sysConf.note;
-  const fill = document.getElementById('sys-conf-fill');
+  // Confidence bar
+  document.getElementById('sys-conf-val').textContent  = c.sysConf.val;
+  document.getElementById('sys-conf-val').className    = 'sys-conf-val ' + (c.confLabel==='high'?'r-strong':c.confLabel==='medium'?'r-medium':'r-weak');
+  document.getElementById('sys-conf-note').textContent = c.sysConf.note;
+  var fill = document.getElementById('sys-conf-fill');
   fill.style.width      = '0%';
   fill.style.background = c.sysConf.color;
-  setTimeout(() => { fill.style.width = c.sysConf.pct + '%'; }, 80);
+  setTimeout(function(){ fill.style.width = c.sysConf.pct + '%'; }, 80);
 
   // Timeline
-  const tl = document.getElementById('timeline');
-  tl.innerHTML = c.timeline.map(t => `
-    <div class="timeline-item">
-      <div class="timeline-dot ${t.type}"></div>
-      <div class="timeline-year">${t.year}</div>
-      <div class="timeline-event">
-        ${t.event}
-        ${t.badge ? `<span class="timeline-badge conf-medium">${t.badge}</span>` : ''}
-      </div>
-      <div class="timeline-detail">${t.detail}</div>
-    </div>
-  `).join('');
+  var tl = document.getElementById('timeline');
+  if (tl) tl.innerHTML = c.timeline.map(t =>
+    '<div class="timeline-item">'
+    + '<div class="timeline-dot ' + t.type + '"></div>'
+    + '<div class="timeline-year">' + t.year + '</div>'
+    + '<div class="timeline-event">' + t.event + (t.badge ? '<span class="timeline-badge conf-medium">' + t.badge + '</span>' : '') + '</div>'
+    + '<div class="timeline-detail">' + t.detail + '</div>'
+    + '</div>'
+  ).join('');
 
   // Audit log
-  const dec  = decisions[id] || [];
-  const all  = [...c.audit, ...dec];
-  const log  = document.getElementById('audit-log');
-  log.innerHTML = all.map(a => `
-    <div class="audit-row">
-      <span class="audit-time">${a.time}</span>
-      <span class="audit-reviewer">${a.reviewer}</span>
-      <span class="audit-action">${a.action}</span>
-      <span class="audit-badge ${a.badgeCls}">${a.badge}</span>
-    </div>
-  `).join('');
+  var dec = decisions[id] || [];
+  var all = c.audit.concat(dec);
+  var log = document.getElementById('audit-log');
+  if (log) log.innerHTML = all.map(a =>
+    '<div class="audit-row">'
+    + '<span class="audit-time">' + a.time + '</span>'
+    + '<span class="audit-reviewer">' + a.reviewer + '</span>'
+    + '<span class="audit-action">' + a.action + '</span>'
+    + '<span class="audit-badge ' + a.badgeCls + '">' + a.badge + '</span>'
+    + '</div>'
+  ).join('');
 
-  // Restore notes
-  document.getElementById('reviewer-notes').value = c._notes || '';
+  // Notes
+  var notesEl = document.getElementById('reviewer-notes');
+  if (notesEl) notesEl.value = c._notes || '';
+
+  // Reset AI summary panels
+  var ss = document.getElementById('summary-structured');
+  var sw = document.getElementById('summary-websearch');
+  if (ss) ss.innerHTML = '<span style="color:var(--t4);font-style:italic;">Click Generate to summarize using registry data, Google Places, phone signals, and SIC classification.</span>';
+  if (sw) sw.innerHTML = '<span style="color:var(--t4);font-style:italic;">Click Generate to search the web for current information — news, reviews, LinkedIn presence, red flags.</span>';
+  var gb1 = document.getElementById('gen-structured-btn');
+  var gb2 = document.getElementById('gen-websearch-btn');
+  if (gb1) { gb1.textContent='Generate'; gb1.disabled=false; gb1.style.opacity='1'; }
+  if (gb2) { gb2.textContent='Generate'; gb2.disabled=false; gb2.style.opacity='1'; }
 }
 
-function logDecision(action) {
-  // If no candidate loaded, tell the reviewer
-  if (!selectedId || !currentCandidate) {
-    showToast('Select a filing from the left panel first', 'warn');
-    return;
+// ── Pre-QA chips ──
+function renderPreQAChips(c) {
+  var chips = [];
+  var googleMatch = c.reasoning.find(function(r){ return r.label==='Domain match'; });
+  var phoneMatch  = c.reasoning.find(function(r){ return r.label==='Phone match'; });
+  var addrMatch   = c.reasoning.find(function(r){ return r.label==='Address proximity'; });
+  var agentMatch  = c.reasoning.find(function(r){ return r.label==='Reg. agent signal'; });
+  var gCls = (googleMatch && googleMatch.val==='Exact') ? 'chip-ok' : 'chip-warn';
+  chips.push('<span class="preqa-chip ' + gCls + '"><img src="' + FAV('google.com') + '">Google Places &nbsp;&#183;&nbsp; ' + (googleMatch?googleMatch.val:'—') + '</span>');
+  var pCls = (phoneMatch && phoneMatch.val==='Yes') ? 'chip-ok' : 'chip-warn';
+  chips.push('<span class="preqa-chip ' + pCls + '">&#128222; Phone &nbsp;&#183;&nbsp; ' + (phoneMatch?phoneMatch.val:'—') + '</span>');
+  var aCls = (addrMatch && addrMatch.val==='High') ? 'chip-ok' : 'chip-warn';
+  chips.push('<span class="preqa-chip ' + aCls + '">&#128205; Address &nbsp;&#183;&nbsp; ' + (addrMatch?addrMatch.val:'—') + '</span>');
+  var rCls = (agentMatch && agentMatch.val==='Strong') ? 'chip-ok' : 'chip-none';
+  chips.push('<span class="preqa-chip ' + rCls + '"><img src="' + FAV('opencorporates.com') + '">Agent &nbsp;&#183;&nbsp; ' + (agentMatch?agentMatch.val:'—') + '</span>');
+  chips.push('<span class="preqa-chip chip-auto"><img src="' + FAV('anthropic.com') + '">SIC &nbsp;&#183;&nbsp; auto-classified</span>');
+  var el = document.getElementById('preqa-chips');
+  if (el) el.innerHTML = chips.join('');
+}
+
+// ── Dupe diff panel ──
+function renderDupeDiff(c) {
+  var section = document.getElementById('dupe-diff-section');
+  var panel   = document.getElementById('dupe-diff-panel');
+  if (!section || !panel) return;
+  if (c.filingCount < 2) { section.style.display='none'; return; }
+  section.style.display = 'block';
+  var fields = [
+    {label:'Name',    a:c.filing.name,    b:c.entity.name},
+    {label:'Address', a:c.filing.address, b:c.entity.address},
+    {label:'Phone',   a:c.filing.phone,   b:c.entity.phone},
+    {label:'Website', a:c.filing.website, b:c.entity.website},
+    {label:'Agent',   a:c.filing.agent,   b:c.entity.agent},
+    {label:'Filed',   a:c.filing.date,    b:'—'},
+  ];
+  var diffCount = fields.filter(function(f){ return f.a&&f.b&&f.a!=='—'&&f.b!=='—'&&f.a!==f.b; }).length;
+  var sameCount = fields.filter(function(f){ return f.a&&f.b&&f.a!=='—'&&f.b!=='—'&&f.a===f.b; }).length;
+  panel.innerHTML =
+    '<div class="diff-header">'
+      + '<span class="diff-header-label" style="color:var(--t4);">Field</span>'
+      + '<span class="diff-header-label" style="color:var(--teal);">Filing 1 &nbsp;&#183;&nbsp; registry</span>'
+      + '<span class="diff-header-label" style="color:var(--blue);">Filing 2 &nbsp;&#183;&nbsp; suggested entity</span>'
+    + '</div>'
+    + fields.map(function(f){
+        var diff = f.a&&f.b&&f.a!=='—'&&f.b!=='—'&&f.a!==f.b;
+        return '<div class="diff-row" style="' + (diff?'background:rgba(245,158,11,.03);':'') + '">'
+          + '<div class="diff-field-label" style="' + (diff?'color:var(--amber);':'') + '">' + f.label + (diff?' &#x26A1;':'') + '</div>'
+          + '<div class="diff-val ' + (diff?'changed':'same') + '">' + (f.a||'—') + '</div>'
+          + '<div class="diff-val ' + (diff?'changed':(f.a===f.b?'same':'added')) + '">' + (f.b||'—') + '</div>'
+          + '</div>';
+      }).join('')
+    + '<div style="padding:8px 14px;border-top:0.5px solid var(--border1);background:var(--bg2);display:flex;gap:16px;align-items:center;">'
+      + '<span style="font-size:11px;color:var(--amber);font-weight:500;">&#x26A1; ' + diffCount + ' field' + (diffCount!==1?'s':'') + ' differ</span>'
+      + '<span style="font-size:11px;color:var(--green);">&#10003; ' + sameCount + ' field' + (sameCount!==1?'s':'') + ' match</span>'
+      + '<span style="font-size:10px;color:var(--t4);margin-left:auto;">'
+        + (diffCount===0 ? 'All fields match — likely same entity' :
+           diffCount===1 ? 'Minor difference — possible amendment' :
+           diffCount<=2  ? 'Some differences — review carefully' :
+                           'Significant differences — may be separate entities')
+      + '</span>'
+    + '</div>';
+}
+
+// ── Address selector ──
+function renderAddrSelector(c) {
+  var sources = [
+    {key:'registry', label:'Registry filing',      addr:c.filing.address, note:'Source of record',              cls:'rgba(45,212,191,.15)', color:'var(--teal)'},
+    {key:'google',   label:'Google Places',         addr:c.entity.address, note:c.entity.address===c.filing.address?'Matches registry':'Differs from registry', cls:c.entity.address===c.filing.address?'rgba(34,197,94,.1)':'rgba(245,158,11,.08)', color:c.entity.address===c.filing.address?'var(--green)':'var(--amber)'},
+  ];
+  if (c.entity.website && c.entity.website !== '—') {
+    sources.push({key:'website', label:'Website contact page', addr:c.entity.address, note:'Auto-scraped from '+c.entity.website, cls:'rgba(96,165,250,.08)', color:'var(--blue)'});
   }
-
-  const c = CANDIDATES.find(x => x.id === selectedId);
-  if (!c) return;
-
-  const now = new Date().toISOString().slice(0,16).replace('T',' ');
-
-  const msgMap = {
-    linked:    `Linked to existing entity · ${c.entityName}`,
-    created:   `New entity created · ${c.filingName} recorded as standalone business`,
-    rejected:  `Match rejected · ${c.filingName} and ${c.entityName} treated as separate entities`,
-    split:     `Cluster split · filings separated — system will not re-suggest this pair`,
-    escalated: `Escalated to senior review · pending human investigation`,
-  };
-
-  const clsMap = {
-    linked:    'conf-high',
-    created:   'conf-info',
-    rejected:  'conf-low',
-    split:     'conf-medium',
-    escalated: 'conf-medium',
-  };
-
-  const statusMap = {
-    linked:    'confirmed',
-    created:   'new_entity',
-    rejected:  'conflict',
-    split:     'needs-decision',
-    escalated: 'needs-decision',
-  };
-
-  // Log the decision
-  if (!decisions[selectedId]) decisions[selectedId] = [];
-  decisions[selectedId].push({
-    time: now, reviewer: 'reviewer_01',
-    action: msgMap[action], badge: action, badgeCls: clsMap[action],
+  window._addrSources  = sources;
+  window._selectedAddr = 'registry';
+  var container = document.getElementById('addr-selector');
+  if (!container) return;
+  container.innerHTML = sources.map(function(s, idx){
+    return '<div class="addr-option" data-idx="' + idx + '" data-key="' + s.key + '">'
+      + '<div class="addr-select-dot"></div>'
+      + '<div class="addr-source-label">' + s.label + '</div>'
+      + '<div class="addr-val-text">' + (s.addr||'<span style="color:var(--t4);font-style:italic;">not available</span>') + '</div>'
+      + '<span class="addr-match-badge" style="background:' + s.cls + ';color:' + s.color + ';border:0.5px solid ' + s.color + '33;">' + s.note + '</span>'
+      + '</div>';
+  }).join('');
+  // Mark registry as selected
+  var first = container.querySelector('.addr-option');
+  if (first) first.classList.add('selected');
+  container.querySelectorAll('.addr-option').forEach(function(el){
+    el.addEventListener('click', function(){
+      var idx = parseInt(el.dataset.idx);
+      var src = (window._addrSources||[])[idx];
+      if (!src) return;
+      container.querySelectorAll('.addr-option').forEach(function(o){ o.classList.remove('selected'); });
+      el.classList.add('selected');
+      var input = document.getElementById('e-addr');
+      if (input) { input.value = src.addr||''; markDirty('e-addr'); }
+    });
   });
+}
 
-  // Update candidate status
-  c.status = statusMap[action];
-
-  // Save notes safely
-  const notesEl = document.getElementById('reviewer-notes');
-  if (notesEl) c._notes = notesEl.value;
-
-  // Show confirmation toast
-  const toastMsg = {
-    linked:    `✓ Linked — ${c.entityName}`,
-    created:   `+ New entity created — ${c.filingName}`,
-    rejected:  `✗ Match rejected`,
-    split:     `⋮ Cluster split`,
-    escalated: `↑ Escalated for senior review`,
-  };
-  showToast(toastMsg[action], action === 'rejected' ? 'danger' : action === 'linked' || action === 'created' ? 'success' : 'warn');
-
-  // Update audit log immediately
-  const log = document.getElementById('audit-log');
-  if (log) {
-    const row = document.createElement('div');
-    row.className = 'audit-row';
-    row.innerHTML = `
-      <span class="audit-time">${now}</span>
-      <span class="audit-reviewer">reviewer_01</span>
-      <span class="audit-action">${msgMap[action]}</span>
-      <span class="audit-badge ${clsMap[action]}">${action}</span>
-    `;
-    log.prepend(row);
-    // Make sure notes section is visible so reviewer sees the log
-    const notesBody = document.getElementById('notes-body');
-    if (notesBody && !notesBody.classList.contains('visible')) toggleNotes();
+// ── Inline edit helpers ──
+function markDirty(fieldId) {
+  var input = document.getElementById(fieldId);
+  var dot   = document.getElementById('dot-'+fieldId);
+  var chk   = document.getElementById('chk-'+fieldId);
+  if (input) input.classList.add('dirty');
+  if (dot)   dot.classList.add('on');
+  if (chk)   chk.classList.remove('on');
+  var saveBtn = document.getElementById('save-all-btn');
+  if (saveBtn) saveBtn.style.display = 'block';
+  var saveConf = document.getElementById('save-confirm');
+  if (saveConf) saveConf.style.display = 'none';
+  if (fieldId === 'e-web') {
+    var val = input ? input.value.trim() : '';
+    var linkEl = document.getElementById('e-web-link');
+    if (linkEl) linkEl.innerHTML = val ? '<a href="'+(val.startsWith('http')?val:'https://'+val)+'" target="_blank" class="web-link" style="font-size:11px;">&#x2197;</a>' : '';
   }
+}
 
-  // Refresh cards and badge
+function saveAllEdits() {
+  ['e-name','e-addr','e-phone','e-web','e-agent'].forEach(function(f){
+    var input = document.getElementById(f);
+    var dot   = document.getElementById('dot-'+f);
+    var chk   = document.getElementById('chk-'+f);
+    if (input && input.classList.contains('dirty')) {
+      input.classList.remove('dirty');
+      if (dot) dot.classList.remove('on');
+      if (chk) { chk.classList.add('on'); setTimeout(function(){ chk.classList.remove('on'); }, 3000); }
+      if (currentCandidate) {
+        var km = {'e-name':'name','e-addr':'address','e-phone':'phone','e-web':'website','e-agent':'agent'};
+        if (km[f]) currentCandidate.entity[km[f]] = input.value;
+      }
+    }
+  });
+  var saveBtn  = document.getElementById('save-all-btn');
+  var saveConf = document.getElementById('save-confirm');
+  if (saveBtn)  saveBtn.style.display = 'none';
+  if (saveConf) { saveConf.style.display='block'; setTimeout(function(){ saveConf.style.display='none'; },3000); }
+}
+
+// ── Decision actions ──
+function logDecision(action) {
+  if (!selectedId || !currentCandidate) { showToast('Select a filing from the left panel first','warn'); return; }
+  var c   = currentCandidate;
+  var now = new Date().toISOString().slice(0,16).replace('T',' ');
+  var msgMap = {
+    linked:    'Linked to existing entity · '+c.entityName,
+    created:   'New entity created · '+c.filingName+' recorded as standalone business',
+    rejected:  'Match rejected · treated as separate entities',
+    split:     'Cluster split · system will not re-suggest this pair',
+    escalated: 'Escalated to senior review',
+  };
+  var clsMap    = {linked:'conf-high',created:'conf-info',rejected:'conf-low',split:'conf-medium',escalated:'conf-medium'};
+  var statusMap = {linked:'confirmed',created:'new_entity',rejected:'conflict',split:'needs-decision',escalated:'needs-decision'};
+  if (!decisions[selectedId]) decisions[selectedId] = [];
+  decisions[selectedId].push({time:now, reviewer:'reviewer_01', action:msgMap[action], badge:action, badgeCls:clsMap[action]});
+  c.status = statusMap[action];
+  var notesEl = document.getElementById('reviewer-notes');
+  if (notesEl) c._notes = notesEl.value;
+  var log = document.getElementById('audit-log');
+  if (log) {
+    var row = document.createElement('div');
+    row.className = 'audit-row';
+    row.innerHTML = '<span class="audit-time">'+now+'</span><span class="audit-reviewer">reviewer_01</span><span class="audit-action">'+msgMap[action]+'</span><span class="audit-badge '+clsMap[action]+'">'+action+'</span>';
+    log.prepend(row);
+    var nb = document.getElementById('notes-body');
+    if (nb && !nb.classList.contains('visible')) toggleNotes();
+  }
+  var toastMsgs = {linked:'&#10003; Linked — '+c.entityName, created:'+ New entity created', rejected:'&#10007; Match rejected', split:'&#8942; Cluster split', escalated:'&#8593; Escalated for senior review'};
+  showToast(toastMsgs[action], action==='rejected'?'danger':action==='linked'||action==='created'?'success':'warn');
   buildCards();
   updatePendingBadge();
-}
-
-async function generateSummary(type) {
-  if (!currentCandidate) {
-    showToast('Select a filing first', 'warn');
-    return;
-  }
-  const c = currentCandidate;
-
-  const btnId     = type === 'structured' ? 'gen-structured-btn' : 'gen-websearch-btn';
-  const outputId  = type === 'structured' ? 'summary-structured'  : 'summary-websearch';
-  const btn       = document.getElementById(btnId);
-  const output    = document.getElementById(outputId);
-
-  // Loading state
-  btn.textContent  = 'Generating…';
-  btn.disabled     = true;
-  btn.style.opacity = '.6';
-  output.innerHTML = `<div style="display:flex;align-items:center;gap:8px;color:var(--t4);font-size:12px;">
-    <div style="width:10px;height:10px;border:1.5px solid var(--border2);border-top-color:var(--teal);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0;"></div>
-    Generating${type === 'websearch' ? ' with live web search' : ''}…
-  </div>`;
-
-  // Build prompt from all available record data
-  const recordContext = `
-Business filing: ${c.filingName}
-Suggested entity match: ${c.entityName}
-Identity confidence: ${c.conf}% (${c.confLabel})
-Entity track: ${c.track === 'small' ? 'Small business' : c.track === 'mid' ? 'Mid-market' : 'Enterprise'}
-
-FILING DATA (from registry):
-- Address: ${c.filing.address || 'not available'}
-- Phone: ${c.filing.phone || 'not available'}
-- Website: ${c.filing.website || 'not available'}
-- Registered agent: ${c.filing.agent || 'not available'}
-- Filing date: ${c.filing.date || 'not available'}
-
-SUGGESTED ENTITY DATA:
-- Entity name: ${c.entity.name}
-- Address: ${c.entity.address || 'not available'}
-- Phone: ${c.entity.phone || 'not available'}
-- Website: ${c.entity.website || 'not available'}
-- Registered agent: ${c.entity.agent || 'not available'}
-- Linked filings: ${c.entity.filings || 'not available'}
-
-MATCH SIGNALS:
-${c.reasoning.map(r => `- ${r.label}: ${r.val}`).join('\n')}
-
-SYSTEM CONFIDENCE: ${c.sysConf.val} (${c.conf}%) — ${c.sysConf.note}
-`.trim();
-
-  const structuredPrompt = `You are a business intelligence analyst reviewing registry data for a data quality platform. 
-  
-Based on the following structured data about a business filing, write a concise 3-4 sentence analytical summary that:
-1. Describes what this business likely does based on its name, SIC signals, and location
-2. Assesses whether the two filings (Filing data vs Suggested entity) appear to be the same underlying business
-3. Flags any concerns or signals that warrant closer review
-
-Be analytical and direct. Do not pad with filler. End with a one-sentence recommendation.
-
-RECORD DATA:
-${recordContext}`;
-
-  const webSearchPrompt = `You are a business intelligence analyst. Search the web for current information about the following business and write a concise 3-4 sentence summary covering:
-1. What this business does and any public presence (website, reviews, news)
-2. Any red flags, name changes, legal issues, or notable findings
-3. Whether the web presence is consistent with the registry filing data
-
-Be factual and concise. Flag anything that contradicts the registry data. If you find nothing notable, say so clearly.
-
-Business to research: ${c.filingName}
-Location: ${c.filing.address || c.entity.address || 'unknown'}
-Website: ${c.filing.website !== '—' ? c.filing.website : c.entity.website || 'unknown'}`;
-
-  try {
-    const body = {
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 1000,
-      messages: [{ role: 'user', content: type === 'structured' ? structuredPrompt : webSearchPrompt }],
-    };
-
-    // Add web search tool for the websearch type
-    if (type === 'websearch') {
-      body.tools = [{ type: 'web_search_20250305', name: 'web_search' }];
-    }
-
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-
-    const data = await response.json();
-
-    // Extract text from response — handle both direct text and tool use responses
-    let summaryText = '';
-    if (data.content) {
-      data.content.forEach(block => {
-        if (block.type === 'text') summaryText += block.text;
-      });
-    }
-
-    if (!summaryText) {
-      summaryText = 'No summary generated — the AI did not return a response. Please try again.';
-    }
-
-    // Render the summary
-    output.innerHTML = `
-      <div style="color:var(--t1);line-height:1.75;font-size:12px;">${summaryText.replace(/\n/g, '<br>')}</div>
-    `;
-
-  } catch (err) {
-    output.innerHTML = `<div style="color:var(--red);font-size:12px;">Error generating summary: ${err.message}. Check that the Anthropic API key is configured.</div>`;
-  }
-
-  // Reset button
-  btn.textContent  = 'Regenerate';
-  btn.disabled     = false;
-  btn.style.opacity = '1';
 }
 
 function submitAndApprove() {
-  if (!selectedId || !currentCandidate) {
-    showToast('Select a filing from the left panel first', 'warn');
-    return;
-  }
-  const c = currentCandidate;
-
-  // Save any unsaved field edits first
+  if (!selectedId || !currentCandidate) { showToast('Select a filing first','warn'); return; }
+  var c = currentCandidate;
   saveAllEdits();
-
-  // Log the approval
-  const now = new Date().toISOString().slice(0,16).replace('T',' ');
+  var now = new Date().toISOString().slice(0,16).replace('T',' ');
   if (!decisions[selectedId]) decisions[selectedId] = [];
-  decisions[selectedId].push({
-    time: now, reviewer: 'reviewer_01',
-    action: `Approved for export · entity record verified and DUNS-ready`,
-    badge: 'approved', badgeCls: 'conf-high',
-  });
-
-  // Mark as approved
+  decisions[selectedId].push({time:now, reviewer:'reviewer_01', action:'Approved for export · DUNS-ready', badge:'approved', badgeCls:'conf-high'});
   c.status = 'confirmed';
-
-  // Update audit log
-  const log = document.getElementById('audit-log');
+  var log = document.getElementById('audit-log');
   if (log) {
-    const row = document.createElement('div');
+    var row = document.createElement('div');
     row.className = 'audit-row';
-    row.innerHTML = `
-      <span class="audit-time">${now}</span>
-      <span class="audit-reviewer">reviewer_01</span>
-      <span class="audit-action">Approved for export · entity record verified and DUNS-ready</span>
-      <span class="audit-badge conf-high">approved</span>
-    `;
+    row.innerHTML = '<span class="audit-time">'+now+'</span><span class="audit-reviewer">reviewer_01</span><span class="audit-action">Approved for export · DUNS-ready</span><span class="audit-badge conf-high">approved</span>';
     log.prepend(row);
-    const notesBody = document.getElementById('notes-body');
-    if (notesBody && !notesBody.classList.contains('visible')) toggleNotes();
+    var nb = document.getElementById('notes-body');
+    if (nb && !nb.classList.contains('visible')) toggleNotes();
   }
-
-  // Update submit button to show approved state
-  const btn = document.getElementById('submit-approve-btn');
-  if (btn) {
-    btn.textContent = '✓ Approved — DUNS-ready';
-    btn.style.background = 'var(--green-dim)';
-    btn.style.borderColor = 'var(--green-border)';
-    btn.disabled = true;
-    btn.style.opacity = '.6';
-    btn.style.cursor = 'default';
-  }
-
-  showToast('✓ Approved and ready for export', 'success');
+  var btn = document.getElementById('submit-approve-btn');
+  if (btn) { btn.textContent='&#10003; Approved — DUNS-ready'; btn.disabled=true; btn.style.opacity='.6'; btn.style.cursor='default'; }
+  showToast('&#10003; Approved and ready for export','success');
   buildCards();
   updatePendingBadge();
 }
 
-function showToast(msg, type) {
-  document.querySelectorAll('.decision-toast').forEach(el => el.remove());
-  const toast = document.createElement('div');
-  toast.className = 'decision-toast';
-  const bg = type === 'success' ? 'var(--green-dim)' : type === 'danger' ? 'var(--red-dim)' : 'var(--amber-dim)';
-  const border = type === 'success' ? 'var(--green-border)' : type === 'danger' ? 'var(--red-border)' : 'var(--amber-border)';
-  const color = type === 'success' ? 'var(--green)' : type === 'danger' ? 'var(--red)' : 'var(--amber)';
-  toast.style.cssText = `
-    position:fixed;bottom:24px;right:24px;z-index:9999;
-    padding:12px 18px;border-radius:10px;
-    background:${bg};border:0.5px solid ${border};color:${color};
-    font-size:13px;font-weight:500;font-family:'DM Sans',sans-serif;
-    box-shadow:0 4px 20px rgba(0,0,0,.4);
-    animation:slideUp .2s ease forwards;
-  `;
-  toast.textContent = msg;
-  document.body.appendChild(toast);
-  setTimeout(() => { toast.style.opacity = '0'; toast.style.transition = 'opacity .3s'; setTimeout(() => toast.remove(), 300); }, 3000);
+// ── AI Summary ──
+async function generateSummary(type) {
+  if (!currentCandidate) { showToast('Select a filing first','warn'); return; }
+  var c       = currentCandidate;
+  var btnId   = type==='structured' ? 'gen-structured-btn' : 'gen-websearch-btn';
+  var outId   = type==='structured' ? 'summary-structured'  : 'summary-websearch';
+  var btn     = document.getElementById(btnId);
+  var output  = document.getElementById(outId);
+  if (!btn || !output) return;
+
+  btn.textContent = 'Generating\u2026';
+  btn.disabled    = true;
+  btn.style.opacity = '.6';
+  output.innerHTML = '<div style="display:flex;align-items:center;gap:8px;color:var(--t4);font-size:12px;"><div style="width:10px;height:10px;border:1.5px solid var(--border2);border-top-color:var(--teal);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0;"></div>Generating'+(type==='websearch'?' with live web search':'')+'\u2026</div>';
+
+  var ctx = 'Business: '+c.filingName+'\nSuggested match: '+c.entityName+'\nConfidence: '+c.conf+'% ('+c.confLabel+')\nTrack: '+(c.track==='small'?'Small business':c.track==='mid'?'Mid-market':'Enterprise')
+    + '\n\nFiling data:\n- Address: '+c.filing.address+'\n- Phone: '+c.filing.phone+'\n- Website: '+c.filing.website+'\n- Agent: '+c.filing.agent+'\n- Filed: '+c.filing.date
+    + '\n\nSuggested entity:\n- Address: '+c.entity.address+'\n- Phone: '+c.entity.phone+'\n- Website: '+c.entity.website+'\n- Agent: '+c.entity.agent
+    + '\n\nMatch signals:\n' + c.reasoning.map(function(r){return '- '+r.label+': '+r.val;}).join('\n');
+
+  var prompt = type==='structured'
+    ? 'You are a business intelligence analyst reviewing registry data. Based on this structured data, write a concise 3-4 sentence analytical summary describing what this business likely does, whether the two filings appear to be the same underlying business, and any concerns worth flagging. End with a one-sentence recommendation.\n\n'+ctx
+    : 'You are a business intelligence analyst. Search the web for "'+stripSfx(c.filingName)+'" and write a 3-4 sentence summary covering: what this business does, any public presence or notable findings, and whether the web presence is consistent with the registry data. Flag anything suspicious.\n\nContext:\n'+ctx;
+
+  try {
+    var body = {
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 600,
+      messages: [{role:'user', content:prompt}],
+    };
+    if (type === 'websearch') {
+      body.tools = [{type:'web_search_20250305', name:'web_search'}];
+    }
+    var resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(body),
+    });
+    var data = await resp.json();
+    var text = '';
+    if (data.content) {
+      data.content.forEach(function(b){ if (b.type==='text') text += b.text; });
+    }
+    if (data.error) text = 'API error: ' + data.error.message;
+    if (!text) text = 'No response generated. Please try again.';
+    output.innerHTML = '<div style="color:var(--t1);line-height:1.75;font-size:12px;">'+text.replace(/\n/g,'<br>')+'</div>';
+  } catch(err) {
+    output.innerHTML = '<div style="color:var(--red);font-size:12px;">Error: '+err.message+'</div>';
+  }
+  btn.textContent = 'Regenerate';
+  btn.disabled    = false;
+  btn.style.opacity = '1';
 }
 
+// ── Research modal ──
+function openResearchModal() {
+  if (!currentCandidate) { showToast('Select a filing first','warn'); return; }
+  var c         = currentCandidate;
+  var name      = c.filingName;
+  var cleanName = stripSfx(name);
+  var city      = (c.entity.address||'').split(',')[1] || '';
+  var state     = ((c.entity.address||'').split(',')[2]||'').trim().split(' ')[0] || '';
+  var track     = c.track || 'small';
+  var tLabel    = track==='small'?'Small business':track==='mid'?'Mid-market':'Enterprise';
+  var q         = encodeURIComponent(cleanName+' '+city+' '+state);
+  var qN        = encodeURIComponent(cleanName);
+  var qNR       = encodeURIComponent(stripSfx(c.entityName));
+  var loc       = encodeURIComponent(city+' '+state);
+
+  var autoLinks = [
+    {label:'Google Places', url:'https://www.google.com/search?q='+q, icon:'google.com', auto:true},
+  ].concat(track!=='small'?[{label:'OpenCorporates',url:'https://opencorporates.com/companies?q='+encodeURIComponent(name)+'&jurisdiction_code=us_de',icon:'opencorporates.com',auto:true}]:[])
+   .concat(track==='ent'  ?[
+     {label:'SEC EDGAR',url:'https://www.sec.gov/cgi-bin/browse-edgar?company='+encodeURIComponent(name)+'&CIK=&type=10-K&dateb=&owner=include&count=10&search_text=&action=getcompany',icon:'sec.gov',auto:true},
+     {label:'SAM.gov',url:'https://sam.gov/search/?keywords='+encodeURIComponent(name),icon:'sam.gov',auto:true},
+   ]:[]);
+  var manualLinks = track==='small' ? [
+    {label:'BBB',      url:'https://www.bbb.org/search?find_text='+qN+'&find_loc='+loc, icon:'bbb.org'},
+    {label:'Facebook', url:'https://www.facebook.com/search/pages/?q='+qN,             icon:'facebook.com'},
+    {label:'Yelp',     url:'https://www.yelp.com/search?find_desc='+qN+'&find_loc='+loc,icon:'yelp.com'},
+  ] : track==='mid' ? [
+    {label:'LinkedIn',  url:'https://www.linkedin.com/search/results/companies/?keywords='+qNR,icon:'linkedin.com'},
+    {label:'Crunchbase',url:'https://www.crunchbase.com/textsearch?q='+qNR,                   icon:'crunchbase.com'},
+    {label:'BBB',       url:'https://www.bbb.org/search?find_text='+qN+'&find_loc='+loc,      icon:'bbb.org'},
+  ] : [
+    {label:'LinkedIn',  url:'https://www.linkedin.com/search/results/companies/?keywords='+qNR,icon:'linkedin.com'},
+    {label:'Crunchbase',url:'https://www.crunchbase.com/textsearch?q='+qNR,                   icon:'crunchbase.com'},
+  ];
+
+  document.querySelectorAll('#id-research-modal,#id-research-overlay').forEach(function(el){el.remove();});
+  var overlay = document.createElement('div');
+  overlay.id = 'id-research-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9998;backdrop-filter:blur(2px);';
+  var modal = document.createElement('div');
+  modal.id = 'id-research-modal';
+  modal.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--bg2);border:0.5px solid var(--border2);border-radius:14px;padding:0;z-index:9999;width:400px;box-shadow:0 20px 60px rgba(0,0,0,.6);font-family:\'DM Sans\',sans-serif;overflow:hidden;';
+  modal.innerHTML =
+    '<div style="padding:16px 18px;border-bottom:0.5px solid var(--border1);display:flex;align-items:flex-start;justify-content:space-between;">'
+      + '<div><div style="font-size:14px;font-weight:600;color:var(--t0);">'+name+'</div>'
+      + '<div style="font-size:11px;color:var(--t3);margin-top:2px;">'+(city?city.trim():'')+(state?', '+state:'')+ ' &nbsp;&#183;&nbsp; '+tLabel+' track</div></div>'
+      + '<button onclick="document.querySelectorAll(\'#id-research-modal,#id-research-overlay\').forEach(function(el){el.remove();})" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--t3);line-height:1;padding:2px;">&times;</button>'
+    + '</div>'
+    + '<div style="padding:12px 18px;border-bottom:0.5px solid var(--border0);">'
+      + '<div style="font-size:10px;font-weight:500;color:var(--t4);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;">Auto-checked (pre-QA)</div>'
+      + autoLinks.map(function(l){
+          return '<a href="'+l.url+'" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:8px;padding:8px 11px;border:0.5px solid var(--border1);border-radius:8px;text-decoration:none;color:var(--t1);font-size:12px;font-weight:500;background:var(--bg1);margin-bottom:5px;transition:all .1s;" onmouseover="this.style.background=\'var(--bg4)\'" onmouseout="this.style.background=\'var(--bg1)\'">'
+            + '<img src="'+FAV(l.icon)+'" style="width:14px;height:14px;border-radius:2px;">'+l.label
+            + '<span style="font-size:9px;padding:1px 5px;border-radius:4px;background:var(--teal-dim);color:var(--teal);border:0.5px solid var(--teal-border);margin-left:auto;">auto</span></a>';
+        }).join('')
+    + '</div>'
+    + '<div style="padding:12px 18px;border-bottom:0.5px solid var(--border0);">'
+      + '<div style="font-size:10px;font-weight:500;color:var(--t4);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;">Spot-check manually</div>'
+      + manualLinks.map(function(l){
+          return '<a href="'+l.url+'" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:8px;padding:8px 11px;border:0.5px solid var(--border2);border-radius:8px;text-decoration:none;color:var(--t1);font-size:12px;font-weight:500;background:var(--bg3);margin-bottom:5px;transition:all .1s;" onmouseover="this.style.background=\'var(--bg4)\'" onmouseout="this.style.background=\'var(--bg3)\'">'
+            + '<img src="'+FAV(l.icon)+'" style="width:14px;height:14px;border-radius:2px;">'+l.label
+            + '<span style="font-size:11px;color:var(--t4);margin-left:auto;">&#x2197; open</span></a>';
+        }).join('')
+    + '</div>'
+    + '<div style="padding:10px 18px;font-size:10px;color:var(--t4);line-height:1.6;">LinkedIn and Facebook are never scraped automatically. After checking a source, update the field and click <strong style="color:var(--green);">Save field edits</strong>.</div>';
+  overlay.addEventListener('click', function(){ document.querySelectorAll('#id-research-modal,#id-research-overlay').forEach(function(el){el.remove();}); });
+  document.body.appendChild(overlay);
+  document.body.appendChild(modal);
+}
+
+// ── Notes toggle ──
 function toggleNotes() {
-  const body = document.getElementById('notes-body');
-  const icon = document.getElementById('notes-icon');
-  body.classList.toggle('visible');
-  icon.classList.toggle('open');
+  var body = document.getElementById('notes-body');
+  var icon = document.getElementById('notes-icon');
+  if (body) body.classList.toggle('visible');
+  if (icon) icon.classList.toggle('open');
 }
 
+// ── Toast ──
+function showToast(msg, type) {
+  document.querySelectorAll('.decision-toast').forEach(function(el){el.remove();});
+  var toast = document.createElement('div');
+  toast.className = 'decision-toast';
+  var bg  = type==='success'?'var(--green-dim)':type==='danger'?'var(--red-dim)':'var(--amber-dim)';
+  var brd = type==='success'?'var(--green-border)':type==='danger'?'var(--red-border)':'var(--amber-border)';
+  var col = type==='success'?'var(--green)':type==='danger'?'var(--red)':'var(--amber)';
+  toast.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:9999;padding:12px 18px;border-radius:10px;background:'+bg+';border:0.5px solid '+brd+';color:'+col+';font-size:13px;font-weight:500;font-family:\'DM Sans\',sans-serif;box-shadow:0 4px 20px rgba(0,0,0,.4);animation:slideUp .2s ease forwards;';
+  toast.innerHTML = msg;
+  document.body.appendChild(toast);
+  setTimeout(function(){ toast.style.opacity='0'; toast.style.transition='opacity .3s'; setTimeout(function(){toast.remove();},300); }, 3000);
+}
+
+// ── Filter / search / export ──
 function setFilter(f) {
   currentFilter = f;
-  document.getElementById('filter-pending').classList.toggle('active', f === 'pending');
-  document.getElementById('filter-all').classList.toggle('active', f === 'all');
+  var pb = document.getElementById('filter-pending');
+  var ab = document.getElementById('filter-all');
+  if (pb) pb.classList.toggle('active', f==='pending');
+  if (ab) ab.classList.toggle('active', f==='all');
   buildCards();
 }
-
 function filterCards() { buildCards(); }
 
+function updatePendingBadge() {
+  var n     = CANDIDATES.filter(function(c){return c.status==='needs-decision';}).length;
+  var badge = document.getElementById('pending-badge');
+  if (badge) badge.textContent = n;
+  var meta  = document.querySelector('.topbar-meta');
+  if (meta)  meta.textContent  = 'Pre-DUNS entity resolution \u00B7 US-DE \u00B7 '+n+' candidates pending';
+}
+
 function exportDecisions() {
-  const rows = [['filing_name','entity_name','confidence','decision','reviewer','timestamp','notes']];
-  CANDIDATES.forEach(c => {
-    const dec = (decisions[c.id] || []).filter(d =>
-      ['linked','created','rejected','split','escalated'].includes(d.badge)
-    );
-    if (dec.length > 0) {
-      dec.forEach(d => {
-        rows.push([c.filingName, c.entityName, c.conf+'%', d.badge, d.reviewer, d.time,
-          document.getElementById('reviewer-notes')?.value || '']);
-      });
-    } else {
-      rows.push([c.filingName, c.entityName, c.conf+'%', 'pending', '', '', '']);
-    }
+  var rows = [['filing_name','entity_name','confidence','decision','reviewer','timestamp','notes']];
+  CANDIDATES.forEach(function(c){
+    var dec = (decisions[c.id]||[]).filter(function(d){return ['linked','created','rejected','split','escalated','approved'].indexOf(d.badge)>=0;});
+    if (dec.length>0) {
+      dec.forEach(function(d){ rows.push([c.filingName,c.entityName,c.conf+'%',d.badge,d.reviewer,d.time,(document.getElementById('reviewer-notes')||{value:''}).value]); });
+    } else { rows.push([c.filingName,c.entityName,c.conf+'%','pending','','','']); }
   });
-  const csv  = rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
-  const blob = new Blob([csv], { type:'text/csv' });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href     = url;
-  a.download = `identity_review_${new Date().toISOString().slice(0,10)}.csv`;
-  a.click();
+  var csv  = rows.map(function(r){return r.map(function(v){return '"'+String(v).replace(/"/g,'""')+'"';}).join(',');}).join('\n');
+  var blob = new Blob([csv],{type:'text/csv'});
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href   = url; a.download = 'identity_review_'+new Date().toISOString().slice(0,10)+'.csv'; a.click();
   URL.revokeObjectURL(url);
 }
 
-function updatePendingBadge() {
-  const n     = CANDIDATES.filter(c => c.status === 'needs-decision').length;
-  const badge = document.getElementById('pending-badge');
-  if (badge) badge.textContent = n;
-  const meta = document.querySelector('.topbar-meta');
-  if (meta) meta.textContent = `Pre-DUNS entity resolution · US-DE · ${n} candidates pending`;
-}
-
-function updatePendingBadge() {
-  const n     = CANDIDATES.filter(c => c.status === 'needs-decision').length;
-  const badge = document.getElementById('pending-badge');
-  if (badge) badge.textContent = n;
-  const meta = document.querySelector('.topbar-meta');
-  if (meta) meta.textContent = `Pre-DUNS entity resolution · US-DE · ${n} candidates pending`;
-}
-document.addEventListener('DOMContentLoaded', () => {
+// ── Init ──
+document.addEventListener('DOMContentLoaded', function() {
   buildCards();
   updatePendingBadge();
 });
