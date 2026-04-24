@@ -385,8 +385,26 @@ body {
   font-family: 'DM Mono', monospace;
 }
 
-/* Empty state */
-.empty-state {
+/* Source links */
+.src-link {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 9px; border-radius: 6px; font-size: 11px; font-weight: 500;
+  border: 0.5px solid var(--border2); background: var(--bg3); color: var(--t2);
+  text-decoration: none; transition: all .12s; cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+}
+.src-link:hover { color: var(--t0); border-color: var(--border3); background: var(--bg4); }
+.src-link img { width: 12px; height: 12px; border-radius: 2px; opacity: .85; }
+.src-link.manual { border-color: var(--amber-border); color: var(--amber); background: var(--amber-dim); }
+.src-link.manual:hover { background: rgba(245,158,11,.18); }
+
+/* Clickable website value */
+.web-link {
+  color: var(--teal); text-decoration: none; font-size: 12px;
+  display: inline-flex; align-items: center; gap: 4px;
+}
+.web-link:hover { text-decoration: underline; opacity: .8; }
+.web-link-arrow { font-size: 10px; opacity: .6; }
   flex: 1; display: flex; flex-direction: column;
   align-items: center; justify-content: center;
   color: var(--t4); gap: 10px; text-align: center; padding: 40px;
@@ -508,6 +526,10 @@ body {
                 <div class="compare-field"><div class="field-label">Website</div><div class="field-val" id="c-web-r">—</div></div>
                 <div class="compare-field"><div class="field-label">Registered agent</div><div class="field-val" id="c-agent-r">—</div></div>
                 <div class="compare-field"><div class="field-label">Linked filings</div><div class="field-val" id="c-filings-r">—</div></div>
+                <div class="compare-field" style="border-top:0.5px solid var(--border1);padding-top:10px;">
+                  <div class="field-label" style="margin-bottom:7px;">Cross-check sources</div>
+                  <div id="source-links" style="display:flex;flex-wrap:wrap;gap:5px;"></div>
+                </div>
               </div>
             </div>
           </div>
@@ -832,24 +854,72 @@ function loadCandidate(id) {
   badge.textContent = `${c.conf}% ${c.confLabel}`;
   badge.className   = `conf-large ${confCls}`;
 
-  // Comparison fields
+  // Comparison fields — websites rendered as clickable links
   const setField = (id, val, matchCls) => {
     const el = document.getElementById(id);
     el.textContent = val || '—';
     el.className   = `field-val ${!val ? 'empty' : matchCls || ''}`;
   };
+  const setWebField = (id, val, matchCls) => {
+    const el = document.getElementById(id);
+    if (!val || val === '—') {
+      el.innerHTML   = '<span style="color:var(--t4);font-style:italic;">—</span>';
+      el.className   = 'field-val empty';
+    } else {
+      const href = val.startsWith('http') ? val : 'https://' + val;
+      el.innerHTML   = `<a href="${href}" target="_blank" rel="noopener" class="web-link">${val}<span class="web-link-arrow">↗</span></a>`;
+      el.className   = `field-val ${matchCls || ''}`;
+    }
+  };
+
   setField('c-name-l',  c.filing.name);
   setField('c-addr-l',  c.filing.address);
-  setField('c-phone-l', c.filing.phone, c.filing.phone===c.entity.phone?'match':'');
-  setField('c-web-l',   c.filing.website, c.filing.website===c.entity.website?'match':'');
-  setField('c-agent-l', c.filing.agent, c.filing.agent===c.entity.agent?'match':'');
+  setField('c-phone-l', c.filing.phone,  c.filing.phone  === c.entity.phone  ? 'match' : '');
+  setWebField('c-web-l', c.filing.website, c.filing.website === c.entity.website ? 'match' : '');
+  setField('c-agent-l', c.filing.agent,  c.filing.agent  === c.entity.agent  ? 'match' : '');
   setField('c-date-l',  c.filing.date);
   setField('c-name-r',  c.entity.name);
   setField('c-addr-r',  c.entity.address);
-  setField('c-phone-r', c.entity.phone, c.entity.phone===c.filing.phone?'match':'');
-  setField('c-web-r',   c.entity.website, c.entity.website===c.filing.website?'match':'');
-  setField('c-agent-r', c.entity.agent, c.entity.agent===c.filing.agent?'match':'');
+  setField('c-phone-r', c.entity.phone,  c.entity.phone  === c.filing.phone  ? 'match' : '');
+  setWebField('c-web-r', c.entity.website, c.entity.website === c.filing.website ? 'match' : '');
+  setField('c-agent-r', c.entity.agent,  c.entity.agent  === c.filing.agent  ? 'match' : '');
   setField('c-filings-r', c.entity.filings);
+
+  // Source links — track-appropriate, route by entity type
+  const name  = encodeURIComponent(c.filingName);
+  const nameR = encodeURIComponent(c.entityName);
+  const loc   = encodeURIComponent((c.entity.address || '').split(',').slice(-2).join(',').trim());
+  const isEnt = c.conf >= 80 || (c.filing.agent || '').toLowerCase().includes('corporation');
+  const FAV   = d => `https://www.google.com/s2/favicons?domain=${d}&sz=16`;
+
+  const autoLinks = [
+    { label:'Google',         url:`https://www.google.com/search?q=${name}+${loc}`,         icon:'google.com' },
+    { label:'OpenCorporates', url:`https://opencorporates.com/companies?q=${name}&jurisdiction_code=us_de`, icon:'opencorporates.com' },
+  ];
+  const manualLinks = isEnt ? [
+    { label:'LinkedIn',   url:`https://www.linkedin.com/search/results/companies/?keywords=${nameR}`, icon:'linkedin.com',   manual:true },
+    { label:'Crunchbase', url:`https://www.crunchbase.com/textsearch?q=${nameR}`,                     icon:'crunchbase.com', manual:true },
+    { label:'SEC EDGAR',  url:`https://www.sec.gov/cgi-bin/browse-edgar?company=${nameR}&CIK=&type=10-K&dateb=&owner=include&count=10&search_text=&action=getcompany`, icon:'sec.gov', manual:true },
+  ] : [
+    { label:'BBB',      url:`https://www.bbb.org/search?find_text=${name}`,                                    icon:'bbb.org',      manual:true },
+    { label:'Facebook', url:`https://www.facebook.com/search/pages/?q=${name}`,                                icon:'facebook.com', manual:true },
+    { label:'Yelp',     url:`https://www.yelp.com/search?find_desc=${name}&find_loc=${loc}`,                   icon:'yelp.com',     manual:true },
+    { label:'LinkedIn', url:`https://www.linkedin.com/search/results/companies/?keywords=${nameR}`,            icon:'linkedin.com', manual:true },
+  ];
+
+  // Add website link if present
+  const webLinks = [];
+  if (c.entity.website && c.entity.website !== '—') {
+    const href = c.entity.website.startsWith('http') ? c.entity.website : 'https://' + c.entity.website;
+    webLinks.push({ label: c.entity.website, url: href, icon: c.entity.website.replace(/https?:\/\/(www\.)?/,'').split('/')[0] });
+  }
+
+  const allLinks = [...webLinks, ...autoLinks, ...manualLinks];
+  document.getElementById('source-links').innerHTML = allLinks.map(l =>
+    `<a href="${l.url}" target="_blank" rel="noopener" class="src-link${l.manual?' manual':''}">
+      <img src="${FAV(l.icon)}">${l.label}
+    </a>`
+  ).join('');
 
   // Reasoning grid
   const rg = document.getElementById('reasoning-grid');
