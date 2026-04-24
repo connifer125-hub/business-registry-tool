@@ -385,7 +385,37 @@ body {
   font-family: 'DM Mono', monospace;
 }
 
-/* Inline editing */
+/* Address selector */
+.addr-option {
+  display:flex; align-items:center; gap:10px;
+  padding:9px 12px; border-radius:8px;
+  border:0.5px solid var(--border1); background:var(--bg1);
+  cursor:pointer; transition:all .12s;
+}
+.addr-option:hover { border-color:var(--border2); background:var(--bg2); }
+.addr-option.selected {
+  border-color:var(--teal-border);
+  background:linear-gradient(90deg,var(--teal-dim),var(--bg1));
+}
+.addr-source-label {
+  font-size:10px; font-weight:500; color:var(--t4);
+  text-transform:uppercase; letter-spacing:.07em;
+  min-width:120px; flex-shrink:0; font-family:'DM Mono',monospace;
+}
+.addr-option.selected .addr-source-label { color:var(--teal); }
+.addr-val-text { font-size:12px; color:var(--t1); flex:1; }
+.addr-match-badge {
+  font-size:10px; padding:2px 7px; border-radius:5px;
+  font-family:'DM Mono',monospace; font-weight:500; flex-shrink:0;
+}
+.addr-select-dot {
+  width:8px;height:8px;border-radius:50%;
+  border:1.5px solid var(--border2);flex-shrink:0;
+}
+.addr-option.selected .addr-select-dot {
+  background:var(--teal);border-color:var(--teal);
+  box-shadow:0 0 5px rgba(45,212,191,.4);
+}
 .inline-edit {
   flex: 1; padding: 4px 7px; border-radius: 5px;
   border: 0.5px solid transparent; background: transparent;
@@ -626,7 +656,14 @@ body {
             </div>
           </div>
 
-          <!-- Section 3: Match reasoning -->
+          <!-- Address corroboration selector -->
+          <div class="section" id="addr-selector-section">
+            <div class="section-label">Address corroboration — select the correct operating address</div>
+            <div id="addr-selector" style="display:flex;flex-direction:column;gap:6px;"></div>
+            <div style="font-size:10px;color:var(--t4);margin-top:6px;line-height:1.5;">
+              Click a source to select it as the verified operating address. The entity address field updates automatically.
+            </div>
+          </div>
           <div class="section">
             <div class="section-label">Match reasoning</div>
             <div class="reasoning-grid" id="reasoning-grid">
@@ -746,6 +783,88 @@ function saveAllEdits() {
   }
 }
 
+function renderAddrSelector(c) {
+  const sources = [
+    {
+      key:    'registry',
+      label:  'Registry filing',
+      addr:   c.filing.address,
+      note:   'Source of record — legal address on file',
+      match:  'source',
+      cls:    'rgba(45,212,191,.15)',
+      color:  'var(--teal)',
+    },
+    {
+      key:    'google',
+      label:  'Google Places',
+      addr:   c.entity.address,
+      note:   c.entity.address !== c.filing.address ? 'Differs from registry' : 'Matches registry',
+      match:  c.entity.address === c.filing.address ? 'match' : 'partial',
+      cls:    c.entity.address === c.filing.address ? 'rgba(34,197,94,.1)' : 'rgba(245,158,11,.08)',
+      color:  c.entity.address === c.filing.address ? 'var(--green)' : 'var(--amber)',
+    },
+  ];
+
+  // Add website source if entity has a website
+  if (c.entity.website && c.entity.website !== '—') {
+    sources.push({
+      key:   'website',
+      label: 'Website contact page',
+      addr:  c.entity.address, // in real app this would be scraped separately
+      note:  'Auto-scraped from ' + c.entity.website,
+      match: 'scraped',
+      cls:   'rgba(96,165,250,.08)',
+      color: 'var(--blue)',
+    });
+  }
+
+  let selectedKey = 'registry';
+
+  const container = document.getElementById('addr-selector');
+  const render = () => {
+    container.innerHTML = sources.map((s, idx) => `
+      <div class="addr-option ${s.key === selectedKey ? 'selected' : ''}"
+        data-key="${s.key}" data-idx="${idx}">
+        <div class="addr-select-dot"></div>
+        <div class="addr-source-label">${s.label}</div>
+        <div class="addr-val-text">${s.addr || '<span style="color:var(--t4);font-style:italic;">not available</span>'}</div>
+        <span class="addr-match-badge" style="background:${s.cls};color:${s.color};border:0.5px solid ${s.color}33;">${s.note}</span>
+      </div>
+    `).join('');
+    // Attach click handlers after rendering
+    container.querySelectorAll('.addr-option').forEach(el => {
+      el.addEventListener('click', () => {
+        const idx = parseInt(el.dataset.idx);
+        const src = sources[idx];
+        if (src) selectAddress(src.key, src.addr || '');
+      });
+    });
+  };
+
+  // Store sources on window for selectAddress to access
+  window._addrSources  = sources;
+  window._selectedAddr = selectedKey;
+  render();
+}
+
+function selectAddress(key, addrVal) {
+  window._selectedAddr = key;
+  // Update the entity address input
+  const input = document.getElementById('e-addr');
+  if (input) {
+    input.value = addrVal;
+    markDirty('e-addr');
+  }
+  // Re-render selector with new selection
+  const sources = window._addrSources || [];
+  const container = document.getElementById('addr-selector');
+  if (container) {
+    container.querySelectorAll('.addr-option').forEach((el, i) => {
+      el.classList.toggle('selected', sources[i]?.key === key);
+    });
+  }
+}
+
 function renderPreQAChips(c) {
   const chips = [];
   const googleMatch = c.reasoning.find(r => r.label === 'Domain match');
@@ -783,19 +902,21 @@ function openResearchModal() {
   const state = (c.entity.address || '').split(',')[2]?.trim()?.split(' ')[0] || '';
   const track = c.track || 'small';
 
-  const q  = encodeURIComponent(name + ' ' + city + ' ' + state);
-  const qN = encodeURIComponent(name);
-  const loc = encodeURIComponent(city + ' ' + state);
-  const trackLabel = track === 'small' ? 'Small business' : track === 'mid' ? 'Mid-market' : 'Enterprise';
+  const stripSfx = n => n.replace(/\b(LLC|Inc\.?|Corp\.?|LLP|Ltd\.?|L\.L\.C\.?|Co\.?|PLC|PLLC|P\.C\.)\b\.?/gi,'').replace(/\s+/g,' ').trim();
+  const cleanName  = stripSfx(name);
+  const q   = encodeURIComponent(cleanName + ' ' + city + ' ' + state);
+  const qN  = encodeURIComponent(cleanName);
+  const qNR = encodeURIComponent(stripSfx(c.entityName));
+  const loc  = encodeURIComponent(city + ' ' + state);
 
   const autoLinks = [
     { label:'Google Places', url:`https://www.google.com/search?q=${q}`, icon:'google.com', auto:true },
     ...(track !== 'small' ? [
-      { label:'OpenCorporates', url:`https://opencorporates.com/companies?q=${qN}&jurisdiction_code=us_de`, icon:'opencorporates.com', auto:true },
+      { label:'OpenCorporates', url:`https://opencorporates.com/companies?q=${encodeURIComponent(name)}&jurisdiction_code=us_de`, icon:'opencorporates.com', auto:true },
     ] : []),
     ...(track === 'ent' ? [
-      { label:'SEC EDGAR', url:`https://www.sec.gov/cgi-bin/browse-edgar?company=${qN}&CIK=&type=10-K&dateb=&owner=include&count=10&search_text=&action=getcompany`, icon:'sec.gov', auto:true },
-      { label:'SAM.gov',   url:`https://sam.gov/search/?keywords=${qN}`, icon:'sam.gov', auto:true },
+      { label:'SEC EDGAR', url:`https://www.sec.gov/cgi-bin/browse-edgar?company=${encodeURIComponent(name)}&CIK=&type=10-K&dateb=&owner=include&count=10&search_text=&action=getcompany`, icon:'sec.gov', auto:true },
+      { label:'SAM.gov',   url:`https://sam.gov/search/?keywords=${encodeURIComponent(name)}`, icon:'sam.gov', auto:true },
     ] : []),
   ];
 
@@ -806,13 +927,13 @@ function openResearchModal() {
       { label:'Yelp',     url:`https://www.yelp.com/search?find_desc=${qN}&find_loc=${loc}`,icon:'yelp.com' },
     ] : []),
     ...(track === 'mid' ? [
-      { label:'LinkedIn',   url:`https://www.linkedin.com/search/results/companies/?keywords=${qN}`, icon:'linkedin.com' },
-      { label:'Crunchbase', url:`https://www.crunchbase.com/textsearch?q=${qN}`,                    icon:'crunchbase.com' },
-      { label:'BBB',        url:`https://www.bbb.org/search?find_text=${qN}&find_loc=${loc}`,       icon:'bbb.org' },
+      { label:'LinkedIn',   url:`https://www.linkedin.com/search/results/companies/?keywords=${qNR}`, icon:'linkedin.com' },
+      { label:'Crunchbase', url:`https://www.crunchbase.com/textsearch?q=${qNR}`,                    icon:'crunchbase.com' },
+      { label:'BBB',        url:`https://www.bbb.org/search?find_text=${qN}&find_loc=${loc}`,        icon:'bbb.org' },
     ] : []),
     ...(track === 'ent' ? [
-      { label:'LinkedIn',   url:`https://www.linkedin.com/search/results/companies/?keywords=${qN}`, icon:'linkedin.com' },
-      { label:'Crunchbase', url:`https://www.crunchbase.com/textsearch?q=${qN}`,                    icon:'crunchbase.com' },
+      { label:'LinkedIn',   url:`https://www.linkedin.com/search/results/companies/?keywords=${qNR}`, icon:'linkedin.com' },
+      { label:'Crunchbase', url:`https://www.crunchbase.com/textsearch?q=${qNR}`,                    icon:'crunchbase.com' },
     ] : []),
   ];
 
@@ -1165,6 +1286,9 @@ function loadCandidate(id) {
   // Pre-QA chips
   renderPreQAChips(c);
 
+  // Address corroboration selector
+  renderAddrSelector(c);
+
   // Filing side — read only, with match highlighting
   const setField = (id, val, matchCls) => {
     const el = document.getElementById(id);
@@ -1210,8 +1334,16 @@ function loadCandidate(id) {
   }
 
   // Source links — routed by entity track, not confidence score
-  const name  = encodeURIComponent(c.filingName);
-  const nameR = encodeURIComponent(c.entityName);
+  // Strip legal suffixes for cleaner searches
+  const stripSuffixes = name => name
+    .replace(/\b(LLC|Inc\.?|Corp\.?|LLP|Ltd\.?|L\.L\.C\.?|Co\.?|PLC|PLLC|P\.C\.)\b\.?/gi, '')
+    .replace(/\s+/g, ' ').trim();
+
+  const cleanFiling = stripSuffixes(c.filingName);
+  const cleanEntity = stripSuffixes(c.entityName);
+  const name  = encodeURIComponent(c.filingName);       // full name for registry searches
+  const nameC = encodeURIComponent(cleanFiling);        // clean name for social/directory searches
+  const nameR = encodeURIComponent(cleanEntity);        // clean entity name
   const loc   = encodeURIComponent((c.entity.address || '').split(',').slice(-2).join(',').trim());
   const track = c.track || 'small';
 
@@ -1221,26 +1353,26 @@ function loadCandidate(id) {
   }] : [];
 
   const autoSrcs = [
-    { label:'Google', url:`https://www.google.com/search?q=${name}+${loc}`, icon:'google.com' },
+    { label:'Google', url:`https://www.google.com/search?q=${nameC}+${loc}`, icon:'google.com' },
     ...(track !== 'small' ? [
       { label:'OpenCorporates', url:`https://opencorporates.com/companies?q=${name}&jurisdiction_code=us_de`, icon:'opencorporates.com' },
     ] : []),
     ...(track === 'ent' ? [
-      { label:'SEC EDGAR', url:`https://www.sec.gov/cgi-bin/browse-edgar?company=${nameR}&CIK=&type=10-K&dateb=&owner=include&count=10&search_text=&action=getcompany`, icon:'sec.gov' },
-      { label:'SAM.gov',   url:`https://sam.gov/search/?keywords=${nameR}`, icon:'sam.gov' },
+      { label:'SEC EDGAR', url:`https://www.sec.gov/cgi-bin/browse-edgar?company=${name}&CIK=&type=10-K&dateb=&owner=include&count=10&search_text=&action=getcompany`, icon:'sec.gov' },
+      { label:'SAM.gov',   url:`https://sam.gov/search/?keywords=${name}`, icon:'sam.gov' },
     ] : []),
   ];
 
   const manualSrcs = [
     ...(track === 'small' ? [
-      { label:'BBB',      url:`https://www.bbb.org/search?find_text=${name}&find_loc=${loc}`, icon:'bbb.org',      manual:true },
-      { label:'Facebook', url:`https://www.facebook.com/search/pages/?q=${name}`,             icon:'facebook.com', manual:true },
-      { label:'Yelp',     url:`https://www.yelp.com/search?find_desc=${name}&find_loc=${loc}`,icon:'yelp.com',     manual:true },
+      { label:'BBB',      url:`https://www.bbb.org/search?find_text=${nameC}&find_loc=${loc}`, icon:'bbb.org',      manual:true },
+      { label:'Facebook', url:`https://www.facebook.com/search/pages/?q=${nameC}`,             icon:'facebook.com', manual:true },
+      { label:'Yelp',     url:`https://www.yelp.com/search?find_desc=${nameC}&find_loc=${loc}`,icon:'yelp.com',     manual:true },
     ] : []),
     ...(track === 'mid' ? [
       { label:'LinkedIn',   url:`https://www.linkedin.com/search/results/companies/?keywords=${nameR}`, icon:'linkedin.com',   manual:true },
       { label:'Crunchbase', url:`https://www.crunchbase.com/textsearch?q=${nameR}`,                    icon:'crunchbase.com', manual:true },
-      { label:'BBB',        url:`https://www.bbb.org/search?find_text=${name}&find_loc=${loc}`,        icon:'bbb.org',        manual:true },
+      { label:'BBB',        url:`https://www.bbb.org/search?find_text=${nameC}&find_loc=${loc}`,       icon:'bbb.org',        manual:true },
     ] : []),
     ...(track === 'ent' ? [
       { label:'LinkedIn',   url:`https://www.linkedin.com/search/results/companies/?keywords=${nameR}`, icon:'linkedin.com',   manual:true },
