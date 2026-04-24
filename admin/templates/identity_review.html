@@ -777,42 +777,48 @@ function renderPreQAChips(c) {
 
 function openResearchModal() {
   if (!currentCandidate) return;
-  const c    = currentCandidate;
-  const name = c.filingName;
-  const city = (c.entity.address || '').split(',')[1]?.trim() || '';
-  const state= (c.entity.address || '').split(',')[2]?.trim()?.split(' ')[0] || '';
-  const isEnt = c.conf >= 80 || (c.filing.agent || '').toLowerCase().includes('corporation');
-  const isSmall = !isEnt;
+  const c     = currentCandidate;
+  const name  = c.filingName;
+  const city  = (c.entity.address || '').split(',')[1]?.trim() || '';
+  const state = (c.entity.address || '').split(',')[2]?.trim()?.split(' ')[0] || '';
+  const track = c.track || 'small';
 
   const q  = encodeURIComponent(name + ' ' + city + ' ' + state);
   const qN = encodeURIComponent(name);
+  const loc = encodeURIComponent(city + ' ' + state);
+  const trackLabel = track === 'small' ? 'Small business' : track === 'mid' ? 'Mid-market' : 'Enterprise';
+
+  const autoLinks = [
+    { label:'Google Places', url:`https://www.google.com/search?q=${q}`, icon:'google.com', auto:true },
+    ...(track !== 'small' ? [
+      { label:'OpenCorporates', url:`https://opencorporates.com/companies?q=${qN}&jurisdiction_code=us_de`, icon:'opencorporates.com', auto:true },
+    ] : []),
+    ...(track === 'ent' ? [
+      { label:'SEC EDGAR', url:`https://www.sec.gov/cgi-bin/browse-edgar?company=${qN}&CIK=&type=10-K&dateb=&owner=include&count=10&search_text=&action=getcompany`, icon:'sec.gov', auto:true },
+      { label:'SAM.gov',   url:`https://sam.gov/search/?keywords=${qN}`, icon:'sam.gov', auto:true },
+    ] : []),
+  ];
+
+  const manualLinks = [
+    ...(track === 'small' ? [
+      { label:'BBB',      url:`https://www.bbb.org/search?find_text=${qN}&find_loc=${loc}`, icon:'bbb.org' },
+      { label:'Facebook', url:`https://www.facebook.com/search/pages/?q=${qN}`,             icon:'facebook.com' },
+      { label:'Yelp',     url:`https://www.yelp.com/search?find_desc=${qN}&find_loc=${loc}`,icon:'yelp.com' },
+    ] : []),
+    ...(track === 'mid' ? [
+      { label:'LinkedIn',   url:`https://www.linkedin.com/search/results/companies/?keywords=${qN}`, icon:'linkedin.com' },
+      { label:'Crunchbase', url:`https://www.crunchbase.com/textsearch?q=${qN}`,                    icon:'crunchbase.com' },
+      { label:'BBB',        url:`https://www.bbb.org/search?find_text=${qN}&find_loc=${loc}`,       icon:'bbb.org' },
+    ] : []),
+    ...(track === 'ent' ? [
+      { label:'LinkedIn',   url:`https://www.linkedin.com/search/results/companies/?keywords=${qN}`, icon:'linkedin.com' },
+      { label:'Crunchbase', url:`https://www.crunchbase.com/textsearch?q=${qN}`,                    icon:'crunchbase.com' },
+    ] : []),
+  ];
 
   const sections = [
-    {
-      heading: 'Auto-checked (pre-QA)',
-      note: 'These ran automatically before you saw this record',
-      links: [
-        { label:'Google Places', url:`https://www.google.com/search?q=${q}`, icon:'google.com', auto:true },
-        { label:'OpenCorporates', url:`https://opencorporates.com/companies?q=${qN}&jurisdiction_code=us_de`, icon:'opencorporates.com', auto:true },
-      ]
-    },
-    {
-      heading: 'Spot-check manually',
-      note: 'Open to visually verify — never scraped automatically',
-      links: [
-        ...(isSmall ? [
-          { label:'BBB',      url:`https://www.bbb.org/search?find_text=${qN}&find_loc=${encodeURIComponent(city+' '+state)}`, icon:'bbb.org' },
-          { label:'Facebook', url:`https://www.facebook.com/search/pages/?q=${qN}`, icon:'facebook.com' },
-          { label:'Yelp',     url:`https://www.yelp.com/search?find_desc=${qN}&find_loc=${encodeURIComponent(city+' '+state)}`, icon:'yelp.com' },
-        ] : []),
-        { label:'LinkedIn',   url:`https://www.linkedin.com/search/results/companies/?keywords=${qN}`, icon:'linkedin.com' },
-        { label:'Crunchbase', url:`https://www.crunchbase.com/textsearch?q=${qN}`, icon:'crunchbase.com' },
-        ...(!isSmall ? [
-          { label:'SEC EDGAR', url:`https://www.sec.gov/cgi-bin/browse-edgar?company=${qN}&CIK=&type=10-K&dateb=&owner=include&count=10&search_text=&action=getcompany`, icon:'sec.gov' },
-          { label:'SAM.gov',   url:`https://sam.gov/search/?keywords=${qN}`, icon:'sam.gov' },
-        ] : []),
-      ]
-    }
+    { heading:'Auto-checked (pre-QA)', note:'These ran automatically before you saw this record', links: autoLinks },
+    { heading:'Spot-check manually',   note:'Open to visually verify — never scraped automatically', links: manualLinks },
   ];
 
   document.querySelectorAll('#id-research-modal,#id-research-overlay').forEach(el => el.remove());
@@ -835,7 +841,7 @@ function openResearchModal() {
     <div style="padding:16px 18px;border-bottom:0.5px solid var(--border1);display:flex;align-items:flex-start;justify-content:space-between;">
       <div>
         <div style="font-size:14px;font-weight:600;color:var(--t0);">${name}</div>
-        <div style="font-size:11px;color:var(--t3);margin-top:2px;">${city}${state?', '+state:''} · ${isSmall?'Small business':'Enterprise'} track</div>
+        <div style="font-size:11px;color:var(--t3);margin-top:2px;">${city}${state?', '+state:''} · ${trackLabel} track</div>
       </div>
       <button onclick="document.querySelectorAll('#id-research-modal,#id-research-overlay').forEach(el=>el.remove())"
         style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--t3);line-height:1;padding:2px;">×</button>
@@ -877,6 +883,7 @@ const CANDIDATES = [
     entityName: 'HELOC.com',
     conf: 91, confLabel: 'high',
     filingCount: 2,
+    track: 'small',
     tags: ['name-variant', 'shared-website'],
     status: 'needs-decision',
     filing: {
@@ -919,6 +926,7 @@ const CANDIDATES = [
     entityName: 'JCM Electrical',
     conf: 78, confLabel: 'medium',
     filingCount: 1,
+    track: 'small',
     tags: ['name-variant', 'addr-overlap'],
     status: 'needs-decision',
     filing: {
@@ -960,6 +968,7 @@ const CANDIDATES = [
     entityName: 'Scope Content, Inc.',
     conf: 44, confLabel: 'low',
     filingCount: 2,
+    track: 'mid',
     tags: ['needs-decision', 'addr-overlap'],
     status: 'needs-decision',
     filing: {
@@ -1001,6 +1010,7 @@ const CANDIDATES = [
     entityName: 'PM Construction Group',
     conf: 67, confLabel: 'medium',
     filingCount: 2,
+    track: 'mid',
     tags: ['name-variant', 'needs-decision'],
     status: 'needs-decision',
     filing: {
@@ -1043,6 +1053,7 @@ const CANDIDATES = [
     entityName: 'Sidley Austin LLP',
     conf: 98, confLabel: 'high',
     filingCount: 1,
+    track: 'ent',
     tags: ['shared-website'],
     status: 'confirmed',
     filing: {
@@ -1108,6 +1119,7 @@ function buildCards() {
         </div>
         <div class="card-tags">
           ${c.tags.map(t=>`<span class="tag ${tagCls[t]||''}">${tagMap[t]||t}</span>`).join('')}
+          <span class="tag" style="color:${c.track==='ent'?'#60a5fa':c.track==='mid'?'#c084fc':'#34d399'};border-color:${c.track==='ent'?'rgba(96,165,250,.2)':c.track==='mid'?'rgba(192,132,252,.2)':'rgba(52,211,153,.2)'};background:${c.track==='ent'?'rgba(96,165,250,.07)':c.track==='mid'?'rgba(192,132,252,.07)':'rgba(52,211,153,.07)'};">${c.track==='ent'?'Enterprise':c.track==='mid'?'Mid-market':'Small biz'}</span>
         </div>
         <div class="card-filings">${c.filingCount} filing${c.filingCount>1?'s':''} · ${c.status.replace('-',' ')}</div>
       `;
@@ -1197,16 +1209,11 @@ function loadCandidate(id) {
     document.getElementById('e-web-link').innerHTML = `<a href="${href}" target="_blank" class="web-link" style="font-size:11px;">↗</a>`;
   }
 
-  // Source links
+  // Source links — routed by entity track, not confidence score
   const name  = encodeURIComponent(c.filingName);
   const nameR = encodeURIComponent(c.entityName);
   const loc   = encodeURIComponent((c.entity.address || '').split(',').slice(-2).join(',').trim());
-  const isEnt = c.conf >= 80 || (c.filing.agent || '').toLowerCase().includes('corporation');
-
-  const chip = (label, cls, icon, manual) =>
-    `<a href="${label.url||'#'}" target="_blank" class="src-link${manual?' manual':''}" rel="noopener">
-      <img src="${FAV(icon)}">${label.label||label}
-    </a>`;
+  const track = c.track || 'small';
 
   const webLinks = webVal && webVal !== '—' ? [{
     label: webVal, url: webVal.startsWith('http') ? webVal : 'https://'+webVal,
@@ -1214,18 +1221,31 @@ function loadCandidate(id) {
   }] : [];
 
   const autoSrcs = [
-    { label:'Google',         url:`https://www.google.com/search?q=${name}+${loc}`,                                 icon:'google.com' },
-    { label:'OpenCorporates', url:`https://opencorporates.com/companies?q=${name}&jurisdiction_code=us_de`,         icon:'opencorporates.com' },
+    { label:'Google', url:`https://www.google.com/search?q=${name}+${loc}`, icon:'google.com' },
+    ...(track !== 'small' ? [
+      { label:'OpenCorporates', url:`https://opencorporates.com/companies?q=${name}&jurisdiction_code=us_de`, icon:'opencorporates.com' },
+    ] : []),
+    ...(track === 'ent' ? [
+      { label:'SEC EDGAR', url:`https://www.sec.gov/cgi-bin/browse-edgar?company=${nameR}&CIK=&type=10-K&dateb=&owner=include&count=10&search_text=&action=getcompany`, icon:'sec.gov' },
+      { label:'SAM.gov',   url:`https://sam.gov/search/?keywords=${nameR}`, icon:'sam.gov' },
+    ] : []),
   ];
-  const manualSrcs = isEnt ? [
-    { label:'LinkedIn',   url:`https://www.linkedin.com/search/results/companies/?keywords=${nameR}`, icon:'linkedin.com',   manual:true },
-    { label:'Crunchbase', url:`https://www.crunchbase.com/textsearch?q=${nameR}`,                     icon:'crunchbase.com', manual:true },
-    { label:'SEC EDGAR',  url:`https://www.sec.gov/cgi-bin/browse-edgar?company=${nameR}&CIK=&type=10-K&dateb=&owner=include&count=10&search_text=&action=getcompany`, icon:'sec.gov', manual:true },
-  ] : [
-    { label:'BBB',      url:`https://www.bbb.org/search?find_text=${name}`,                                    icon:'bbb.org',      manual:true },
-    { label:'Facebook', url:`https://www.facebook.com/search/pages/?q=${name}`,                                icon:'facebook.com', manual:true },
-    { label:'Yelp',     url:`https://www.yelp.com/search?find_desc=${name}&find_loc=${loc}`,                   icon:'yelp.com',     manual:true },
-    { label:'LinkedIn', url:`https://www.linkedin.com/search/results/companies/?keywords=${nameR}`,            icon:'linkedin.com', manual:true },
+
+  const manualSrcs = [
+    ...(track === 'small' ? [
+      { label:'BBB',      url:`https://www.bbb.org/search?find_text=${name}&find_loc=${loc}`, icon:'bbb.org',      manual:true },
+      { label:'Facebook', url:`https://www.facebook.com/search/pages/?q=${name}`,             icon:'facebook.com', manual:true },
+      { label:'Yelp',     url:`https://www.yelp.com/search?find_desc=${name}&find_loc=${loc}`,icon:'yelp.com',     manual:true },
+    ] : []),
+    ...(track === 'mid' ? [
+      { label:'LinkedIn',   url:`https://www.linkedin.com/search/results/companies/?keywords=${nameR}`, icon:'linkedin.com',   manual:true },
+      { label:'Crunchbase', url:`https://www.crunchbase.com/textsearch?q=${nameR}`,                    icon:'crunchbase.com', manual:true },
+      { label:'BBB',        url:`https://www.bbb.org/search?find_text=${name}&find_loc=${loc}`,        icon:'bbb.org',        manual:true },
+    ] : []),
+    ...(track === 'ent' ? [
+      { label:'LinkedIn',   url:`https://www.linkedin.com/search/results/companies/?keywords=${nameR}`, icon:'linkedin.com',   manual:true },
+      { label:'Crunchbase', url:`https://www.crunchbase.com/textsearch?q=${nameR}`,                    icon:'crunchbase.com', manual:true },
+    ] : []),
   ];
 
   document.getElementById('source-links').innerHTML = [
