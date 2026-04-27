@@ -30,7 +30,14 @@ body,input,select,button,textarea { font-family: 'DM Sans', sans-serif; }
 }
 
 /* ── Main layout ── */
-.main { padding: 0 !important; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+.main { padding: 0 !important; }
+
+/* ── Queue wrap ── */
+.queue-wrap {
+  overflow-y: auto;
+  overflow-x: auto;
+  height: calc(100vh - 280px);
+}
 
 /* ── Top bar ── */
 .top-bar {
